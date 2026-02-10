@@ -1,0 +1,29 @@
+flowchart LR
+    subgraph DP["Data Plane (PL)"]
+        cam["Pcam 5C (OV5640)<br/>MIPI CSI-2 RAW10"] --> dphy["MIPI D-PHY RX"]
+        dphy --> csi["MIPI CSI-2 RX<br/>AXI4-Stream Video"]
+        csi --> gray["RGB to Grayscale"]
+        gray --> win["Line Buffers + 3x3 Window Generator"]
+        win --> filt["3x3 Filter (Avg / Sobel)"]
+        filt --> thr["Threshold / Overlay"]
+
+        thr --> out_sel{"Output Path"}
+        out_sel -->|Direct stream| vout["Video Out + rgb2dvi"]
+        out_sel -->|Frame buffer| vdma["AXI VDMA + DDR"]
+        vdma --> vout
+        vout --> hdmi["HDMI TX"]
+
+        filt -->|Optional| fast["FAST (+NMS)"]
+        fast --> thr
+    end
+
+    subgraph CP["Control Plane (PS)"]
+        ps["Zynq PS"] -->|I2C + GPIO| camctl["Sensor config / reset"]
+        ps -->|AXI-Lite| ipctl["IP register config"]
+    end
+
+    camctl -.-> cam
+    ipctl -.-> dphy
+    ipctl -.-> csi
+    ipctl -.-> vdma
+    ipctl -.-> vout
