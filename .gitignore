@@ -1,0 +1,78 @@
+# -----------------------------------------------------------------------------
+# VHDL / cocotb / Python test artifacts
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# cocotb build dirs and junit outputs
+sim_build/
+**/sim_build/
+results.xml
+*.result.xml
+
+# -----------------------------------------------------------------------------
+# HDL simulator artifacts (GHDL / NVC / common)
+# -----------------------------------------------------------------------------
+# GHDL library/index files
+work-obj*.cf
+*obj*.cf
+
+# Compiled/elaborated objects from cocotb + simulator backends
+*.o
+e~*.o
+
+# Default work libraries (NVC and many other simulators)
+work/
+
+# Waveform dumps
+*.ghw
+*.fst
+*.vcd
+*.vcd.gz
+*.gtkw
+
+# -----------------------------------------------------------------------------
+# Xilinx Vivado generated files
+# Based on https://raw.githubusercontent.com/github/gitignore/main/community/Xilinx.gitignore, trimmed to be safe.
+# -----------------------------------------------------------------------------
+.Xil/
+*.jou
+*.log
+*.str
+*.pb
+*.rpx
+*.tmp
+*.rst
+*.debug
+
+# Vivado per-project generated directories
+*.cache/
+*.runs/
+*.sim/
+*.ip_user_files/
+*.hw/
+*.sdk/
+*.gen/
+
+# IP integrator / handoff generated folders
+ipshared/
+hw_handoff/
+
+# Vivado telemetry and usage logs
+webtalk*.jou
+webtalk*.log
+usage_statistics_webtalk.html
+par_usage_statistics.html
+
+# User-specific project metadata
+*.xpr.user
+
+# -----------------------------------------------------------------------------
+# Legacy Xilinx ISE/ISim artifacts (present in this repo)
+# -----------------------------------------------------------------------------
+_xmsgs/
+iseconfig/
+xlnx_auto_0_xdb/
+xst/
+isim/
