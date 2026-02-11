@@ -1,0 +1,13 @@
+v 4
+file . "tb/tb_debouncing.vhd" "1f1d821789d58c45752257eea6e39fefe3a70830" "20260211074342.508":
+  entity tb_debouncing at 1( 0) + 0 on 77;
+  architecture sim of tb_debouncing at 8( 107) + 0 on 78;
+file . "src/debouncing.vhd" "0f638762479be18eb0cc8ea54f9fc1c0b651a2ef" "20260211074342.472":
+  entity debouncer at 1( 0) + 0 on 73;
+  architecture rtl of debouncer at 17( 310) + 0 on 74;
+file . "src/and_gate.vhd" "fff1458d28b556bb92249a60e04a919fff757df2" "20260211074342.469":
+  entity and_gate at 1( 0) + 0 on 71;
+  architecture behavioral of and_gate at 14( 282) + 0 on 72;
+file . "tb/tb_and_gate.vhd" "06d4365fa5804673a75c19cc85596b40e6b8d000" "20260211074342.502":
+  entity tb_and_gate at 1( 0) + 0 on 75;
+  architecture behavioral of tb_and_gate at 8( 114) + 0 on 76;
