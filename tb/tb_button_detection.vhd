@@ -2,15 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity Tb_Debouncing is
+entity Tb_Button_Detection is
 end entity;
 
-architecture A_Tb of Tb_Debouncing is
+architecture A_Tb of Tb_Button_Detection is
 
   -- DUT Signals
-  signal s_clk     : std_logic := '0';
-  signal s_btn_in  : std_logic := '0';
-  signal s_btn_out : std_logic;
+  signal s_clk              : std_logic := '0';
+  signal s_debounced_btn_in : std_logic := '0';
+  signal s_single_click_out : std_logic;
+  signal s_double_click_out : std_logic;
 
   -- Clock Parameter
   constant C_CLK_PERIOD : time := 20 ns; -- 50 MHz
@@ -20,16 +21,17 @@ begin
   ------------------------------------------------------------------
   -- DUT Instance
   ------------------------------------------------------------------
-  U_DUT : entity work.Debouncer
+  U_DUT : entity work.Button_Detection
     generic map(
-      G_CLK_FREQ_HZ => 50_000_000,
-      G_DEBOUNCE_MS => 10
+      G_CLK_FREQ_HZ         => 50_000_000,
+      G_BUTTON_DETECTION_MS => 5
     )
     port map
     (
       i_clk           => s_clk,
-      i_btn           => s_btn_in,
-      o_btn_debounced => s_btn_out
+      i_debounced_btn => s_debounced_btn_in,
+      o_single_click  => s_single_click_out,
+      o_double_click  => s_double_click_out
     );
 
   ------------------------------------------------------------------
@@ -52,55 +54,37 @@ begin
   begin
 
     -- Initial state
-    s_btn_in <= '0';
+    s_debounced_btn_in <= '0';
     wait for 100 ns;
 
     ------------------------------------------------------------------
-    -- Simulated bouncing during press
+    -- Simulated Single Click
     ------------------------------------------------------------------
-    -- Bounce pattern: 0/1/0/1/0/1
-    s_btn_in <= '1';
-    wait for 200 ns;
-    s_btn_in <= '0';
-    wait for 150 ns;
-    s_btn_in <= '1';
-    wait for 180 ns;
-    s_btn_in <= '0';
-    wait for 120 ns;
-    s_btn_in <= '1';
-    wait for 160 ns;
+    -- 
+    s_debounced_btn_in <= '1';
+    wait for 40 ns;
 
-    -- Now stable pressed
-    s_btn_in <= '1';
-    wait for 20 ms;
+    s_debounced_btn_in <= '0';
+    wait for 6 ms;
 
     ------------------------------------------------------------------
-    -- Keep stable pressed
+    -- Simulated Double Click
     ------------------------------------------------------------------
-    wait for 10 ms;
+    s_debounced_btn_in <= '1';
+    wait for 40 ns;
 
-    ------------------------------------------------------------------
-    -- Bouncing during release
-    ------------------------------------------------------------------
-    s_btn_in <= '0';
-    wait for 200 ns;
-    s_btn_in <= '1';
-    wait for 150 ns;
-    s_btn_in <= '0';
-    wait for 180 ns;
-    s_btn_in <= '1';
-    wait for 120 ns;
-    s_btn_in <= '0';
-    wait for 160 ns;
+    s_debounced_btn_in <= '0';
+    wait for 40 ns;
 
-    -- Now stable released
-    s_btn_in <= '0';
-    wait for 20 ms;
+    s_debounced_btn_in <= '1';
+    wait for 40 ns;
+
+    s_debounced_btn_in <= '0';
+    wait for 6 ms;
 
     ------------------------------------------------------------------
     -- End simulation (Note: Severity failure is only used to stop execution of the simulation. )
     ------------------------------------------------------------------
-    wait for 5 ms;
     assert false report "Simulation completed" severity failure;
 
   end process P_STIM;
