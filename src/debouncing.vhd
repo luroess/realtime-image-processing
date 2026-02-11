@@ -2,59 +2,58 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity debouncer is
+entity Debouncer is
   generic (
-    CLK_FREQ_HZ : integer := 50_000_000; -- 50 MHz
-    DEBOUNCE_MS : integer := 10 -- 10 ms
+    G_CLK_FREQ_HZ : integer := 50_000_000; -- 50 MHz
+    G_DEBOUNCE_MS : integer := 10 -- 10 ms
   );
   port (
-    clk     : in std_logic;
-    btn_in  : in std_logic;
-    btn_out : out std_logic
+    i_clk : in std_logic;
+    i_btn : in std_logic;
+    o_btn : out std_logic
   );
 end entity;
 
-architecture rtl of debouncer is
+architecture A_Rtl of Debouncer is
 
-  constant COUNT_MAX : integer := (CLK_FREQ_HZ / 1000) * DEBOUNCE_MS;
+  constant C_COUNT_MAX : integer := (G_CLK_FREQ_HZ / 1000) * G_DEBOUNCE_MS;
 
-  signal sync1, sync2 : std_logic                    := '0';
-  signal btn_last     : std_logic                    := '0';
-  signal stable_btn   : std_logic                    := '0';
-  signal counter      : integer range 0 to COUNT_MAX := 0;
+  signal s_sync1, s_sync2 : std_logic                      := '0';
+  signal s_btn_last       : std_logic                      := '0';
+  signal s_stable_btn     : std_logic                      := '0';
+  signal s_counter        : integer range 0 to C_COUNT_MAX := 0;
 
 begin
 
-  -- 1) Synchronizer (Metastability-Schutz)
-  process (clk)
+  -- Synchronizer for metastability mitigation
+  P_SYNC : process (i_clk)
   begin
-    if rising_edge(clk) then
-      sync1 <= btn_in;
-      sync2 <= sync1;
+    if rising_edge(i_clk) then
+      s_sync1 <= i_btn;
+      s_sync2 <= s_sync1;
     end if;
-  end process;
+  end process P_SYNC;
 
-  -- 2) Debounce-Logik
-  -- Finite State Machine für verschiedene Inputs (1x Button Druck, 2 x Button Druck)
-  process (clk)
+  -- Debounce logic: counter-based stability detection
+  P_REG_DEBOUNCE : process (i_clk)
   begin
-    if rising_edge(clk) then
-      if sync2 = btn_last then
-        if counter < COUNT_MAX then
-          counter <= counter + 1;
+    if rising_edge(i_clk) then
+      if s_sync2 = s_btn_last then
+        if s_counter < C_COUNT_MAX then
+          s_counter <= s_counter + 1;
         end if;
       else
-        counter <= 0;
+        s_counter <= 0;
       end if;
 
-      if counter = COUNT_MAX then
-        stable_btn <= sync2;
+      if s_counter = C_COUNT_MAX then
+        s_stable_btn <= s_sync2;
       end if;
 
-      btn_last <= sync2;
+      s_btn_last <= s_sync2;
     end if;
-  end process;
+  end process P_REG_DEBOUNCE;
 
-  btn_out <= stable_btn;
+  o_btn <= s_stable_btn;
 
-end rtl;
+end A_Rtl;
