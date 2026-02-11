@@ -2,107 +2,107 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity tb_debouncing is
+entity Tb_Debouncing is
 end entity;
 
-architecture sim of tb_debouncing is
+architecture A_Tb of Tb_Debouncing is
 
-  -- DUT Signale
-  signal clk_tb     : std_logic := '0';
-  signal btn_in_tb  : std_logic := '0';
-  signal btn_out_tb : std_logic;
+  -- DUT Signals
+  signal s_clk     : std_logic := '0';
+  signal s_btn_in  : std_logic := '0';
+  signal s_btn_out : std_logic;
 
   -- Clock Parameter
-  constant CLK_PERIOD : time := 20 ns; -- 50 MHz
+  constant C_CLK_PERIOD : time := 20 ns; -- 50 MHz
 
 begin
 
   ------------------------------------------------------------------
-  -- DUT Instanz
+  -- DUT Instance
   ------------------------------------------------------------------
-  DUT : entity work.debouncer
+  U_DUT : entity work.Debouncer
     generic map(
-      CLK_FREQ_HZ => 50_000_000,
-      DEBOUNCE_MS => 10
+      G_CLK_FREQ_HZ => 50_000_000,
+      G_DEBOUNCE_MS => 10
     )
     port map
     (
-      clk     => clk_tb,
-      btn_in  => btn_in_tb,
-      btn_out => btn_out_tb
+      i_clk => s_clk,
+      i_btn => s_btn_in,
+      o_btn => s_btn_out
     );
 
   ------------------------------------------------------------------
   -- Clock Generator
   ------------------------------------------------------------------
-  clk_process : process
+  P_CLK : process
   begin
     while true loop
-      clk_tb <= '0';
-      wait for CLK_PERIOD/2;
-      clk_tb <= '1';
-      wait for CLK_PERIOD/2;
+      s_clk <= '0';
+      wait for C_CLK_PERIOD/2;
+      s_clk <= '1';
+      wait for C_CLK_PERIOD/2;
     end loop;
-  end process;
+  end process P_CLK;
 
   ------------------------------------------------------------------
-  -- Stimulus Prozess
+  -- Stimulus Process
   ------------------------------------------------------------------
-  stim_proc : process
+  P_STIM : process
   begin
 
-    -- Startzustand
-    btn_in_tb <= '0';
+    -- Initial state
+    s_btn_in <= '0';
     wait for 100 ns;
 
     ------------------------------------------------------------------
-    -- Simuliertes Prellen beim Drücken
+    -- Simulated bouncing during press
     ------------------------------------------------------------------
-    -- Prellen: 0/1/0/1/0/1
-    btn_in_tb <= '1';
+    -- Bounce pattern: 0/1/0/1/0/1
+    s_btn_in <= '1';
     wait for 200 ns;
-    btn_in_tb <= '0';
+    s_btn_in <= '0';
     wait for 150 ns;
-    btn_in_tb <= '1';
+    s_btn_in <= '1';
     wait for 180 ns;
-    btn_in_tb <= '0';
+    s_btn_in <= '0';
     wait for 120 ns;
-    btn_in_tb <= '1';
+    s_btn_in <= '1';
     wait for 160 ns;
 
-    -- Jetzt stabil gedrückt
-    btn_in_tb <= '1';
+    -- Now stable pressed
+    s_btn_in <= '1';
     wait for 20 ms;
 
     ------------------------------------------------------------------
-    -- Stabil gedrückt halten
+    -- Keep stable pressed
     ------------------------------------------------------------------
     wait for 10 ms;
 
     ------------------------------------------------------------------
-    -- Prellen beim Loslassen
+    -- Bouncing during release
     ------------------------------------------------------------------
-    btn_in_tb <= '0';
+    s_btn_in <= '0';
     wait for 200 ns;
-    btn_in_tb <= '1';
+    s_btn_in <= '1';
     wait for 150 ns;
-    btn_in_tb <= '0';
+    s_btn_in <= '0';
     wait for 180 ns;
-    btn_in_tb <= '1';
+    s_btn_in <= '1';
     wait for 120 ns;
-    btn_in_tb <= '0';
+    s_btn_in <= '0';
     wait for 160 ns;
 
-    -- Jetzt stabil losgelassen
-    btn_in_tb <= '0';
+    -- Now stable released
+    s_btn_in <= '0';
     wait for 20 ms;
 
     ------------------------------------------------------------------
-    -- Simulation beenden
+    -- End simulation (Note: Severity failure is only used to stop execution of the simulation. )
     ------------------------------------------------------------------
     wait for 5 ms;
-    assert false report "Simulation beendet (TB)" severity failure;
+    assert false report "Simulation completed" severity failure;
 
-  end process;
+  end process P_STIM;
 
-end architecture sim;
+end architecture A_Tb;
