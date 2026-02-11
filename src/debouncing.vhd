@@ -8,9 +8,9 @@ entity Debouncer is
     G_DEBOUNCE_MS : integer := 10 -- 10 ms
   );
   port (
-    i_clk : in std_logic;
-    i_btn : in std_logic;
-    o_btn : out std_logic
+    i_clk           : in std_logic;
+    i_btn           : in std_logic;
+    o_btn_debounced : out std_logic
   );
 end entity;
 
@@ -38,7 +38,7 @@ begin
   P_REG_DEBOUNCE : process (i_clk)
   begin
     if rising_edge(i_clk) then
-      if s_sync2 = s_btn_last then
+      if s_sync2 /= s_stable_btn then
         if s_counter < C_COUNT_MAX then
           s_counter <= s_counter + 1;
         end if;
@@ -54,6 +54,6 @@ begin
     end if;
   end process P_REG_DEBOUNCE;
 
-  o_btn <= s_stable_btn;
+  o_btn_debounced <= s_stable_btn;
 
 end A_Rtl;
