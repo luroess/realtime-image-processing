@@ -1,0 +1,8 @@
+{
+  "editor.formatOnSave": true,
+  "files.autoSave": "onFocusChange",
+  "vhdl.format.enable": true,
+  "vhdl.linting.enable": true,
+  "terosHDL.simulator": "ghdl",
+  "terosHDL.waveformViewer": "gtkwave"
+}
