@@ -7,12 +7,12 @@ entity example_passthrough is
         rst           : in  std_logic;
         s_axis_tvalid : in  std_logic;
         s_axis_tready : out std_logic;
-        s_axis_tdata  : in  std_logic_vector(7 downto 0);
+        s_axis_tdata  : in  std_logic_vector(23 downto 0);
         s_axis_tlast  : in  std_logic;
         s_axis_tuser  : in  std_logic;
         m_axis_tvalid : out std_logic;
         m_axis_tready : in  std_logic;
-        m_axis_tdata  : out std_logic_vector(7 downto 0);
+        m_axis_tdata  : out std_logic_vector(23 downto 0);
         m_axis_tlast  : out std_logic;
         m_axis_tuser  : out std_logic
     );

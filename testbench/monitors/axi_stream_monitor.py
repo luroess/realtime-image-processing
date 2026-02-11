@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import numpy as np
 from cocotb.queue import Queue
-from cocotb.triggers import RisingEdge, with_timeout
-from cocotb.result import SimTimeoutError
+from cocotb.triggers import RisingEdge, SimTimeoutError, with_timeout
 
 from models.image_model import Image
 
@@ -25,9 +25,16 @@ class AxiStreamMonitor:
 
         self._frames: Queue[Image] = Queue()
 
+    @staticmethod
+    def _unpack_rgb(word: int) -> tuple[int, int, int]:
+        r = (word >> 16) & 0xFF
+        g = (word >> 8) & 0xFF
+        b = word & 0xFF
+        return (r, g, b)
+
     async def run(self) -> None:
         in_frame = False
-        pixels: list[int] = []
+        pixels: list[tuple[int, int, int]] = []
         line_pixels = 0
 
         while True:
@@ -50,7 +57,7 @@ class AxiStreamMonitor:
             if not in_frame:
                 continue
 
-            pixels.append(int(self.tdata.value))
+            pixels.append(self._unpack_rgb(int(self.tdata.value)))
             line_pixels += 1
 
             if int(self.tlast.value) == 1:
@@ -61,7 +68,8 @@ class AxiStreamMonitor:
                 line_pixels = 0
 
             if len(pixels) == self.width * self.height:
-                await self._frames.put(Image(self.width, self.height, pixels.copy()))
+                frame = np.asarray(pixels, dtype=np.uint8).reshape(self.height, self.width, 3)
+                await self._frames.put(Image(frame))
                 in_frame = False
 
     async def get_frame(self, timeout_ns: int = 100_000) -> Image:
