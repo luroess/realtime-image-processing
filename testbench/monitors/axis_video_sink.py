@@ -16,15 +16,15 @@ class AxiVideoStreamSink:
     def __init__(
         self,
         dut,
-        clk,
-        rst,
+        i_clk,
+        i_rst_n,
         prefix: str = "m_axis_video",
         reset_active_level: bool = True,
     ) -> None:
         self._sink = AxiStreamSink(
             bus=AxiStreamBus.from_prefix(dut, prefix),
-            clock=clk,
-            reset=rst,
+            clock=i_clk,
+            reset=i_rst_n,
             reset_active_level=reset_active_level,
         )
         self._byte_lanes = int(self._sink.byte_lanes)

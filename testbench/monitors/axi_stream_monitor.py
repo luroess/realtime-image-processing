@@ -10,10 +10,10 @@ from models.image_model import Image
 
 
 class AxiStreamMonitor:
-    def __init__(self, dut, clk, rst, width: int, height: int, prefix: str = "m_axis") -> None:
+    def __init__(self, dut, i_clk, i_rst_n, width: int, height: int, prefix: str = "m_axis") -> None:
         self.dut = dut
-        self.clk = clk
-        self.rst = rst
+        self.i_clk = i_clk
+        self.i_rst_n = i_rst_n
         self.width = width
         self.height = height
 
@@ -38,9 +38,9 @@ class AxiStreamMonitor:
         line_pixels = 0
 
         while True:
-            await RisingEdge(self.clk)
+            await RisingEdge(self.i_clk)
 
-            if int(self.rst.value) == 1:
+            if int(self.i_rst_n.value) == 1:
                 in_frame = False
                 pixels = []
                 line_pixels = 0

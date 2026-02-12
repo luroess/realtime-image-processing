@@ -16,7 +16,7 @@ TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 
 async def apply_reset(dut, cycles: int = 5) -> None:
-    dut.rst.value = 1
+    dut.i_rst_n.value = 1
     dut.s_axis_tvalid.value = 0
     dut.s_axis_tdata.value = 0
     dut.s_axis_tlast.value = 0
@@ -24,28 +24,28 @@ async def apply_reset(dut, cycles: int = 5) -> None:
     dut.m_axis_tready.value = 1
 
     for _ in range(cycles):
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.i_clk)
 
-    dut.rst.value = 0
-    await RisingEdge(dut.clk)
+    dut.i_rst_n.value = 0
+    await RisingEdge(dut.i_clk)
 
 
 async def run_frame_test(dut, image: Image, output_path: Path | None = None) -> None:
-    dut.rst.value = 1
+    dut.i_rst_n.value = 1
     dut.s_axis_tvalid.value = 0
     dut.s_axis_tdata.value = 0
     dut.s_axis_tlast.value = 0
     dut.s_axis_tuser.value = 0
     dut.m_axis_tready.value = 1
 
-    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
+    cocotb.start_soon(Clock(dut.i_clk, 10, unit="ns").start())
     await apply_reset(dut)
 
-    driver = AxiStreamDriver(dut=dut, clk=dut.clk, rst=dut.rst, prefix="s_axis")
+    driver = AxiStreamDriver(dut=dut, i_clk=dut.i_clk, i_rst_n=dut.i_rst_n, prefix="s_axis")
     monitor = AxiStreamMonitor(
         dut=dut,
-        clk=dut.clk,
-        rst=dut.rst,
+        i_clk=dut.i_clk,
+        i_rst_n=dut.i_rst_n,
         width=image.width,
         height=image.height,
         prefix="m_axis",

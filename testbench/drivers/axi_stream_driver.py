@@ -7,10 +7,10 @@ from models.image_model import Image
 
 
 class AxiStreamDriver:
-    def __init__(self, dut, clk, rst=None, prefix: str = "s_axis") -> None:
+    def __init__(self, dut, i_clk, i_rst_n=None, prefix: str = "s_axis") -> None:
         self.dut = dut
-        self.clk = clk
-        self.rst = rst
+        self.i_clk = i_clk
+        self.i_rst_n = i_rst_n
 
         self.tvalid = getattr(dut, f"{prefix}_tvalid")
         self.tready = getattr(dut, f"{prefix}_tready")
@@ -34,8 +34,8 @@ class AxiStreamDriver:
         return (r << 16) | (g << 8) | b
 
     async def send_frame(self, image: Image) -> None:
-        while self.rst is not None and int(self.rst.value) == 1:
-            await RisingEdge(self.clk)
+        while self.i_rst_n is not None and int(self.i_rst_n.value) == 1:
+            await RisingEdge(self.i_clk)
 
         for idx, pixel in enumerate(image.flat_pixels()):
             self.tvalid.value = 1
@@ -44,9 +44,9 @@ class AxiStreamDriver:
             self.tlast.value = 1 if image.is_last_in_line(idx) else 0
 
             while True:
-                await RisingEdge(self.clk)
+                await RisingEdge(self.i_clk)
                 if int(self.tready.value) == 1:
                     break
 
         self._drive_idle()
-        await RisingEdge(self.clk)
+        await RisingEdge(self.i_clk)

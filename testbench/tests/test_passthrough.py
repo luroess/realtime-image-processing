@@ -15,8 +15,8 @@ from models.image_model import Image
 from monitors.axis_video_sink import AxiVideoStreamSink
 from verification.scoreboard import Scoreboard
 
-CLK_SIGNAL = "clk"
-RST_SIGNAL = "rst"
+I_CLK_SIGNAL = "i_clk"
+I_RST_N_SIGNAL = "i_rst_n"
 S_AXIS_PREFIX = "s_axis_video"
 M_AXIS_PREFIX = "m_axis_video"
 RESET_ACTIVE_LEVEL = True
@@ -73,8 +73,8 @@ class PassthroughTestbench:
         self.dut = dut
         self.cfg = cfg
 
-        self.clk = getattr(dut, CLK_SIGNAL)
-        self.rst = getattr(dut, RST_SIGNAL)
+        self.i_clk = getattr(dut, I_CLK_SIGNAL)
+        self.i_rst_n = getattr(dut, I_RST_N_SIGNAL)
 
         # Cache stream ports once so monitor code remains compact.
         self.s_axis_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
@@ -99,7 +99,7 @@ class PassthroughTestbench:
     async def initialize(self) -> None:
         """Bring DUT to a known reset state and build stream endpoints."""
         # Drive startup values immediately to avoid an initial delta-cycle with unresolved reset.
-        self.rst.value = int(RESET_ACTIVE_LEVEL)
+        self.i_rst_n.value = int(RESET_ACTIVE_LEVEL)
         self.s_axis_tvalid.value = 0
         self.s_axis_tdata.value = 0
         self.s_axis_tlast.value = 0
@@ -107,28 +107,28 @@ class PassthroughTestbench:
         self.m_axis_tready.value = 0
 
         if not self._clock_started:
-            cocotb.start_soon(Clock(self.clk, 10, unit="ns").start())
+            cocotb.start_soon(Clock(self.i_clk, 10, unit="ns").start())
             self._clock_started = True
 
         await apply_reset(
             dut=self.dut,
-            clk=self.clk,
-            rst=self.rst,
+            i_clk=self.i_clk,
+            i_rst_n=self.i_rst_n,
             stream_input_prefix=S_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
         )
 
         self.source = AxiVideoStreamSource(
             dut=self.dut,
-            clk=self.clk,
-            rst=self.rst,
+            i_clk=self.i_clk,
+            i_rst_n=self.i_rst_n,
             prefix=S_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
         )
         self.sink = AxiVideoStreamSink(
             dut=self.dut,
-            clk=self.clk,
-            rst=self.rst,
+            i_clk=self.i_clk,
+            i_rst_n=self.i_rst_n,
             prefix=M_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
         )
@@ -145,7 +145,7 @@ class PassthroughTestbench:
             self._pause_task = cocotb.start_soon(
                 drive_sink_pause(
                     sink=self.sink,
-                    clk=self.clk,
+                    i_clk=self.i_clk,
                     pattern=self.cfg.pause_pattern,
                 ),
             )
@@ -205,7 +205,7 @@ class PassthroughTestbench:
             if self.cfg.check_handshake:
                 # Give pause driving a few cycles to establish deterministic READY patterns.
                 for _ in range(self.cfg.handshake_settle_cycles):
-                    await RisingEdge(self.clk)
+                    await RisingEdge(self.i_clk)
 
             await self.source.send_image(image)
 
@@ -235,7 +235,7 @@ class PassthroughTestbench:
 
         while accepted_beats < expected_beats:
             # Sample in read-only phase so assertions see stable values for this edge.
-            await RisingEdge(self.clk)
+            await RisingEdge(self.i_clk)
             await ReadOnly()
 
             # Enforce fully resolved outputs at all times (no X/Z/U windows on observed outputs).
@@ -245,7 +245,7 @@ class PassthroughTestbench:
             self._assert_resolved(self.m_axis_tlast, "m_axis_video_tlast")
             self._assert_resolved(self.m_axis_tuser, "m_axis_video_tuser")
 
-            if int(self.rst.value) == int(RESET_ACTIVE_LEVEL):
+            if int(self.i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
                 ready_low_run = 0
                 prev_stall_payload = None
                 accepted_beats = 0
