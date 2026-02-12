@@ -7,7 +7,6 @@ from pathlib import Path
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
-
 from drivers.axi_stream_driver import AxiStreamDriver
 from models.image_model import Image
 from monitors.axi_stream_monitor import AxiStreamMonitor

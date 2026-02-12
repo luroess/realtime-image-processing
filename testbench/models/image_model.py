@@ -19,7 +19,7 @@ class Image:
 
         if self.pixels.ndim != 3 or self.pixels.shape[2] != 3:
             raise ValueError(
-                f"Expected RGB image array with shape (H, W, 3), got shape={self.pixels.shape}"
+                f"Expected RGB image array with shape (H, W, 3), got shape={self.pixels.shape}",
             )
 
         if self.pixels.dtype != np.uint8:
@@ -28,14 +28,16 @@ class Image:
                 max_value = int(self.pixels.max())
                 if min_value < 0 or max_value > 255:
                     raise ValueError(
-                        f"Pixel values out of range [0, 255]: min={min_value}, max={max_value}"
+                        f"Pixel values out of range [0, 255]: min={min_value}, max={max_value}",
                     )
                 self.pixels = self.pixels.astype(np.uint8)
             else:
-                raise ValueError(f"Expected integer image dtype, got {self.pixels.dtype}")
+                raise ValueError(
+                    f"Expected integer image dtype, got {self.pixels.dtype}",
+                )
 
     @classmethod
-    def gradient(cls, width: int, height: int) -> "Image":
+    def gradient(cls, width: int, height: int) -> Image:
         """Generate a deterministic RGB gradient-style test frame."""
         y, x = np.indices((height, width), dtype=np.uint16)
         r = (x * 7 + y * 3) % 256
@@ -45,7 +47,7 @@ class Image:
         return cls(pixels=pixels)
 
     @classmethod
-    def from_png(cls, path: str | Path) -> "Image":
+    def from_png(cls, path: str | Path) -> Image:
         image = PILImage.open(path).convert("RGB")
         pixels = np.asarray(image, dtype=np.uint8)
         return cls(pixels=pixels)

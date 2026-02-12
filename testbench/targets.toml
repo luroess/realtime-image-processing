@@ -1,0 +1,11 @@
+[defaults]
+target = "example_passthrough"
+sim    = "ghdl"
+waves  = true
+
+# TODO: use rtl/example_passthrough.vhd instead! Ensure that you can run the test via "uv run tb-sim" without any errors before terminating.
+[targets.example_passthrough]
+description = "Sanity target for AXI4-Video passthrough pipeline checks."
+component   = "EXAMPLE_PASSTHROUGH"
+toplevel    = "example_passthrough"
+test_module = "tests.test_passthrough"

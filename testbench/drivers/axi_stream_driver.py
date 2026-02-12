@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from cocotb.triggers import RisingEdge
-
 from models.image_model import Image
 
 
