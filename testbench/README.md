@@ -6,7 +6,7 @@ Current setup verifies RGB24 stream pixels (`TDATA[23:0]` as `R:G:B`) and uses `
 ## Structure
 
 - `tests/`: cocotb test cases.
-- `stimuli/`: reusable traffic generators (AXI4-Video source + pause patterns).
+- `drivers/`: reusable traffic generators (AXI4-Video source + pause patterns).
 - `monitors/`: protocol-aware capture modules (AXI4-Video sink).
 - `models/`: image model and image I/O.
 - `verification/`: scoreboards and comparison logic.
@@ -43,6 +43,7 @@ Use `sim/targets.toml` as the single source of truth for simulation targets.
 
 ```bash
 uv run tb-sim --list-targets
+uv run tb-sim --target test_example
 uv run tb-sim --target example_passthrough
 uv run tb-sim --toplevel example_passthrough
 ```
@@ -89,7 +90,7 @@ surfer testbench/sim_build/test_example/example_passthrough_example_passthrough/
 ## Testbench Flow
 
 1. `tests/test_example.py` creates source/sink endpoints.
-2. `stimuli/axis_video_source.py` drives AXI4-Video traffic via `cocotbext-axi`.
+2. `drivers/axis_video_source.py` drives AXI4-Video traffic via `cocotbext-axi`.
 3. `monitors/axis_video_sink.py` captures AXI4-Video output via `cocotbext-axi`.
 4. `verification/scoreboard.py` compares input and output pixels.
 5. cocotb reports pass/fail in `results.xml` (and the PNG test also writes `sim_build/lenna_512_512_out_rgb.png`).
