@@ -7,13 +7,13 @@ from cocotb.triggers import RisingEdge
 
 async def apply_reset(
     dut,
-    clk,
-    rst,
+    i_clk,
+    i_rst_n,
     cycles: int = 3,
     stream_input_prefix: str = "s_axis_video",
     reset_active_level: bool = True,
 ) -> None:
-    rst.value = int(reset_active_level)
+    i_rst_n.value = int(reset_active_level)
 
     getattr(dut, f"{stream_input_prefix}_tvalid").value = 0
     getattr(dut, f"{stream_input_prefix}_tdata").value = 0
@@ -21,7 +21,7 @@ async def apply_reset(
     getattr(dut, f"{stream_input_prefix}_tuser").value = 0
 
     for _ in range(cycles):
-        await RisingEdge(clk)
+        await RisingEdge(i_clk)
 
-    rst.value = int(not reset_active_level)
-    await RisingEdge(clk)
+    i_rst_n.value = int(not reset_active_level)
+    await RisingEdge(i_clk)

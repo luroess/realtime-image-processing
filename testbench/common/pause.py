@@ -17,7 +17,7 @@ class PauseControllable(Protocol):
 async def drive_sink_pause(
     *,
     sink: PauseControllable,
-    clk: Any,
+    i_clk: Any,
     pattern: tuple[int, ...],
 ) -> None:
     """Drive sink pause (`1`=pause, `0`=ready) on falling clock edges."""
@@ -28,7 +28,7 @@ async def drive_sink_pause(
     pattern_iter = itertools.cycle(pattern)
 
     while True:
-        await FallingEdge(clk)
+        await FallingEdge(i_clk)
         sink.set_pause(bool(next(pattern_iter)))
 
 
