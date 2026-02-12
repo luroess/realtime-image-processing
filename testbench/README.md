@@ -29,6 +29,8 @@ sudo apt update
 sudo apt install -y ghdl make
 pip install uv
 ```
+[Installation uv](https://docs.astral.sh/uv/getting-started/installation/)
+[Installation GHDL](https://github.com/ghdl/ghdl)
 
 ## Run
 
@@ -75,6 +77,7 @@ For non-passthrough DUTs, set `test_module` to a DUT-specific cocotb module that
 Signal names/prefixes are hard-coded inside each test module.
 
 ### Waveforms for Surfer
+[Surfer install instructions](https://github.com/ripopov/surfer)
 
 Wave dumps are configured via `waves` in `sim/targets.toml` (default is enabled).
 
