@@ -98,16 +98,17 @@ class PassthroughTestbench:
 
     async def initialize(self) -> None:
         """Bring DUT to a known reset state and build stream endpoints."""
-        if not self._clock_started:
-            cocotb.start_soon(Clock(self.clk, 10, unit="ns").start())
-            self._clock_started = True
-
-        # Keep input side quiescent while reset is active so no accidental transfers occur.
+        # Drive startup values immediately to avoid an initial delta-cycle with unresolved reset.
         self.rst.value = int(RESET_ACTIVE_LEVEL)
         self.s_axis_tvalid.value = 0
         self.s_axis_tdata.value = 0
         self.s_axis_tlast.value = 0
         self.s_axis_tuser.value = 0
+        self.m_axis_tready.value = 0
+
+        if not self._clock_started:
+            cocotb.start_soon(Clock(self.clk, 10, unit="ns").start())
+            self._clock_started = True
 
         await apply_reset(
             dut=self.dut,
