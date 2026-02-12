@@ -3,15 +3,20 @@ target = "example_passthrough"
 sim    = "ghdl"
 waves  = true
 
-# TODO: use rtl/example_passthrough.vhd instead! Ensure that you can run the test via "uv run tb-sim" without any errors before terminating.
 [targets.example_passthrough]
 description = "Sanity target for AXI4-Video passthrough pipeline checks."
-component   = "EXAMPLE_PASSTHROUGH"
 toplevel    = "example_passthrough"
 test_module = "tests.test_passthrough"
+sources     = ["rtl/EXAMPLE_PASSTHROUGH/hdl/*.vhd"]
 
 [targets.test_example]
 description = "Run legacy single-frame example tests only (tests.test_example)."
-component   = "EXAMPLE_PASSTHROUGH"
 toplevel    = "example_passthrough"
 test_module = "tests.test_example"
+sources     = ["rtl/EXAMPLE_PASSTHROUGH/hdl/*.vhd"]
+
+[targets.axi_rgb_to_grayscale]
+description = "AXI4-Stream RGB to grayscale transform checks."
+toplevel    = "axirgbtograyscale"
+test_module = "tests.test_axi_rgb_to_grayscale"
+sources     = ["rtl/RGB_TO_GRAYSCALE/hdl/*.vhd"]
