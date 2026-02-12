@@ -13,42 +13,55 @@ from monitors.axi_stream_monitor import AxiStreamMonitor
 from verification.scoreboard import Scoreboard
 
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
+S_AXIS_PREFIX = "s_axis_video"
+M_AXIS_PREFIX = "m_axis_video"
+RESET_ACTIVE_LEVEL = True
 
 
-async def apply_reset(dut, cycles: int = 5) -> None:
-    dut.i_rst_n.value = 1
-    dut.s_axis_tvalid.value = 0
-    dut.s_axis_tdata.value = 0
-    dut.s_axis_tlast.value = 0
-    dut.s_axis_tuser.value = 0
-    dut.m_axis_tready.value = 1
+def _get_first_attr(dut, names: tuple[str, ...]):
+    for name in names:
+        if hasattr(dut, name):
+            return getattr(dut, name)
+    raise AttributeError(f"DUT has none of the expected signals: {', '.join(names)}")
+
+
+async def apply_reset(dut, clk, rst, cycles: int = 5) -> None:
+    rst.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    getattr(dut, f"{M_AXIS_PREFIX}_tready").value = 1
 
     for _ in range(cycles):
-        await RisingEdge(dut.i_clk)
+        await RisingEdge(clk)
 
-    dut.i_rst_n.value = 0
-    await RisingEdge(dut.i_clk)
+    rst.value = int(not RESET_ACTIVE_LEVEL)
+    await RisingEdge(clk)
 
 
 async def run_frame_test(dut, image: Image, output_path: Path | None = None) -> None:
-    dut.i_rst_n.value = 1
-    dut.s_axis_tvalid.value = 0
-    dut.s_axis_tdata.value = 0
-    dut.s_axis_tlast.value = 0
-    dut.s_axis_tuser.value = 0
-    dut.m_axis_tready.value = 1
+    clk = _get_first_attr(dut, ("clk", "i_clk"))
+    rst = _get_first_attr(dut, ("rst", "i_rst_n"))
 
-    cocotb.start_soon(Clock(dut.i_clk, 10, unit="ns").start())
-    await apply_reset(dut)
+    rst.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    getattr(dut, f"{M_AXIS_PREFIX}_tready").value = 1
 
-    driver = AxiStreamDriver(dut=dut, i_clk=dut.i_clk, i_rst_n=dut.i_rst_n, prefix="s_axis")
+    cocotb.start_soon(Clock(clk, 10, unit="ns").start())
+    await apply_reset(dut=dut, clk=clk, rst=rst)
+
+    driver = AxiStreamDriver(dut=dut, i_clk=clk, i_rst_n=rst, prefix=S_AXIS_PREFIX)
     monitor = AxiStreamMonitor(
         dut=dut,
-        i_clk=dut.i_clk,
-        i_rst_n=dut.i_rst_n,
+        i_clk=clk,
+        i_rst_n=rst,
         width=image.width,
         height=image.height,
-        prefix="m_axis",
+        prefix=M_AXIS_PREFIX,
     )
     scoreboard = Scoreboard()
 
