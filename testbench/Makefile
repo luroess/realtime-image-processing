@@ -13,4 +13,9 @@ VERILOG_SOURCES +=
 # Let cocotb discover local testbench modules (drivers/monitors/models).
 export PYTHONPATH := $(abspath .):$(PYTHONPATH)
 
+# GHDL specific flags to generate a waveform file
+ifeq ($(SIM), ghdl)
+    SIM_ARGS += --wave=sim_build/wave.ghw
+endif
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
