@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity Debouncer is
   generic (
-    G_CLK_FREQ_HZ : integer := 50_000_000; -- 50 MHz
+    G_CLK_FREQ_HZ : integer := 100_000_000; -- 50 MHz
     G_DEBOUNCE_MS : integer := 10 -- 10 ms
   );
   port (
