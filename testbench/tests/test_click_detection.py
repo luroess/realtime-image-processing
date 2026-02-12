@@ -7,6 +7,7 @@ from pathlib import Path
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
+from cocotb.utils import get_sim_time
 
 from drivers.axi_stream_driver import AxiStreamDriver
 from models.image_model import Image
@@ -16,7 +17,7 @@ from verification.scoreboard import Scoreboard
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 # CONSTANTS
-CLK_PERIOD_NS = 20           # 50 MHz
+CLK_PERIOD_NS = 10           # 50 MHz
 CLK_TIMER_MS = 10 # TODO: 500 ms
 CLK_TIMER_NS = CLK_TIMER_MS * 1_000_000
 
@@ -57,12 +58,16 @@ async def test_single_click(dut) -> None:
     await check_output(dut, 0, 0, 100)
 
     dut.i_btn_debounced.value = '1'
+    print(f"Button => 1: {get_sim_time(units='ns')} ns")
     await Timer(50, unit="ns")
 
     dut.i_btn_debounced.value = '0'
+    print(f"Button => 0: {get_sim_time(units='ns')} ns")
     await Timer(CLK_TIMER_MS, unit="ms")
     await RisingEdge(dut.i_clk)
+    await RisingEdge(dut.i_clk)
     dut.i_btn_debounced.value = '1'
+    print(f"Check Ouput: {get_sim_time(units='ns')} ns")
     await check_output(dut, 1, 0, 0)
 
 
@@ -72,7 +77,30 @@ async def test_single_click(dut) -> None:
 
 @cocotb.test()
 async def test_double_click(dut) -> None:
-    cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
+    """Test Click Detection Logic for double click."""
 
-    dut.i_btn_debounced.value = 0
-    await(check_output(dut, 0, 0, 100))
+    cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
+    await apply_reset(dut)
+
+    dut.i_btn_debounced.value = '0'
+    await check_output(dut, 0, 0, 100)
+
+    dut.i_btn_debounced.value = '1'
+    print(f"Button => 1: {get_sim_time(units='ns')} ns")
+    await Timer(50, unit="ns")
+
+    dut.i_btn_debounced.value = '0'
+    await check_output(dut, 0, 0, 100)
+
+    dut.i_btn_debounced.value = '1'
+    print(f"Button => 1: {get_sim_time(units='ns')} ns")
+    await Timer(50, unit="ns")
+
+    dut.i_btn_debounced.value = '0'
+    print(f"Button => 0: {get_sim_time(units='ns')} ns")
+    await Timer(CLK_TIMER_MS, unit="ms")
+    await RisingEdge(dut.i_clk)
+    await RisingEdge(dut.i_clk)
+    dut.i_btn_debounced.value = '1'
+    print(f"Check Ouput: {get_sim_time(units='ns')} ns")
+    await check_output(dut, 0, 1, 0)
