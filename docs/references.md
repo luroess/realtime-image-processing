@@ -22,6 +22,9 @@ This file collects the full list of board, tool, and design references used with
 ## AMD/Xilinx Video Pipeline Docs
 
 - [UG934: AXI4-Stream Video IP and System Design Guide](https://docs.amd.com/r/en-US/ug934_axi_videoIP)
+- [UG934 (local project copy)](../.codex/ug934_axi_videoIP.pdf)
+- [Project AXI4-Stream video notes](pl_video_stream.md)
+- [AXI4-Stream wrapper implementation guide (project)](axi4s_ip_wrapper_guide.md)
 - [PG232: MIPI CSI-2 Receiver Subsystem](https://docs.amd.com/r/en-US/pg232-mipi-csi2-rx)
 - [PG043: Video In to AXI4-Stream](https://docs.amd.com/r/en-US/pg043_v_vid_in_axi4s)
 - [PG044: AXI4-Stream to Video Out](https://docs.amd.com/r/en-US/pg044_v_axis_vid_out)
@@ -56,4 +59,5 @@ This file collects the full list of board, tool, and design references used with
 - [BT656_to_AXI4S](https://github.com/dylanmsu/BT656_to_AXI4S)
 
 ### Non-VHDL
-- [Image-processing---Verilog](https://github.com/Galapple/Image-processing---Verilog)
+- [/georgeyhere/FPGA-Video-Processing](https://github.com/georgeyhere/FPGA-Video-Processing/tree/master)
+- [/Galapple/Image-processing---Verilog](https://github.com/Galapple/Image-processing---Verilog)
