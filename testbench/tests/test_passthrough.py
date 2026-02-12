@@ -8,9 +8,9 @@ from pathlib import Path
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
+from common.backpressure import drive_sink_pause
 from common.reset import apply_reset
 from drivers.axis_video_source import AxiVideoStreamSource
-from drivers.backpressure import drive_sink_pause
 from models.image_model import Image
 from monitors.axis_video_sink import AxiVideoStreamSink
 from verification.scoreboard import Scoreboard
