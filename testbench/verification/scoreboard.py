@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-
 from models.image_model import Image
 
 
@@ -17,7 +16,7 @@ class Scoreboard:
             raise AssertionError(
                 "Image dimensions mismatch: "
                 f"expected={expected.width}x{expected.height}x{expected.channels}, "
-                f"received={received.width}x{received.height}x{received.channels}"
+                f"received={received.width}x{received.height}x{received.channels}",
             )
 
         if np.array_equal(expected.pixels, received.pixels):
@@ -33,5 +32,5 @@ class Scoreboard:
 
         raise AssertionError(
             f"First pixel mismatch at index={idx} (x={int(x)}, y={int(y)}, ch={ch}): "
-            f"expected={exp_px}, received={got_px}"
+            f"expected={exp_px}, received={got_px}",
         )

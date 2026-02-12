@@ -1,7 +1,11 @@
+[build-system]
+requires      = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "testbench"
 version = "0.1.0"
-description = "Add your description here"
+description = "Cocotb verification environment for AXI4-Video FPGA blocks"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -12,3 +16,26 @@ dependencies = [
     "pillow>=11.1.0",
     "pytest>=9.0.2",
 ]
+
+    [project.scripts]
+    tb-sim = "sim.run:main"
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+include = [
+    "sim*",
+    "common*",
+    "drivers*",
+    "models*",
+    "monitors*",
+    "stimuli*",
+    "verification*",
+    "tests*",
+]
+exclude = ["sim_build*", "images*"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

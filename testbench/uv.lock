@@ -253,7 +253,7 @@ wheels = [
 [[package]]
 name = "testbench"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "cocotb" },
     { name = "cocotbext-axi" },

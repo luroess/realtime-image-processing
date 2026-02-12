@@ -22,7 +22,6 @@ This file collects the full list of board, tool, and design references used with
 ## AMD/Xilinx Video Pipeline Docs
 
 - [UG934: AXI4-Stream Video IP and System Design Guide](https://docs.amd.com/r/en-US/ug934_axi_videoIP)
-- [UG934 (local project copy)](../.codex/ug934_axi_videoIP.pdf)
 - [Project AXI4-Stream video notes](pl_video_stream.md)
 - [AXI4-Stream wrapper implementation guide (project)](axi4s_ip_wrapper_guide.md)
 - [PG232: MIPI CSI-2 Receiver Subsystem](https://docs.amd.com/r/en-US/pg232-mipi-csi2-rx)

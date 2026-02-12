@@ -4,6 +4,8 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+*.egg-info/
+*.eff-info/
 
 # cocotb build dirs and junit outputs
 sim_build/
