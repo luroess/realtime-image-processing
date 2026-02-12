@@ -166,9 +166,10 @@ class PassthroughTestbench:
                 f"required>={self.cfg.min_ready_low_run}"
             )
 
-        assert self.handshake_stats.saw_stall, (
-            "Expected at least one VALID=1, READY=0 stall cycle."
-        )
+        if self.cfg.with_backpressure or self.cfg.min_ready_low_run > 0:
+            assert self.handshake_stats.saw_stall, (
+                "Expected at least one VALID=1, READY=0 stall cycle."
+            )
 
         expected_beats = width * height
         assert self.handshake_stats.accepted_beats == expected_beats, (
@@ -200,6 +201,9 @@ class PassthroughTestbench:
         assert self.source is not None
         assert self.sink is not None
 
+        if self.cfg.check_handshake:
+            # Reset handshake statistics so each frame is checked independently.
+            self.handshake_stats = HandshakeStats()
         self._start_optional_tasks(width=image.width, height=image.height)
         try:
             if self.cfg.check_handshake:
