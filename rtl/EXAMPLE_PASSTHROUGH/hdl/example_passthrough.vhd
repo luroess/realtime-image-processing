@@ -3,8 +3,8 @@ library ieee;
 
 entity example_passthrough is
   port (
-    i_clk                 : in  std_logic;
-    i_rst_n                 : in  std_logic;
+    i_clk               : in  std_logic;
+    i_rst_n             : in  std_logic;
     s_axis_video_tvalid : in  std_logic;
     s_axis_video_tready : out std_logic;
     s_axis_video_tdata  : in  std_logic_vector(23 downto 0);
