@@ -4,8 +4,8 @@ use ieee.numeric_std.all;
 
 entity ClickDetector is
   generic (
-    G_CLK_FREQ_HZ    : integer := 50_000_000; -- 50 MHz
-    G_CLICK_TIMER_MS : integer := 10 -- TODO: 0,5s
+    G_CLK_FREQ_HZ    : integer := 100_000_000; -- 100 MHz
+    G_CLICK_TIMER_MS : integer := 500 -- 0,5s
   );
   port (
     i_clk           : in std_logic;
@@ -70,7 +70,7 @@ begin
           when ST_BTN_PRESSED =>
             if i_btn_debounced = '0' then
               s_counter       <= s_counter + 1;
-              s_timer         <= 0;
+              s_timer         <= 1;
               s_current_state <= ST_BTN_RELEASED;
             end if;
 

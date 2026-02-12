@@ -17,8 +17,8 @@ from verification.scoreboard import Scoreboard
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 # CONSTANTS
-CLK_PERIOD_NS = 10           # 50 MHz
-CLK_TIMER_MS = 10 # TODO: 500 ms
+CLK_PERIOD_NS = 10          # 100 MHz
+CLK_TIMER_MS = 500          # 500 ms
 CLK_TIMER_NS = CLK_TIMER_MS * 1_000_000
 
 
