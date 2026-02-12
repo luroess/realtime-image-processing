@@ -151,14 +151,7 @@ def main() -> None:
     )
 
     if waves:
-        wave_name = None
-        public_waves_file = getattr(runner, "waves_file", None)
-        if callable(public_waves_file):
-            wave_name = public_waves_file()
-        else:
-            private_waves_file = getattr(runner, "_waves_file", None)
-            if callable(private_waves_file):
-                wave_name = private_waves_file()
+        wave_name = runner._waves_file()
         if wave_name:
             wave_path = test_dir / wave_name
             if wave_path.exists():

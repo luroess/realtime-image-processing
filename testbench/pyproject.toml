@@ -17,7 +17,7 @@ dependencies = [
     "pytest>=9.0.2",
 ]
 
-[project.scripts]
+    [project.scripts]
     tb-sim = "sim.run:main"
 
 [tool.uv]

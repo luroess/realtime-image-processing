@@ -23,10 +23,35 @@ begin
   -- Keep output buses deterministic in idle cycles:
   -- when input VALID is low, sidebands/data are forced to zero instead of propagating don't-care values.
   -- Treat unknown reset/valid values as idle during simulation startup to prevent U/X propagation.
-  s_axis_video_tready <= '0' when i_rst_n /= '0' else m_axis_video_tready;
-  m_axis_video_tvalid <= '0' when i_rst_n /= '0' else s_axis_video_tvalid;
-  m_axis_video_tdata  <= (others => '0') when (i_rst_n /= '0') or (s_axis_video_tvalid /= '1') else s_axis_video_tdata;
-  m_axis_video_tlast  <= '0' when (i_rst_n /= '0') or (s_axis_video_tvalid /= '1') else s_axis_video_tlast;
-  m_axis_video_tuser  <= '0' when (i_rst_n /= '0') or (s_axis_video_tvalid /= '1') else s_axis_video_tuser;
-
+  <<<<<<< HEAD s_axis_video_tready <= '0' when i_rst_n /= '0'
+else
+  m_axis_video_tready;
+  m_axis_video_tvalid <= '0' when i_rst_n /= '0'
+else
+  s_axis_video_tvalid;
+  m_axis_video_tdata <= (others => '0') when (i_rst_n /= '0') or (s_axis_video_tvalid /= '1')
+else
+  s_axis_video_tdata;
+  m_axis_video_tlast <= '0' when (i_rst_n /= '0') or (s_axis_video_tvalid /= '1')
+else
+  s_axis_video_tlast;
+  m_axis_video_tuser <= '0' when (i_rst_n /= '0') or (s_axis_video_tvalid /= '1')
+else
+  s_axis_video_tuser;
+  = = = = = = = s_axis_video_tready <= '0' when rst /= '0'
+else
+  m_axis_video_tready;
+  m_axis_video_tvalid <= '0' when rst /= '0'
+else
+  s_axis_video_tvalid;
+  m_axis_video_tdata <= (others => '0') when (rst /= '0') or (s_axis_video_tvalid /= '1')
+else
+  s_axis_video_tdata;
+  m_axis_video_tlast <= '0' when (rst /= '0') or (s_axis_video_tvalid /= '1')
+else
+  s_axis_video_tlast;
+  m_axis_video_tuser <= '0' when (rst /= '0') or (s_axis_video_tvalid /= '1')
+else
+  s_axis_video_tuser;
+  >>>>>> > f99c60f(feat(testbench): add cocotbesxt - axi support)
 end architecture;
