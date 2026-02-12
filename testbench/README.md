@@ -41,7 +41,7 @@ uv run tb-sim
 
 ### Target + DUT selection (recommended)
 
-Use `sim/targets.toml` as the single source of truth for simulation targets.
+Use `targets.toml` as the single source of truth for simulation targets.
 
 ```bash
 uv run tb-sim --list-targets
