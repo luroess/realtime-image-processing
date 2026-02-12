@@ -31,6 +31,13 @@ async def apply_reset(dut, cycles: int = 5) -> None:
 
 
 async def run_frame_test(dut, image: Image, output_path: Path | None = None) -> None:
+    dut.rst.value = 1
+    dut.s_axis_tvalid.value = 0
+    dut.s_axis_tdata.value = 0
+    dut.s_axis_tlast.value = 0
+    dut.s_axis_tuser.value = 0
+    dut.m_axis_tready.value = 1
+
     cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
     await apply_reset(dut)
 
