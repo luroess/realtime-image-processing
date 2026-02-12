@@ -15,7 +15,7 @@ from verification.scoreboard import Scoreboard
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 S_AXIS_PREFIX = "s_axis_video"
 M_AXIS_PREFIX = "m_axis_video"
-RESET_ACTIVE_LEVEL = True
+RESET_ACTIVE_LEVEL = False
 
 
 def _get_first_attr(dut, names: tuple[str, ...]):

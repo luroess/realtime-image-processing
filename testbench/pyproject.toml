@@ -12,12 +12,12 @@ dependencies = [
     "cocotb>=2.0.1",
     "cocotbext-axi>=0.1.26",
     "numpy>=2.2.2",
-    "opencv-python>=4.13.0.92",
+
     "pillow>=11.1.0",
     "pytest>=9.0.2",
 ]
 
-    [project.scripts]
+[project.scripts]
     tb-sim = "sim.run:main"
 
 [tool.uv]
