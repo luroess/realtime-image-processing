@@ -42,7 +42,7 @@ def _load_targets(tb_root: Path) -> tuple[dict[str, Any], dict[str, dict[str, An
     defaults = data.get("defaults", {})
     targets = data.get("targets", {})
     if not isinstance(targets, dict) or not targets:
-        raise ValueError("No targets defined in sim/targets.toml")
+        raise ValueError("No targets defined in targets.toml")
 
     return defaults, targets
 
@@ -62,6 +62,67 @@ def _collect_component_sources(repo_root: Path, component: str) -> list[Path]:
     return sources
 
 
+def _collect_sources_from_entries(repo_root: Path, entries: list[str]) -> list[Path]:
+    """Resolve ordered source entries from targets.toml.
+
+    Each entry may be a file path, directory path (collects ``*.vhd``), or glob pattern.
+    Paths are resolved relative to the repository root.
+    """
+    collected: list[Path] = []
+    seen: set[Path] = set()
+
+    for entry in entries:
+        token = entry.strip()
+        if not token:
+            raise ValueError("Empty source entry in 'sources'.")
+
+        has_glob = any(ch in token for ch in "*?[")
+        if has_glob:
+            matches = sorted(path for path in repo_root.glob(token) if path.is_file())
+            if not matches:
+                raise FileNotFoundError(f"Source glob matched no files: {token}")
+        else:
+            path = (repo_root / token).resolve()
+            if path.is_dir():
+                matches = sorted(path.glob("*.vhd"))
+                if not matches:
+                    raise FileNotFoundError(
+                        f"Source directory contains no VHDL files: {path}",
+                    )
+            elif path.is_file():
+                matches = [path]
+            else:
+                raise FileNotFoundError(f"Source path does not exist: {token}")
+
+        for source in matches:
+            resolved = source.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                collected.append(resolved)
+
+    if not collected:
+        raise ValueError("No HDL sources resolved from 'sources'.")
+
+    return collected
+
+
+def _collect_sources(repo_root: Path, config: dict[str, Any]) -> list[Path]:
+    """Resolve HDL sources from either explicit ``sources`` or legacy ``component``."""
+    sources_cfg = config.get("sources")
+    if sources_cfg is not None:
+        if not isinstance(sources_cfg, list) or not all(
+            isinstance(v, str) for v in sources_cfg
+        ):
+            raise ValueError("'sources' must be a list of path/glob strings.")
+        return _collect_sources_from_entries(repo_root=repo_root, entries=sources_cfg)
+
+    component = config.get("component")
+    if component:
+        return _collect_component_sources(repo_root=repo_root, component=str(component))
+
+    raise ValueError("Target must define either 'sources' or 'component'.")
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run cocotb simulation target.")
     parser.add_argument(
@@ -69,7 +130,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List available targets and exit.",
     )
-    parser.add_argument("--target", help="Target name from sim/targets.toml.")
+    parser.add_argument("--target", help="Target name from targets.toml.")
     parser.add_argument("--toplevel", help="HDL toplevel entity/module name.")
     return parser
 
@@ -98,7 +159,7 @@ def _resolve_config(tb_root: Path, args: argparse.Namespace) -> dict[str, Any]:
     if args.toplevel:
         config["toplevel"] = args.toplevel
 
-    required_keys = ("sim", "component", "toplevel", "test_module")
+    required_keys = ("sim", "toplevel", "test_module")
     missing = [k for k in required_keys if not config.get(k)]
     if missing:
         raise ValueError(
@@ -116,15 +177,19 @@ def main() -> None:
     config = _resolve_config(tb_root=tb_root, args=args)
 
     sim = str(config["sim"])
-    component = str(config["component"])
+    component = str(config["component"]) if config.get("component") else None
     toplevel = str(config["toplevel"])
     test_module = str(config["test_module"])
     waves = bool(config["waves"])
 
-    sources = _collect_component_sources(repo_root=repo_root, component=component)
+    sources = _collect_sources(repo_root=repo_root, config=config)
 
     tb_name = _derive_tb_name(test_module)
-    sim_root = tb_root / "sim_build" / tb_name / f"{component.lower()}_{toplevel}"
+    if component:
+        build_key = component.lower()
+    else:
+        build_key = _sanitize_name(str(config["target"])).lower()
+    sim_root = tb_root / "sim_build" / tb_name / f"{build_key}_{toplevel}"
     build_dir = sim_root / "build"
     # GHDL resolves the work library from the current working directory.
     # Run tests in build_dir to keep entity/config lookup consistent.
