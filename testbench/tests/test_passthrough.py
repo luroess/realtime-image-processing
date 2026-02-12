@@ -8,7 +8,7 @@ from pathlib import Path
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
-from common.backpressure import drive_sink_pause
+from common.pause import drive_sink_pause
 from common.reset import apply_reset
 from drivers.axis_video_source import AxiVideoStreamSource
 from models.image_model import Image
