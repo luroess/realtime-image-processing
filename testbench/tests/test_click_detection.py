@@ -18,7 +18,7 @@ TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 # CONSTANTS
 CLK_PERIOD_NS = 10          # 100 MHz
-CLK_Timer_MS = 500          # 0,5s, change to 10ms for testing
+CLK_Timer_MS = 10          # TODO: 0,5s, change to 10ms for testing
 CLK_Timer_NS = CLK_Timer_MS * 1_000_000
 
 
@@ -32,10 +32,16 @@ async def apply_reset(dut, cycles: int = 5) -> None:
     dut.i_rst.value = 0
     await RisingEdge(dut.i_clk)
 
-async def check_output(dut, expected_single_click, expected_double_click, expected_triple_click, wait_duration_ns):
+    await check_output(dut, 1, 0, 0, 10)
+
+
+async def check_output(dut, expected_single_click, expected_double_click, expected_triple_click, wait_duration_ns, stable_duration_ns=0):
     """
     Wait duration_ns and check that the debounced output is stable.
     """
+
+    print(f"Check Output: {get_sim_time(unit='ns')} ns")
+
     if wait_duration_ns != 0:
         await Timer(wait_duration_ns, unit="ns")
     if dut.o_single_click.value != expected_single_click:
@@ -50,195 +56,135 @@ async def check_output(dut, expected_single_click, expected_double_click, expect
         raise Exception(
             f"Double Click output mismatch! Expected {expected_single_click}, {expected_double_click}, {expected_triple_click} , got {int(dut.o_single_click.value)}, {int(dut.o_double_click.value)}, {int(dut.o_triple_click.value)}"
         )
+    
+    if stable_duration_ns != 0:
+        await check_output(dut, expected_single_click, expected_double_click, expected_triple_click, stable_duration_ns)
+        
+    
+async def set_i_btn_debounced_value_and_wait(dut, i_btn_debounced_value, wait_duration, wait_duration_unit='ns'):
+    dut.i_btn_debounced.value = i_btn_debounced_value
+    
+    print(f"Button => {i_btn_debounced_value}: {get_sim_time(unit='ns')} ns")
+
+    if wait_duration != 0:
+        await Timer(wait_duration, unit=wait_duration_unit)
+
+
+async def perform_clicks(dut, number_of_clicks):
+    for i in range(number_of_clicks - 1):
+        await set_i_btn_debounced_value_and_wait(dut, 1, 2 * CLK_PERIOD_NS)
+        await set_i_btn_debounced_value_and_wait(dut, 0, 0)
+        await check_output(dut, 1, 0, 0, 10)
+
+    await set_i_btn_debounced_value_and_wait(dut, 1, 2 * CLK_PERIOD_NS)
+    await set_i_btn_debounced_value_and_wait(dut, 0, CLK_Timer_MS, 'ms')
+
 
 @cocotb.test()
 async def test_single_click(dut) -> None:
     """Test Click Detection Logic for single click."""
 
+    # --------------------------------------------------
+    # Reset
+    # --------------------------------------------------
+
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await apply_reset(dut)
-    await check_output(dut, 1, 0, 0, 10)
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
+    # --------------------------------------------------
+    # 1 Click
+    # --------------------------------------------------
+    await perform_clicks(dut, 1)
 
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await Timer(CLK_Timer_MS, unit="ms")
-    
-    print(f"Check Output: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
-    
-    print(f"Check if Output is stable: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 50)
-
-
-
-
-    
+    await check_output(dut, 1, 0, 0, 10, 50)
+  
 
 @cocotb.test()
 async def test_double_click(dut) -> None:
     """Test Click Detection Logic for double click."""
 
+    # --------------------------------------------------
+    # Reset
+    # --------------------------------------------------
+
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await apply_reset(dut)
 
-    await check_output(dut, 1, 0, 0, 10)
+    # --------------------------------------------------
+    # 2 Clicks
+    # --------------------------------------------------
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
+    await perform_clicks(dut, 2)
 
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
+    await check_output(dut, 1, 1, 0, 10, 50)
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await Timer(CLK_Timer_MS, unit="ms")
-
-    print(f"Check Output: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 0, 10)
-    
-    print(f"Check if Output is stable: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 0, 50)
 
 @cocotb.test()
 async def test_triple_click(dut) -> None:
     """Test Click Detection Logic for triple click."""
 
+    # --------------------------------------------------
+    # Reset
+    # --------------------------------------------------
+
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await apply_reset(dut)
 
-    await check_output(dut, 1, 0, 0, 10)
+    # --------------------------------------------------
+    # 3 Clicks
+    # --------------------------------------------------
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
+    await perform_clicks(dut, 3)
 
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
+    await check_output(dut, 1, 1, 1, 10, 50)
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
-
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await Timer(CLK_Timer_MS, unit="ms")
-
-    print(f"Check Output: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 1, 10)
-    
-    print(f"Check if Output is stable: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 1, 50)
 
 @cocotb.test()
 async def test_four_click_overflow(dut) -> None:
     """Test Click Detection Logic for four clicks (Overflow)."""
 
+    # --------------------------------------------------
+    # Reset
+    # --------------------------------------------------
+
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await apply_reset(dut)
 
-    await check_output(dut, 1, 0, 0, 10)
+    # --------------------------------------------------
+    # 4 Clicks
+    # --------------------------------------------------
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
+    await perform_clicks(dut, 4)
 
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
+    await check_output(dut, 1, 1, 1, 10, 50)
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
-
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
-
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await Timer(CLK_Timer_MS, unit="ms")
-
-    print(f"Check Output: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 1, 10)
-    
-    print(f"Check if Output is stable: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 1, 50)
 
 @cocotb.test()
 async def test_single_click_then_double_click(dut) -> None:
     """Test Click Detection Logic for a single click, then pause, then double click."""
 
+    # --------------------------------------------------
+    # Reset
+    # --------------------------------------------------
+
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await apply_reset(dut)
-    await check_output(dut, 1, 0, 0, 10)
+
+    # --------------------------------------------------
+    # Single Click
+    # --------------------------------------------------
 
     print("Executing Single Click: ")
+    await perform_clicks(dut, 1)
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
+    await check_output(dut, 1, 0, 0, 10, 50)
 
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await Timer(CLK_Timer_MS, unit="ms")
-    
-    print(f"Check Output: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
-    
-    print(f"Check if Output is stable: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 50)
+    # --------------------------------------------------
+    # Double Click
+    # --------------------------------------------------
 
     print("Executing Double Click: ")
+    await perform_clicks(dut, 2)
 
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 0, 0, 10)
-
-    dut.i_btn_debounced.value = '1'
-    print(f"Button => 1: {get_sim_time(unit='ns')} ns")
-    await Timer(2 * CLK_PERIOD_NS, unit="ns")
-
-    dut.i_btn_debounced.value = '0'
-    print(f"Button => 0: {get_sim_time(unit='ns')} ns")
-    await Timer(CLK_Timer_MS, unit="ms")
-
-    print(f"Check Output: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 0, 10)
+    await check_output(dut, 1, 1, 0, 10, 50)
     
-    print(f"Check if Output is stable: {get_sim_time(unit='ns')} ns")
-    await check_output(dut, 1, 1, 0, 50)
