@@ -1,7 +1,7 @@
 library ieee;
   use ieee.std_logic_1164.all;
 
-entity AxiRgbToGrayscale is
+entity AXI_RgbToGrayscale is
   generic (
     -- Bit-width per color component in the input RGB stream.
     G_COMPONENT_WIDTH : positive := 8;
@@ -32,7 +32,7 @@ entity AxiRgbToGrayscale is
   );
 end entity;
 
-architecture A_Rtl of AxiRgbToGrayscale is
+architecture A_Rtl of AXI_RgbToGrayscale is
   constant C_RGB_WIDTH : positive := 3 * G_COMPONENT_WIDTH;
   signal s_gray_data : std_logic_vector(G_OUTPUT_WIDTH - 1 downto 0);
   signal s_out_data  : std_logic_vector(G_OUTPUT_WIDTH - 1 downto 0);
@@ -53,15 +53,15 @@ begin
   -- * Mono-width mode: grayscale only.
   G_RGB_OUTPUT: if G_OUTPUT_WIDTH = C_RGB_WIDTH generate
     s_out_data <= s_axis_video_tdata when i_pass_through = '1' else s_gray_data;
-  end generate G_RGB_OUTPUT;
+  end generate;
 
   G_MONO_OUTPUT: if G_OUTPUT_WIDTH = G_COMPONENT_WIDTH generate
     s_out_data <= s_gray_data;
-  end generate G_MONO_OUTPUT;
+  end generate;
 
   G_FALLBACK_OUTPUT: if (G_OUTPUT_WIDTH /= C_RGB_WIDTH) and (G_OUTPUT_WIDTH /= G_COMPONENT_WIDTH) generate
     s_out_data <= s_gray_data;
-  end generate G_FALLBACK_OUTPUT;
+  end generate;
 
   -- Transparent AXI4-Stream handshake and sideband forwarding.
   -- Data path is transformed by U_RgbToGrayscale.
