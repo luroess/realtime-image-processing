@@ -38,3 +38,9 @@ description = "Click Detector checks."
 toplevel    = "clickdetector"
 test_module = "tests.test_click_detection"
 sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
+
+[targets.test_lowpass_filter]
+description = "AXI4-Stream Lowpass Filter transform checks."
+toplevel    = "lowpassfilter"
+test_module = "tests.test_lowpass_filter"
+sources     = ["rtl/LOWPASS_FILTER/hdl/*.vhd"]
