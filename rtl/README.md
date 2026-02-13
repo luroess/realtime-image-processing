@@ -1,0 +1,3 @@
+# Structure of the HDL code
+
+- All top-level modules that are supposed to be packaged as a Vivado IP core need to be placed in their own sub-dir. These directories must include all `.vhd` sources ...

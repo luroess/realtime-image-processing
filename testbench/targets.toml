@@ -1,0 +1,17 @@
+[defaults]
+target = "example_passthrough"
+sim    = "ghdl"
+waves  = true
+
+# Uses RTL under rtl/EXAMPLE_PASSTHROUGH/hdl/. Ensure that "uv run tb-sim" runs without errors.
+[targets.example_passthrough]
+description = "Sanity target for AXI4-Video passthrough pipeline checks."
+component   = "EXAMPLE_PASSTHROUGH"
+toplevel    = "example_passthrough"
+test_module = "tests.test_passthrough"
+
+[targets.test_example]
+description = "Run legacy single-frame example tests only (tests.test_example)."
+component   = "EXAMPLE_PASSTHROUGH"
+toplevel    = "example_passthrough"
+test_module = "tests.test_example"
