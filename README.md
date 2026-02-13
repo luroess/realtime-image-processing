@@ -4,6 +4,16 @@ Team: Lukas Roess, Valentin Bumeder, Jan Duchscherer
 
 Target: [Digilent Zybo Z7-10 (Zynq-7010)](https://digilent.com/reference/programmable-logic/zybo-z7/start) + [Pcam 5C (OV5640)](https://digilent.com/reference/add-ons/pcam-5c/start)
 
+## Clone
+
+This repository uses a submodule at `Vivado/vivado-git`.
+
+```bash
+git clone <repo-url>
+cd realtime-image-processing
+git submodule update --init --recursive
+```
+
 ## Project Goal
 Build a real-time streaming image-processing pipeline on FPGA (PL) on Zynq.
 
