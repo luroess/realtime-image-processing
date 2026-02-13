@@ -18,5 +18,5 @@
     }
   },
   "forwardPorts": [],
-  "postCreateCommand": "apt-get update && apt-get install -y ca-certificates && git && gtkwave && ghdl && python3-pip --version"
+  "postCreateCommand": "apt-get update && apt-get install -y ca-certificates gtkwave ghdl python3-pip make && git --version && pip3 install uv --break-system-packages"
 }
