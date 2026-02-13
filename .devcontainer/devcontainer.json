@@ -14,7 +14,9 @@
         "surfer-project.surfer",
         "teros-technology.teroshdl",
         "hbohlin.vhdl-ls",
-        "vide-software.v4pvhdlforprofessionals"
+        "vide-software.v4pvhdlforprofessionals",
+        "ms-python.python",
+        "ms-python.pylint"
       ]
     }
   },
