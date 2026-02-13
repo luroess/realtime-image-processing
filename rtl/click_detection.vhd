@@ -5,14 +5,15 @@ use ieee.numeric_std.all;
 entity ClickDetector is
   generic (
     G_CLK_FREQ_HZ    : integer := 100_000_000; -- 100 MHz
-    G_CLICK_TIMER_MS : integer := 500 -- 0,5s
+    G_CLICK_TIMER_MS : integer := 500 -- 0,5s, change to 10ms for testing
   );
   port (
     i_clk           : in std_logic;
     i_rst           : in std_logic;
     i_btn_debounced : in std_logic;
-    o_single_click  : out std_logic;
-    o_double_click  : out std_logic
+    o_single_click  : out std_logic := '1'; -- default mode
+    o_double_click  : out std_logic;
+    o_triple_click  : out std_logic
   );
 end entity;
 
@@ -23,10 +24,9 @@ architecture A_Rtl of ClickDetector is
   -- 1. Define States
   type state_t is (ST_IDLE, ST_BTN_PRESSED, ST_BTN_RELEASED);
   signal s_current_state : state_t := ST_IDLE;
-  signal s_next_state    : state_t;
 
   -- Internal Registers
-  signal s_counter  : integer range 0 to 2           := 0;
+  signal s_counter  : integer range 0 to 3           := 0;
   signal s_timer    : integer range 0 to C_COUNT_MAX := 0;
   signal s_btn_prev : std_logic                      := '0';
 
@@ -44,15 +44,11 @@ begin
       s_timer           <= 0;
       s_btn_prev        <= '0';
       s_btn_rising_edge <= '0';
-      o_single_click    <= '0';
+      o_single_click    <= '1';
       o_double_click    <= '0';
+      o_triple_click    <= '0';
     else
       if rising_edge(i_clk) then
-
-        -- Default: stay in current state
-        o_single_click <= '0';
-        o_double_click <= '0';
-
         if i_btn_debounced = '1' and s_btn_prev = '0' then
           s_btn_rising_edge <= '1';
         else
@@ -69,7 +65,9 @@ begin
 
           when ST_BTN_PRESSED =>
             if i_btn_debounced = '0' then
-              s_counter       <= s_counter + 1;
+              if s_counter < 3 then
+                s_counter <= s_counter + 1;
+              end if;
               s_timer         <= 1;
               s_current_state <= ST_BTN_RELEASED;
             end if;
@@ -80,10 +78,19 @@ begin
             elsif s_timer = C_COUNT_MAX then
               if s_counter = 1 then
                 o_single_click <= '1';
+                o_double_click <= '0';
+                o_triple_click <= '0';
               elsif s_counter = 2 then
+                o_single_click <= '1';
                 o_double_click <= '1';
+                o_triple_click <= '0';
+              elsif s_counter = 3 then
+                o_single_click <= '1';
+                o_double_click <= '1';
+                o_triple_click <= '1';
               end if;
               s_current_state <= ST_IDLE;
+              s_counter       <= 0;
             else
               s_timer <= s_timer + 1;
             end if;
