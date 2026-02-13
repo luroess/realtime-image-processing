@@ -5,13 +5,13 @@ use ieee.numeric_std.all;
 entity ClickDetector is
   generic (
     G_CLK_FREQ_HZ    : integer := 100_000_000; -- 100 MHz
-    G_CLICK_TIMER_MS : integer := 500 -- 0,5s, change to 10ms for testing
+    G_CLICK_TIMER_MS : integer := 500 -- 0.5s, change to 10ms for testing
   );
   port (
     i_clk           : in std_logic;
     i_rst           : in std_logic;
     i_btn_debounced : in std_logic;
-    o_single_click  : out std_logic := '1'; -- default mode
+    o_single_click  : out std_logic; -- default mode
     o_double_click  : out std_logic;
     o_triple_click  : out std_logic
   );
@@ -65,6 +65,8 @@ begin
 
           when ST_BTN_PRESSED =>
             if i_btn_debounced = '0' then
+              -- Saturate s_counter at 3: a 4th (and further) click within the
+              -- same timing window is intentionally ignored until the timer expires.
               if s_counter < 3 then
                 s_counter <= s_counter + 1;
               end if;
