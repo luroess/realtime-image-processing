@@ -1,7 +1,6 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
-# from cocotb.result import SimFailure
 
 
 async def check_debounced(dut, expected, duration_ns):
@@ -15,6 +14,12 @@ async def check_debounced(dut, expected, duration_ns):
             f"Debounced output mismatch! Expected {expected}, got {int(dut.o_btn_debounced.value)}"
         )
 
+async def set_i_btn_value_and_wait(dut, i_btn_value, wait_duration, wait_duration_unit='ns'):
+    dut.i_btn.value = i_btn_value
+    
+    if wait_duration != 0:
+        await Timer(wait_duration, unit=wait_duration_unit)
+
 
 @cocotb.test()
 async def debouncer_test(dut):
@@ -23,7 +28,7 @@ async def debouncer_test(dut):
     # --------------------------------------------------
     # Parameters
     # --------------------------------------------------
-    CLK_PERIOD_NS = 20           # 50 MHz
+    CLK_PERIOD_NS = 10           # 100 MHz
     DEBOUNCE_MS = 10
     DEBOUNCE_NS = DEBOUNCE_MS * 1_000_000
 
@@ -35,8 +40,7 @@ async def debouncer_test(dut):
     # --------------------------------------------------
     # Initial values
     # --------------------------------------------------
-    dut.i_btn.value = 0
-    await Timer(100, unit="ns")
+    await set_i_btn_value_and_wait(dut, 0, 100)
     await check_debounced(dut, 0, 0)
 
     # --------------------------------------------------
@@ -44,23 +48,17 @@ async def debouncer_test(dut):
     # Bounce pattern: 0/1/0/1/0/1
     # The debounced output should remain 0 during bouncing
     # --------------------------------------------------
-    dut.i_btn.value = 1
-    await Timer(200, unit="ns")
-    dut.i_btn.value = 0
-    await Timer(150, unit="ns")
-    dut.i_btn.value = 1
-    await Timer(180, unit="ns")
-    dut.i_btn.value = 0
-    await Timer(120, unit="ns")
-    dut.i_btn.value = 1
-    await Timer(160, unit="ns")
+    await set_i_btn_value_and_wait(dut, 1, 200)
+    await set_i_btn_value_and_wait(dut, 0, 150)
+    await set_i_btn_value_and_wait(dut, 1, 180)
+    await set_i_btn_value_and_wait(dut, 0, 120)
+    await set_i_btn_value_and_wait(dut, 1, 160)
 
     # Check debounced output still 0 (bouncing hasn't stabilized)
     await check_debounced(dut, 0, 0)
 
     # Now stable pressed
-    dut.i_btn.value = 1
-    # Wait for debounce time + a little margin
+    await set_i_btn_value_and_wait(dut, 1, 0)
     await check_debounced(dut, 1, DEBOUNCE_NS + 1_000_000)  # 11 ms
 
     # Keep stable pressed
@@ -70,26 +68,21 @@ async def debouncer_test(dut):
     # --------------------------------------------------
     # Bouncing during release
     # --------------------------------------------------
-    dut.i_btn.value = 0
-    await Timer(200, unit="ns")
-    dut.i_btn.value = 1
-    await Timer(150, unit="ns")
-    dut.i_btn.value = 0
-    await Timer(180, unit="ns")
-    dut.i_btn.value = 1
-    await Timer(120, unit="ns")
-    dut.i_btn.value = 0
-    await Timer(160, unit="ns")
+    await set_i_btn_value_and_wait(dut, 0, 200)
+    await set_i_btn_value_and_wait(dut, 1, 150)
+    await set_i_btn_value_and_wait(dut, 0, 180)
+    await set_i_btn_value_and_wait(dut, 1, 120)
+    await set_i_btn_value_and_wait(dut, 0, 160)
 
     # Debounced output should still be 1 during bouncing
     await check_debounced(dut, 1, 1)
 
     # Now stable released
-    dut.i_btn.value = 0
+    await set_i_btn_value_and_wait(dut, 0, 0)
     await check_debounced(dut, 0, DEBOUNCE_NS + 1_000_000)  # 11 ms
 
     # --------------------------------------------------
     # End simulation
     # --------------------------------------------------
-    await Timer(5_000_000, unit="ns")  # 5 ms
+    await Timer(100, unit="ns")
     dut._log.info("Simulation completed successfully")
