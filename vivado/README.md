@@ -1,6 +1,6 @@
 # Vivado Git Tracking Workflow
 
-`Vivado/vivado-git` is now a real git submodule pointing to:
+`vivado/vivado-git` is now a real git submodule pointing to:
 
 - https://github.com/barbedo/vivado-git
 
@@ -11,7 +11,7 @@ Submodule initialization commands are documented in the repository root `README.
 To pull the latest upstream submodule revision intentionally:
 
 ```bash
-git submodule update --remote Vivado/vivado-git
+git submodule update --remote vivado/vivado-git
 ```
 
 ## Project files in this repo
@@ -29,7 +29,7 @@ Vivado loads `Vivado_init.tcl` from your user config directory.
 Add one source line:
 
 ```tcl
-source [file normalize "/absolute/path/to/realtime-image-processing/Vivado/Vivado_init.tcl"]
+source [file normalize "/absolute/path/to/realtime-image-processing/vivado/Vivado_init.tcl"]
 ```
 
 Use forward slashes in the path, including on Windows.
@@ -42,10 +42,10 @@ For one session only, run the same command directly in the Vivado Tcl console.
 2. In the Tcl console, load the project-local init (safe to run every session):
 
 ```tcl
-source [file normalize "/absolute/path/to/realtime-image-processing/Vivado/Vivado_init.tcl"]
+source [file normalize "/absolute/path/to/realtime-image-processing/vivado/Vivado_init.tcl"]
 ```
 3. Run `wproj`.
-4. This generates `<project_name>.tcl` in the project root (for this repo, under `Vivado/`).
+4. This generates `<project_name>.tcl` in the project root (for this repo, under `vivado/`).
 5. Commit sources plus generated project Tcl with your normal git client.
 
 If you commit from Vivado Tcl console instead, you can use wrapped commands:
@@ -58,4 +58,4 @@ If you commit from Vivado Tcl console instead, you can use wrapped commands:
 
 The `vivado-git` flow is designed around an untracked generated folder named `vivado_project/`.
 
-This repo currently also has a legacy in-place project layout (`hw.*`). The local `Vivado/.gitignore` excludes generated `hw.*` build outputs and keeps source-like content trackable.
+This repo currently also has a legacy in-place project layout (`hw.*`). The local `vivado/.gitignore` excludes generated `hw.*` build outputs and keeps source-like content trackable.
