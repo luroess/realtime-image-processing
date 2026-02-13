@@ -20,3 +20,9 @@ description = "AXI4-Stream RGB to grayscale transform checks."
 toplevel    = "axirgbtograyscale"
 test_module = "tests.test_axi_rgb_to_grayscale"
 sources     = ["rtl/RGB_TO_GRAYSCALE/hdl/*.vhd"]
+
+[targets.test_lowpass_filter]
+description = "AXI4-Stream Lowpass Filter transform checks."
+toplevel    = "lowpassfilter"
+test_module = "tests.test_lowpass_filter"
+sources     = ["rtl/LOWPASS_FILTER/hdl/*.vhd"]
