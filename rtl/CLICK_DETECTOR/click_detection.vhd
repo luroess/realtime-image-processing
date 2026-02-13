@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity ClickDetector is
   generic (
     G_CLK_FREQ_HZ    : integer := 100_000_000; -- 100 MHz
-    G_CLICK_TIMER_MS : integer := 10 -- TODO: 0,5s, change to 10ms for testing
+    G_CLICK_TIMER_MS : integer := 500 -- 0,5s, change to 10ms for testing
   );
   port (
     i_clk           : in std_logic;
