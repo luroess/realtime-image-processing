@@ -9,11 +9,6 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.utils import get_sim_time
 
-from drivers.axi_stream_driver import AxiStreamDriver
-from models.image_model import Image
-from monitors.axi_stream_monitor import AxiStreamMonitor
-from verification.scoreboard import Scoreboard
-
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 # CONSTANTS
@@ -187,4 +182,3 @@ async def test_single_click_then_double_click(dut) -> None:
     await perform_clicks(dut, 2)
 
     await check_output(dut, 1, 1, 0, 10, 50)
-    
