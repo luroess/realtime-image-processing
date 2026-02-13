@@ -7,7 +7,7 @@ TOPLEVEL ?= example_passthrough
 MODULE ?= tests.test_example
 
 # Add DUT sources here. Keep both lists available for future VHDL/Verilog DUT swaps.
-VHDL_SOURCES += $(abspath ../rtl/**/*.vhd)
+VHDL_SOURCES += $(shell find $(abspath ../rtl) -name '*.vhd')
 VERILOG_SOURCES +=
 
 # Let cocotb discover local testbench modules (drivers/monitors/models).

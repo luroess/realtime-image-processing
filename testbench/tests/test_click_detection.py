@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.utils import get_sim_time
-
-TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
-
 # CONSTANTS
 CLK_PERIOD_NS = 10          # 100 MHz
-CLK_TIMER_MS = 500          # 0,5s, change to 10ms for testing
+CLK_TIMER_MS = 500          # 0.5s, change to 10ms for testing
 CLK_TIMER_NS = CLK_TIMER_MS * 1_000_000
 
 
