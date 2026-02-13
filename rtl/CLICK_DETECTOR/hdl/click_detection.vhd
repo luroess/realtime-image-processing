@@ -38,17 +38,17 @@ begin
   P_STATE_MACHINE : process (i_clk)
   begin
 
-    if i_rst = '1' then
-      s_current_state   <= ST_IDLE;
-      s_counter         <= 0;
-      s_timer           <= 0;
-      s_btn_prev        <= '0';
-      s_btn_rising_edge <= '0';
-      o_single_click    <= '1';
-      o_double_click    <= '0';
-      o_triple_click    <= '0';
-    else
-      if rising_edge(i_clk) then
+    if rising_edge(i_clk) then
+      if i_rst = '1' then
+        s_current_state   <= ST_IDLE;
+        s_counter         <= 0;
+        s_timer           <= 0;
+        s_btn_prev        <= '0';
+        s_btn_rising_edge <= '0';
+        o_single_click    <= '1';
+        o_double_click    <= '0';
+        o_triple_click    <= '0';
+      else
         if i_btn_debounced = '1' and s_btn_prev = '0' then
           s_btn_rising_edge <= '1';
         else
