@@ -19,7 +19,6 @@ architecture A_Rtl of Debouncer is
   constant C_COUNT_MAX : integer := (G_CLK_FREQ_HZ / 1000) * G_DEBOUNCE_MS;
 
   signal s_sync1, s_sync2 : std_logic                      := '0';
-  signal s_btn_last       : std_logic                      := '0';
   signal s_stable_btn     : std_logic                      := '0';
   signal s_counter        : integer range 0 to C_COUNT_MAX := 0;
 
@@ -50,7 +49,6 @@ begin
         s_stable_btn <= s_sync2;
       end if;
 
-      s_btn_last <= s_sync2;
     end if;
   end process P_REG_DEBOUNCE;
 
