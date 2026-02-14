@@ -17,6 +17,6 @@ sources     = ["rtl/EXAMPLE_PASSTHROUGH/hdl/example_passthrough.vhd"]
 
 [targets.axi_rgb_to_grayscale]
 description = "AXI4-Stream RGB to grayscale transform checks."
-toplevel    = "axirgbtograyscale"
+toplevel    = "axi_rgbtograyscale"
 test_module = "tests.test_axi_rgb_to_grayscale"
 sources     = ["rtl/RGB_TO_GRAYSCALE/hdl/*.vhd"]

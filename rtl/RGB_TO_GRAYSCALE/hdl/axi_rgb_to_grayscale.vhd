@@ -31,8 +31,9 @@ entity AXI_RgbToGrayscale is
 end entity;
 
 architecture A_Rtl of AXI_RgbToGrayscale is
+  signal s_gray_data_in      : std_logic_vector(G_OUTPUT_WIDTH - 1 downto 0);
   signal s_gray_data         : std_logic_vector(G_OUTPUT_WIDTH - 1 downto 0);
-  signal s_cond_reset_tvalid : std_logic := '0';
+  signal s_cond_reset_tvalid : boolean := false;
 begin
   U_RgbToGrayscale: entity work.E_RgbToGrayscale
     generic map (
@@ -42,21 +43,41 @@ begin
     port map (
       i_rgb888 => s_axis_video_tdata,
       o_gray8  => open,
-      o_data   => s_gray_data
+      o_data   => s_gray_data_in
     );
 
   -- Transparent AXI4-Stream handshake and sideband forwarding.
   -- Data path is transformed by U_RgbToGrayscale.
-  s_axis_video_tready <= '0' when i_aresetn /= '1' else m_axis_video_tready;
-  m_axis_video_tvalid <= '0' when i_aresetn /= '1' else s_axis_video_tvalid;
+  s_axis_video_tready <= '0' when (i_aresetn = '0') else m_axis_video_tready;
+  m_axis_video_tvalid <= '0' when (i_aresetn = '0') else s_axis_video_tvalid;
 
   -- Keep outputs deterministic when idle/reset.
-  s_cond_reset_tvalid <= (i_aresetn /= '1') or (s_axis_video_tvalid /= '1');
+  s_cond_reset_tvalid <= (i_aresetn = '0') or (s_axis_video_tvalid = '0');
   m_axis_video_tdata  <= (others => '0') when s_cond_reset_tvalid else
                         s_gray_data;
   m_axis_video_tuser <= '0' when s_cond_reset_tvalid else
                         s_axis_video_tuser;
   m_axis_video_tlast <= '0' when s_cond_reset_tvalid else
                         s_axis_video_tlast;
+
+  P_REG_CLK: process (i_aclk) is
+    variable v_counter : integer := 0;
+  begin
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
+        v_counter := 0;
+      else
+        if v_counter = 10 then
+          v_counter := 0;
+          s_gray_data(23 downto 16) <= (others => '0');
+          s_gray_data(15 downto 8) <= (others => '1');
+          s_gray_data(7 downto 0) <= (others => '0');
+        else
+          s_gray_data <= s_gray_data_in;
+          v_counter := v_counter + 1;
+        end if;
+      end if;
+    end if;
+  end process;
 
 end architecture;
