@@ -58,9 +58,6 @@ foreach pattern [list \
     [file join $repo_root vivado src hdl *.vhd] \
     [file join $repo_root vivado src hdl *.v] \
     [file join $repo_root vivado src hdl *.sv] \
-    [file join $repo_root rtl RGB_TO_GRAYSCALE hdl *.vhd] \
-    [file join $repo_root rtl RGB_TO_GRAYSCALE hdl *.v] \
-    [file join $repo_root rtl RGB_TO_GRAYSCALE hdl *.sv] \
 ] {
     set files [glob -nocomplain $pattern]
     if {[llength $files] > 0} {

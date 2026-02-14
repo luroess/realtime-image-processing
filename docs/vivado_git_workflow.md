@@ -24,6 +24,8 @@ Project metadata baseline from migration input:
 - Part: `xc7z010clg400-1`
 - Board part: `digilentinc.com:zybo-z7-10:part0:1.1`
 - Active BD tool version: `2025.1`
+- Current migration workspace used for canonicalization:
+  - `vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw`
 
 ## Repository Layout
 

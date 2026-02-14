@@ -1,15 +1,18 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x775276322259E4CE",
+      "boundary_crc": "0xCB1C850C877A5F1D",
       "device": "xc7z010clg400-1",
       "gen_directory": "../../../../hw.gen/sources_1/bd/system",
       "name": "system",
       "rev_ctrl_bd_flag": "RevCtrlBdOff",
       "synth_flow_mode": "Hierarchical",
-      "tool_version": "2025.1"
+      "tool_version": "2025.1",
+      "validated": "true"
     },
     "design_tree": {
+      "AXI_BayerToRGB_0": "",
+      "AXI_GammaCorrection_1": "",
       "DVIClocking_1": "",
       "MIPI_CSI_2_RX_0": "",
       "MIPI_D_PHY_RX_0": "",
@@ -44,13 +47,7 @@
       },
       "v_axi4s_vid_out_0": "",
       "video_dynclk": "",
-      "vtg": "",
-      "axi_gpio_0": "",
-      "ImProc": {
-        "AXI_GammaCorrection_1": "",
-        "AXI_BayerToRGB_0": "",
-        "AxiRgbToGrayscale_0": ""
-      }
+      "vtg": ""
     },
     "interface_ports": {
       "DDR": {
@@ -327,17 +324,6 @@
             "right": "0"
           }
         }
-      },
-      "btns_4bits": {
-        "mode": "Master",
-        "vlnv_bus_definition": "xilinx.com:interface:gpio:1.0",
-        "vlnv": "xilinx.com:interface:gpio_rtl:1.0",
-        "port_maps": {
-          "TRI_I": {
-            "physical_name": "btns_4bits_tri_i",
-            "direction": "I"
-          }
-        }
       }
     },
     "ports": {
@@ -369,6 +355,22 @@
       }
     },
     "components": {
+      "AXI_BayerToRGB_0": {
+        "vlnv": "digilentinc.com:user:AXI_BayerToRGB:1.0",
+        "ip_revision": "13",
+        "xci_name": "system_AXI_BayerToRGB_0_0",
+        "xci_path": "ip\\system_AXI_BayerToRGB_0_0\\system_AXI_BayerToRGB_0_0.xci",
+        "inst_hier_path": "AXI_BayerToRGB_0",
+        "has_run_ip_tcl": "true"
+      },
+      "AXI_GammaCorrection_1": {
+        "vlnv": "digilentinc.com:user:AXI_GammaCorrection:1.0",
+        "ip_revision": "32",
+        "xci_name": "system_AXI_GammaCorrection_1_0",
+        "xci_path": "ip\\system_AXI_GammaCorrection_1_0\\system_AXI_GammaCorrection_1_0.xci",
+        "inst_hier_path": "AXI_GammaCorrection_1",
+        "has_run_ip_tcl": "true"
+      },
       "DVIClocking_1": {
         "vlnv": "xilinx.com:module_ref:DVIClocking:1.0",
         "ip_revision": "1",
@@ -3171,317 +3173,24 @@
             "value": "false"
           }
         }
-      },
-      "axi_gpio_0": {
-        "vlnv": "xilinx.com:ip:axi_gpio:2.0",
-        "ip_revision": "37",
-        "xci_name": "system_axi_gpio_0_0",
-        "xci_path": "ip\\system_axi_gpio_0_0\\system_axi_gpio_0_0.xci",
-        "inst_hier_path": "axi_gpio_0",
-        "has_run_ip_tcl": "true",
-        "parameters": {
-          "GPIO_BOARD_INTERFACE": {
-            "value": "Custom"
-          },
-          "USE_BOARD_FLOW": {
-            "value": "false"
-          }
-        }
-      },
-      "ImProc": {
-        "interface_ports": {
-          "s_axil": {
-            "mode": "Slave",
-            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
-            "vlnv": "xilinx.com:interface:aximm_rtl:1.0"
-          },
-          "AXI_Slave_Interface": {
-            "mode": "Slave",
-            "vlnv_bus_definition": "xilinx.com:interface:axis:1.0",
-            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
-          },
-          "m_axis_video": {
-            "mode": "Master",
-            "vlnv_bus_definition": "xilinx.com:interface:axis:1.0",
-            "vlnv": "xilinx.com:interface:axis_rtl:1.0"
-          }
-        },
-        "ports": {
-          "StreamClk": {
-            "type": "clk",
-            "direction": "I"
-          },
-          "sStreamReset_n": {
-            "type": "rst",
-            "direction": "I"
-          },
-          "i_aclk": {
-            "type": "clk",
-            "direction": "I"
-          },
-          "i_pass_through": {
-            "direction": "I"
-          }
-        },
-        "components": {
-          "AXI_GammaCorrection_1": {
-            "vlnv": "digilentinc.com:user:AXI_GammaCorrection:1.0",
-            "ip_revision": "32",
-            "xci_name": "system_AXI_GammaCorrection_1_0",
-            "xci_path": "ip\\system_AXI_GammaCorrection_1_0\\system_AXI_GammaCorrection_1_0.xci",
-            "inst_hier_path": "ImProc/AXI_GammaCorrection_1",
-            "has_run_ip_tcl": "true"
-          },
-          "AXI_BayerToRGB_0": {
-            "vlnv": "digilentinc.com:user:AXI_BayerToRGB:1.0",
-            "ip_revision": "13",
-            "xci_name": "system_AXI_BayerToRGB_0_0",
-            "xci_path": "ip\\system_AXI_BayerToRGB_0_0\\system_AXI_BayerToRGB_0_0.xci",
-            "inst_hier_path": "ImProc/AXI_BayerToRGB_0",
-            "has_run_ip_tcl": "true"
-          },
-          "AxiRgbToGrayscale_0": {
-            "vlnv": "xilinx.com:module_ref:AxiRgbToGrayscale:1.0",
-            "ip_revision": "1",
-            "xci_name": "system_AxiRgbToGrayscale_0_0",
-            "xci_path": "ip\\system_AxiRgbToGrayscale_0_0\\system_AxiRgbToGrayscale_0_0.xci",
-            "inst_hier_path": "ImProc/AxiRgbToGrayscale_0",
-            "has_run_ip_tcl": "true",
-            "reference_info": {
-              "ref_type": "unknown",
-              "ref_name": "AxiRgbToGrayscale",
-              "boundary_crc": "0x0"
-            },
-            "interface_ports": {
-              "m_axis_video": {
-                "mode": "Master",
-                "vlnv_bus_definition": "xilinx.com:interface:axis:1.0",
-                "vlnv": "xilinx.com:interface:axis_rtl:1.0",
-                "parameters": {
-                  "TDATA_NUM_BYTES": {
-                    "value": "3",
-                    "value_src": "auto"
-                  },
-                  "TDEST_WIDTH": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "TID_WIDTH": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "TUSER_WIDTH": {
-                    "value": "1",
-                    "value_src": "constant"
-                  },
-                  "HAS_TREADY": {
-                    "value": "1",
-                    "value_src": "constant"
-                  },
-                  "HAS_TSTRB": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "HAS_TKEEP": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "HAS_TLAST": {
-                    "value": "1",
-                    "value_src": "constant"
-                  }
-                },
-                "port_maps": {
-                  "TDATA": {
-                    "physical_name": "m_axis_video_tdata",
-                    "direction": "O",
-                    "left": "23",
-                    "right": "0"
-                  },
-                  "TLAST": {
-                    "physical_name": "m_axis_video_tlast",
-                    "direction": "O"
-                  },
-                  "TUSER": {
-                    "physical_name": "m_axis_video_tuser",
-                    "direction": "O"
-                  },
-                  "TVALID": {
-                    "physical_name": "m_axis_video_tvalid",
-                    "direction": "O"
-                  },
-                  "TREADY": {
-                    "physical_name": "m_axis_video_tready",
-                    "direction": "I"
-                  }
-                }
-              },
-              "s_axis_video": {
-                "mode": "Slave",
-                "vlnv_bus_definition": "xilinx.com:interface:axis:1.0",
-                "vlnv": "xilinx.com:interface:axis_rtl:1.0",
-                "parameters": {
-                  "TDATA_NUM_BYTES": {
-                    "value": "3",
-                    "value_src": "auto"
-                  },
-                  "TDEST_WIDTH": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "TID_WIDTH": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "TUSER_WIDTH": {
-                    "value": "1",
-                    "value_src": "constant"
-                  },
-                  "HAS_TREADY": {
-                    "value": "1",
-                    "value_src": "constant"
-                  },
-                  "HAS_TSTRB": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "HAS_TKEEP": {
-                    "value": "0",
-                    "value_src": "constant"
-                  },
-                  "HAS_TLAST": {
-                    "value": "1",
-                    "value_src": "constant"
-                  }
-                },
-                "port_maps": {
-                  "TDATA": {
-                    "physical_name": "s_axis_video_tdata",
-                    "direction": "I",
-                    "left": "23",
-                    "right": "0"
-                  },
-                  "TLAST": {
-                    "physical_name": "s_axis_video_tlast",
-                    "direction": "I"
-                  },
-                  "TUSER": {
-                    "physical_name": "s_axis_video_tuser",
-                    "direction": "I"
-                  },
-                  "TVALID": {
-                    "physical_name": "s_axis_video_tvalid",
-                    "direction": "I"
-                  },
-                  "TREADY": {
-                    "physical_name": "s_axis_video_tready",
-                    "direction": "O"
-                  }
-                }
-              }
-            },
-            "ports": {
-              "i_aclk": {
-                "type": "clk",
-                "direction": "I",
-                "parameters": {
-                  "ASSOCIATED_RESET": {
-                    "value": "i_aresetn",
-                    "value_src": "constant"
-                  }
-                }
-              },
-              "i_aresetn": {
-                "type": "rst",
-                "direction": "I",
-                "parameters": {
-                  "POLARITY": {
-                    "value": "ACTIVE_LOW",
-                    "value_src": "constant"
-                  }
-                }
-              },
-              "i_pass_through": {
-                "direction": "I"
-              }
-            }
-          }
-        },
-        "interface_nets": {
-          "AXI_BayerToRGB_0_AXI_Stream_Master": {
-            "interface_ports": [
-              "AXI_BayerToRGB_0/AXI_Stream_Master",
-              "AXI_GammaCorrection_1/s_axis_video"
-            ]
-          },
-          "AXI_GammaCorrection_1_m_axis_video": {
-            "interface_ports": [
-              "AxiRgbToGrayscale_0/s_axis_video",
-              "AXI_GammaCorrection_1/m_axis_video"
-            ]
-          },
-          "AxiRgbToGrayscale_0_m_axis_video": {
-            "interface_ports": [
-              "m_axis_video",
-              "AxiRgbToGrayscale_0/m_axis_video"
-            ]
-          },
-          "MIPI_CSI_2_RX_0_m_axis_video": {
-            "interface_ports": [
-              "AXI_Slave_Interface",
-              "AXI_BayerToRGB_0/AXI_Slave_Interface"
-            ]
-          },
-          "ps7_0_axi_periph_M05_AXI": {
-            "interface_ports": [
-              "s_axil",
-              "AXI_GammaCorrection_1/s_axil"
-            ]
-          }
-        },
-        "nets": {
-          "i_btn_rgb2gray_passthrough_1": {
-            "ports": [
-              "i_pass_through",
-              "AxiRgbToGrayscale_0/i_pass_through"
-            ]
-          },
-          "mm_clk_150": {
-            "ports": [
-              "StreamClk",
-              "AXI_BayerToRGB_0/StreamClk",
-              "AXI_GammaCorrection_1/StreamClk"
-            ]
-          },
-          "rst_clk_wiz_0_50M_peripheral_aresetn": {
-            "ports": [
-              "sStreamReset_n",
-              "AXI_BayerToRGB_0/sStreamReset_n",
-              "AXI_GammaCorrection_1/aAxiLiteReset_n",
-              "AxiRgbToGrayscale_0/i_aresetn",
-              "AXI_GammaCorrection_1/sStreamReset_n"
-            ]
-          },
-          "s_axil_clk_50": {
-            "ports": [
-              "i_aclk",
-              "AxiRgbToGrayscale_0/i_aclk",
-              "AXI_GammaCorrection_1/AxiLiteClk"
-            ]
-          }
-        }
       }
     },
     "interface_nets": {
-      "AxiRgbToGrayscale_0_m_axis_video": {
+      "AXI_BayerToRGB_0_AXI_Stream_Master": {
         "interface_ports": [
-          "axi_vdma_0/S_AXIS_S2MM",
-          "ImProc/m_axis_video"
+          "AXI_BayerToRGB_0/AXI_Stream_Master",
+          "AXI_GammaCorrection_1/s_axis_video"
+        ]
+      },
+      "AXI_GammaCorrection_1_m_axis_video": {
+        "interface_ports": [
+          "AXI_GammaCorrection_1/m_axis_video",
+          "axi_vdma_0/S_AXIS_S2MM"
         ]
       },
       "MIPI_CSI_2_RX_0_m_axis_video": {
         "interface_ports": [
-          "ImProc/AXI_Slave_Interface",
+          "AXI_BayerToRGB_0/AXI_Slave_Interface",
           "MIPI_CSI_2_RX_0/m_axis_video"
         ]
       },
@@ -3589,7 +3298,7 @@
       },
       "ps7_0_axi_periph_M05_AXI": {
         "interface_ports": [
-          "ImProc/s_axil",
+          "AXI_GammaCorrection_1/s_axil",
           "ps7_0_axi_periph/M05_AXI"
         ]
       },
@@ -3694,15 +3403,11 @@
           "MIPI_D_PHY_RX_0/dphy_data_lp_p"
         ]
       },
-      "i_btn_rgb2gray_passthrough_1": {
-        "ports": [
-          "axi_gpio_0/gpio_io_i",
-          "ImProc/i_pass_through"
-        ]
-      },
       "mm_clk_150": {
         "ports": [
           "clk_wiz_0/clk_out2",
+          "AXI_BayerToRGB_0/StreamClk",
+          "AXI_GammaCorrection_1/StreamClk",
           "MIPI_CSI_2_RX_0/video_aclk",
           "axi_mem_intercon/ACLK",
           "axi_mem_intercon/S00_ACLK",
@@ -3716,8 +3421,7 @@
           "axi_vdma_0/s_axis_s2mm_aclk",
           "processing_system7_0/S_AXI_HP0_ACLK",
           "processing_system7_0/S_AXI_HP2_ACLK",
-          "v_axi4s_vid_out_0/aclk",
-          "ImProc/StreamClk"
+          "v_axi4s_vid_out_0/aclk"
         ]
       },
       "processing_system7_0_FCLK_CLK0": {
@@ -3751,6 +3455,9 @@
       "rst_clk_wiz_0_50M_peripheral_aresetn": {
         "ports": [
           "rst_clk_wiz_0_50M/peripheral_aresetn",
+          "AXI_BayerToRGB_0/sStreamReset_n",
+          "AXI_GammaCorrection_1/aAxiLiteReset_n",
+          "AXI_GammaCorrection_1/sStreamReset_n",
           "MIPI_CSI_2_RX_0/s_axi_lite_aresetn",
           "MIPI_D_PHY_RX_0/s_axi_lite_aresetn",
           "axi_mem_intercon/S00_ARESETN",
@@ -3767,8 +3474,7 @@
           "ps7_0_axi_periph/M05_ARESETN",
           "v_axi4s_vid_out_0/aresetn",
           "video_dynclk/s_axi_aresetn",
-          "vtg/s_axi_aresetn",
-          "ImProc/sStreamReset_n"
+          "vtg/s_axi_aresetn"
         ]
       },
       "rst_clk_wiz_0_50M_peripheral_reset": {
@@ -3792,6 +3498,7 @@
       "s_axil_clk_50": {
         "ports": [
           "clk_wiz_0/clk_out1",
+          "AXI_GammaCorrection_1/AxiLiteClk",
           "MIPI_CSI_2_RX_0/s_axi_lite_aclk",
           "MIPI_D_PHY_RX_0/s_axi_lite_aclk",
           "axi_vdma_0/s_axi_lite_aclk",
@@ -3806,8 +3513,7 @@
           "ps7_0_axi_periph/M05_ACLK",
           "rst_clk_wiz_0_50M/slowest_sync_clk",
           "video_dynclk/s_axi_aclk",
-          "vtg/s_axi_aclk",
-          "ImProc/i_aclk"
+          "vtg/s_axi_aclk"
         ]
       },
       "v_axi4s_vid_out_0_locked": {
@@ -3853,7 +3559,7 @@
           "Data": {
             "segments": {
               "SEG_AXI_GammaCorrection_1_reg0": {
-                "address_block": "/ImProc/AXI_GammaCorrection_1/s_axil/reg0",
+                "address_block": "/AXI_GammaCorrection_1/s_axil/reg0",
                 "offset": "0x43C10000",
                 "range": "64K"
               },

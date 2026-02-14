@@ -1,6 +1,10 @@
 # Vivado Migration Inputs
 
-This directory stores migration-only source artifacts copied from the imported GUI workspace.
+This directory stores migration-only source artifacts copied from the current GUI workspace.
+
+Migration source of truth:
+
+- `vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw`
 
 - `system.bd` is a temporary BD snapshot used by `vivado/src/bd/system.tcl` until a proper
   `write_bd_tcl` export is generated.
