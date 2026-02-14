@@ -6,7 +6,7 @@ Target: [Digilent Zybo Z7-10 (Zynq-7010)](https://digilent.com/reference/program
 
 ## Clone
 
-This repository uses a submodule at `Vivado/vivado-git`.
+This repository uses a submodule at `vivado/vivado-git`.
 
 ```bash
 git clone <repo-url>
