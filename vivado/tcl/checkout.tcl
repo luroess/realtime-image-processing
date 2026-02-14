@@ -18,6 +18,7 @@ proc rt_get_arg {i_flag i_default} {
 set script_dir [file dirname [file normalize [info script]]]
 set default_repo_root [file normalize [file join $script_dir .. ..]]
 set repo_root [file normalize [rt_get_arg "-repo-root" $default_repo_root]]
+set ::rt_repo_root $repo_root
 
 set project_name hw
 set project_dir [file normalize [file join $repo_root vivado proj $project_name]]
@@ -99,4 +100,7 @@ current_run -implementation [get_runs impl_1]
 save_project
 
 puts "INFO: Checkout complete: $project_file"
-puts "INFO: To build and export artifacts run: source [file join $repo_root vivado tcl build_export.tcl]"
+puts "INFO: Repo root detected as: $repo_root"
+puts "INFO: To build and export artifacts run:"
+puts "INFO:   set argv \"-tag <artifact_tag> -repo-root $repo_root\""
+puts "INFO:   source [file join $repo_root vivado tcl build_export.tcl]"

@@ -66,7 +66,7 @@ In Vivado Tcl console:
 
 ```tcl
 set argv "-repo-root /absolute/path/to/realtime-image-processing"
-source vivado/tcl/checkout.tcl
+source /absolute/path/to/realtime-image-processing/vivado/tcl/checkout.tcl
 ```
 
 Result:
@@ -82,8 +82,8 @@ Result:
 In Vivado Tcl console (project open):
 
 ```tcl
-set argv "-tag 2026-02-13-main"
-source vivado/tcl/build_export.tcl
+set argv "-tag 2026-02-13-main -repo-root /absolute/path/to/realtime-image-processing"
+source /absolute/path/to/realtime-image-processing/vivado/tcl/build_export.tcl
 ```
 
 Outputs in `vivado/artifacts/handoff/2026-02-13-main/`:
@@ -98,8 +98,8 @@ Outputs in `vivado/artifacts/handoff/2026-02-13-main/`:
 In Vivado Tcl console (project open):
 
 ```tcl
-set argv "-tag 2026-02-13-main-full"
-source vivado/tcl/archive_full_project.tcl
+set argv "-tag 2026-02-13-main-full -repo-root /absolute/path/to/realtime-image-processing"
+source /absolute/path/to/realtime-image-processing/vivado/tcl/archive_full_project.tcl
 ```
 
 Output:
@@ -136,6 +136,15 @@ After replacement, `system.tcl` becomes the canonical BD source in Git.
 ```tcl
 update_ip_catalog -rebuild
 ```
+
+### Board part not found
+
+If Vivado reports:
+
+- `The board_part definition was not found for digilentinc.com:zybo-z7-10:part0:1.1`
+
+the scripts continue in part-only mode (`xc7z010clg400-1`). Install Digilent board
+files if you need board automation in the GUI.
 
 ### BD validation updates files
 

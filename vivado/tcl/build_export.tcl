@@ -1,6 +1,6 @@
 # Build bitstream and export handoff artifacts.
 # Usage:
-#   set argv "-tag <artifact_tag>"
+#   set argv "-tag <artifact_tag> -repo-root /abs/path/to/repo"
 #   source vivado/tcl/build_export.tcl
 
 proc rt_get_arg {i_flag i_default} {
@@ -15,8 +15,19 @@ proc rt_get_arg {i_flag i_default} {
     return [lindex $::argv $val_idx]
 }
 
+set script_dir [file dirname [file normalize [info script]]]
+set default_repo_root [file normalize [file join $script_dir .. ..]]
+set repo_root [file normalize [rt_get_arg "-repo-root" $default_repo_root]]
+if {[info exists ::rt_repo_root]} {
+    set repo_root $::rt_repo_root
+}
+
 if {[llength [get_projects -quiet]] == 0} {
-    error "No open project. Open vivado/proj/hw/hw.xpr first or run checkout.tcl"
+    set auto_project_file [file join $repo_root vivado proj hw hw.xpr]
+    if {![file exists $auto_project_file]} {
+        error "No open project and no project found at $auto_project_file. Run checkout.tcl first."
+    }
+    open_project $auto_project_file
 }
 
 set project_name [get_property NAME [current_project]]

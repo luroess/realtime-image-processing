@@ -5,7 +5,13 @@ proc set_project_properties_post_create_project {i_project_name} {
     set obj [get_projects $i_project_name]
 
     set_property part {xc7z010clg400-1} $obj
-    set_property board_part {digilentinc.com:zybo-z7-10:part0:1.1} $obj
+    set board_part_id {digilentinc.com:zybo-z7-10:part0:1.1}
+    if {[llength [get_board_parts -quiet $board_part_id]] > 0} {
+        set_property board_part $board_part_id $obj
+    } else {
+        # Continue with part-only flow if board files are not installed.
+        puts "WARNING: Board definition '$board_part_id' not found in this Vivado installation. Continuing with part-only project settings."
+    }
     set_property target_language {VHDL} $obj
     set_property simulator_language {Mixed} $obj
 
