@@ -11,13 +11,14 @@ Submodule initialization commands are documented in the repository root `README.
 To pull the latest upstream submodule revision intentionally:
 
 ```bash
+git submodule update --init --recursive
 git submodule update --remote vivado/vivado-git
 ```
 
 ## Project files in this repo
 
-- `Vivado/vivado-git/` (submodule)
-- `Vivado/Vivado_init.tcl` (project-local entry point into submodule)
+- `vivado/vivado-git/` (submodule)
+- `vivado/Vivado_init.tcl` (project-local entry point into submodule)
 
 ## One-time Vivado setup (Linux and Windows)
 
