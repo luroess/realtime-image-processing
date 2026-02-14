@@ -1,62 +1,62 @@
-# Vivado Git Tracking Workflow
+# Vivado Workflow (Integrated Project)
 
-`vivado/vivado-git` is now a real git submodule pointing to:
+This repository already contains an integrated Vivado project description (`vivado/hw.tcl`).
+Use that Tcl file to create/recreate the local generated project.
 
-- https://github.com/barbedo/vivado-git
+## Prerequisite
 
-The exact version is pinned by this repository's submodule SHA.
-
-Submodule initialization commands are documented in the repository root `README.md`.
-
-To pull the latest upstream submodule revision intentionally:
+From repository root, make sure submodules are present:
 
 ```bash
 git submodule update --init --recursive
-git submodule update --remote vivado/vivado-git
 ```
 
-## Project files in this repo
+## First-Time Setup (New Clone)
 
-- `vivado/vivado-git/` (submodule)
-- `vivado/Vivado_init.tcl` (project-local entry point into submodule)
+1. Open Vivado.
+2. Run `Tools -> Run Tcl Script...` and select:
 
-## One-time Vivado setup (Linux and Windows)
+```text
+realtime-image-processing/vivado/hw.tcl
+```
 
-Vivado loads `Vivado_init.tcl` from your user config directory.
+3. Vivado recreates the generated project under:
 
-- Linux: `~/.Xilinx/Vivado/Vivado_init.tcl`
-- Windows: `%APPDATA%/Xilinx/Vivado/Vivado_init.tcl`
+```text
+realtime-image-processing/vivado/vivado_project/
+```
 
-Add one source line:
+4. In Vivado Tcl console, load project-local commands:
 
 ```tcl
-source [file normalize "/absolute/path/to/realtime-image-processing/vivado/Vivado_init.tcl"]
+source [file normalize "realtime-image-processing/vivado/Vivado_init.tcl"]
 ```
 
-Use forward slashes in the path, including on Windows.
-
-For one session only, run the same command directly in the Vivado Tcl console.
-
-## Daily usage
-
-1. Open your project in Vivado.
-2. In the Tcl console, load the project-local init (safe to run every session):
+5. Verify `wproj` exists:
 
 ```tcl
-source [file normalize "/absolute/path/to/realtime-image-processing/vivado/Vivado_init.tcl"]
+info commands wproj
 ```
-3. Run `wproj`.
-4. This generates `<project_name>.tcl` in the project root (for this repo, under `vivado/`).
-5. Commit sources plus generated project Tcl with your normal git client.
 
-If you commit from Vivado Tcl console instead, you can use wrapped commands:
+## Daily Workflow
 
-- `git status`
-- `git add ...`
-- `git commit -m "message"`
+1. Open the generated project (`realtime-image-processing/vivado/vivado_project/hw.xpr`).
+2. In Tcl console, run:
 
-## Important layout note
+```tcl
+source [file normalize "absolute_path_to_repo/realtime-image-processing/vivado/Vivado_init.tcl"]
+```
 
-The `vivado-git` flow is designed around an untracked generated folder named `vivado_project/`.
+3. After project changes, regenerate the tracked project script:
 
-This repo currently also has a legacy in-place project layout (`hw.*`). The local `vivado/.gitignore` excludes generated `hw.*` build outputs and keeps source-like content trackable.
+```tcl
+wproj
+```
+
+4. Commit source files + updated `vivado/hw.tcl`.
+
+## Notes
+
+- `wproj` overwrites `vivado/hw.tcl` by design.
+- If you get `invalid command name "wproj"`, source `vivado/Vivado_init.tcl` first.
+- Do not commit generated build outputs from `vivado/vivado_project/`.
