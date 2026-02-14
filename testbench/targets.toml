@@ -27,8 +27,14 @@ toplevel    = "debouncer"
 test_module = "tests.test_debouncing"
 sources     = ["rtl/DEBOUNCER/hdl/*.vhd"]
 
+    [targets.test_debouncer.generics]
+    G_DEBOUNCE_NS = 100
+
 [targets.test_click_detector]
 description = "Click Detector checks."
 toplevel    = "clickdetector"
 test_module = "tests.test_click_detection"
 sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
+
+    [targets.test_click_detector.generics]
+    G_CLICK_TIMER_NS = 100
