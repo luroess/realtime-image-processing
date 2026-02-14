@@ -28,10 +28,5 @@ hw.runs/
 hw.sim/
 
 # Generated BD/import trees (recreated via Tcl)
-hw.srcs/sources_1/bd/
-hw.srcs/sources_1/imports/
 hw.srcs/sim_1/
 hw.srcs/utils_1/
-
-# Generated project summary/report
-archive_project_summary.txt
