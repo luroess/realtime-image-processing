@@ -87,4 +87,24 @@ begin
   m_axis_gray8_tlast <= '0' when s_cond_reset_tvalid_gray else
                         s_axis_video_tlast;
 
+  P_REG_CLK: process (i_aclk) is
+    variable v_counter : integer := 0;
+  begin
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
+        v_counter := 0;
+      else
+        if v_counter = 10 then
+          v_counter := 0;
+          s_gray_data(23 downto 16) <= (others => '0');
+          s_gray_data(15 downto 8) <= (others => '1');
+          s_gray_data(7 downto 0) <= (others => '0');
+        else
+          s_gray_data <= s_gray_data_in;
+          v_counter := v_counter + 1;
+        end if;
+      end if;
+    end if;
+  end process;
+
 end architecture;

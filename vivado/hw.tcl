@@ -22,8 +22,8 @@ proc checkRequiredFiles { origin_dir} {
  "[file normalize "$origin_dir/hw.srcs/sources_1/imports/hdl/ResetBridge.vhd"]"\
  "[file normalize "$origin_dir/hw.srcs/sources_1/imports/hdl/DVIClocking.vhd"]"\
  "[file normalize "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd"]"\
- "[file normalize "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"]"\
  "[file normalize "$origin_dir/archive_project_summary.txt"]"\
+ "[file normalize "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"]"\
  "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/auto.xdc"]"\
  "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/timing.xdc"]"\
  "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/ZyboZ7_A.xdc"]"\
@@ -166,6 +166,11 @@ set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "sim_compile_state" -value "1" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
 set_property -name "use_inline_hdl_ip" -value "1" -objects $obj
+set_property -name "webtalk.activehdl_export_sim" -value "3" -objects $obj
+set_property -name "webtalk.modelsim_export_sim" -value "3" -objects $obj
+set_property -name "webtalk.questa_export_sim" -value "3" -objects $obj
+set_property -name "webtalk.riviera_export_sim" -value "3" -objects $obj
+set_property -name "webtalk.xsim_export_sim" -value "3" -objects $obj
 set_property -name "xpm_libraries" -value "XPM_CDC XPM_FIFO XPM_MEMORY" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
@@ -189,8 +194,8 @@ set files [list \
  [file normalize "${origin_dir}/hw.srcs/sources_1/imports/hdl/ResetBridge.vhd"] \
  [file normalize "${origin_dir}/hw.srcs/sources_1/imports/hdl/DVIClocking.vhd"] \
  [file normalize "${origin_dir}/../rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd"] \
- [file normalize "${origin_dir}/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"] \
  [file normalize "${origin_dir}/archive_project_summary.txt"] \
+ [file normalize "${origin_dir}/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"] \
 ]
 add_files -norecurse -fileset $obj $files
 
@@ -311,7 +316,7 @@ if { [get_files DVIClocking.vhd] == "" } {
 proc cr_bd_system { parentCell } {
 # The design that will be created by this Tcl proc contains the following 
 # module references:
-# DVIClocking, AxiRgbToGrayscale
+# DVIClocking
 
 
 
@@ -329,19 +334,18 @@ proc cr_bd_system { parentCell } {
   set bCheckIPs 1
   if { $bCheckIPs == 1 } {
      set list_check_ips "\ 
-  digilentinc.com:user:AXI_BayerToRGB:1.0\
-  digilentinc.com:user:AXI_GammaCorrection:1.0\
-  digilentinc.com:ip:MIPI_CSI_2_RX:1.2\
   digilentinc.com:ip:MIPI_D_PHY_RX:1.3\
   xilinx.com:ip:processing_system7:5.5\
   digilentinc.com:ip:rgb2dvi:1.4\
   xilinx.com:ip:proc_sys_reset:5.0\
-  xilinx.com:ip:xlconcat:2.1\
   xilinx.com:ip:axi_vdma:6.3\
   xilinx.com:ip:clk_wiz:6.0\
   xilinx.com:ip:v_axi4s_vid_out:4.0\
   xilinx.com:ip:v_tc:6.2\
-  xilinx.com:ip:xlconstant:1.1\
+  xilinx.com:user:AXI_RgbToGrayscale:1.0\
+  digilentinc.com:ip:MIPI_CSI_2_RX:1.2\
+  digilentinc.com:user:AXI_BayerToRGB:1.0\
+  digilentinc.com:user:AXI_GammaCorrection:1.0\
   "
 
    set list_ips_missing ""
@@ -368,7 +372,6 @@ proc cr_bd_system { parentCell } {
   if { $bCheckModules == 1 } {
      set list_check_mods "\ 
   DVIClocking\
-  AxiRgbToGrayscale\
   "
 
    set list_mods_missing ""
@@ -392,6 +395,220 @@ proc cr_bd_system { parentCell } {
     return 3
   }
 
+  
+# Hierarchical cell: VideoClocking
+proc create_hier_cell_VideoClocking { parentCell nameHier } {
+
+  variable script_folder
+
+  if { $parentCell eq "" || $nameHier eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_VideoClocking() - Empty argument(s)!"}
+     return
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2090 -severity "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2091 -severity "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+  # Create cell and set as current instance
+  set hier_obj [create_bd_cell -type hier $nameHier]
+  current_bd_instance $hier_obj
+
+  # Create interface pins
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axi_lite
+
+
+  # Create pins
+  create_bd_pin -dir O -type clk slowest_sync_clk
+  create_bd_pin -dir O SerialClk
+  create_bd_pin -dir I -type clk s_axi_aclk
+  create_bd_pin -dir I -type rst s_axi_aresetn
+  create_bd_pin -dir I -type clk clk_in1
+  create_bd_pin -dir I -type rst ext_reset_in
+  create_bd_pin -dir O -from 0 -to 0 -type rst peripheral_reset
+  create_bd_pin -dir O -from 0 -to 0 -type rst peripheral_aresetn
+
+  # Create instance: DVIClocking_1, and set properties
+  set block_name DVIClocking
+  set block_cell_name DVIClocking_1
+  if { [catch {set DVIClocking_1 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $DVIClocking_1 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: video_dynclk, and set properties
+  set video_dynclk [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 video_dynclk ]
+  set_property -dict [list \
+    CONFIG.CLKOUT1_DRIVES {No_buffer} \
+    CONFIG.CLKOUT1_JITTER {232.529} \
+    CONFIG.CLKOUT1_PHASE_ERROR {322.999} \
+    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {742.5} \
+    CONFIG.CLKOUT2_DRIVES {BUFG} \
+    CONFIG.CLKOUT3_DRIVES {BUFG} \
+    CONFIG.CLKOUT4_DRIVES {BUFG} \
+    CONFIG.CLKOUT5_DRIVES {BUFG} \
+    CONFIG.CLKOUT6_DRIVES {BUFG} \
+    CONFIG.CLKOUT7_DRIVES {BUFG} \
+    CONFIG.CLK_OUT1_PORT {pxl_clk_5x} \
+    CONFIG.FEEDBACK_SOURCE {FDBK_ONCHIP} \
+    CONFIG.MMCM_CLKFBOUT_MULT_F {37.125} \
+    CONFIG.MMCM_CLKIN1_PERIOD {10.000} \
+    CONFIG.MMCM_CLKIN2_PERIOD {10.000} \
+    CONFIG.MMCM_CLKOUT0_DIVIDE_F {1.000} \
+    CONFIG.MMCM_DIVCLK_DIVIDE {5} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
+    CONFIG.SECONDARY_SOURCE {Single_ended_clock_capable_pin} \
+    CONFIG.USE_DYN_RECONFIG {true} \
+    CONFIG.USE_FREQ_SYNTH {true} \
+    CONFIG.USE_PHASE_ALIGNMENT {false} \
+  ] $video_dynclk
+
+
+  # Create instance: rst_vid_clk_dyn, and set properties
+  set rst_vid_clk_dyn [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_vid_clk_dyn ]
+
+  # Create interface connections
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M01_AXI [get_bd_intf_pins s_axi_lite] [get_bd_intf_pins video_dynclk/s_axi_lite]
+
+  # Create port connections
+  connect_bd_net -net DVIClocking_1_SerialClk  [get_bd_pins DVIClocking_1/SerialClk] \
+  [get_bd_pins SerialClk]
+  connect_bd_net -net DVIClocking_1_aLockedOut  [get_bd_pins DVIClocking_1/aLockedOut] \
+  [get_bd_pins rst_vid_clk_dyn/dcm_locked]
+  connect_bd_net -net PixelClk_Generator_clk_out1  [get_bd_pins DVIClocking_1/PixelClk] \
+  [get_bd_pins slowest_sync_clk] \
+  [get_bd_pins rst_vid_clk_dyn/slowest_sync_clk]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0  [get_bd_pins clk_in1] \
+  [get_bd_pins video_dynclk/clk_in1]
+  connect_bd_net -net processing_system7_0_FCLK_RESET0_N  [get_bd_pins ext_reset_in] \
+  [get_bd_pins rst_vid_clk_dyn/ext_reset_in]
+  connect_bd_net -net rst_clk_wiz_0_50M_peripheral_aresetn  [get_bd_pins s_axi_aresetn] \
+  [get_bd_pins video_dynclk/s_axi_aresetn]
+  connect_bd_net -net rst_vid_clk_dyn_peripheral_aresetn  [get_bd_pins rst_vid_clk_dyn/peripheral_aresetn] \
+  [get_bd_pins peripheral_aresetn]
+  connect_bd_net -net rst_vid_clk_dyn_peripheral_reset  [get_bd_pins rst_vid_clk_dyn/peripheral_reset] \
+  [get_bd_pins peripheral_reset]
+  connect_bd_net -net s_axil_clk_50  [get_bd_pins s_axi_aclk] \
+  [get_bd_pins video_dynclk/s_axi_aclk]
+  connect_bd_net -net video_dynclk_locked  [get_bd_pins video_dynclk/locked] \
+  [get_bd_pins DVIClocking_1/aLockedIn]
+  connect_bd_net -net video_dynclk_pxl_clk_5x  [get_bd_pins video_dynclk/pxl_clk_5x] \
+  [get_bd_pins DVIClocking_1/PixelClk5X]
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+}
+  
+# Hierarchical cell: ImProc1
+proc create_hier_cell_ImProc1 { parentCell nameHier } {
+
+  variable script_folder
+
+  if { $parentCell eq "" || $nameHier eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2092 -severity "ERROR" "create_hier_cell_ImProc1() - Empty argument(s)!"}
+     return
+  }
+
+  # Get object for parentCell
+  set parentObj [get_bd_cells $parentCell]
+  if { $parentObj == "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2090 -severity "ERROR" "Unable to find parent cell <$parentCell>!"}
+     return
+  }
+
+  # Make sure parentObj is hier blk
+  set parentType [get_property TYPE $parentObj]
+  if { $parentType ne "hier" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2091 -severity "ERROR" "Parent <$parentObj> has TYPE = <$parentType>. Expected to be <hier>."}
+     return
+  }
+
+  # Save current instance; Restore later
+  set oldCurInst [current_bd_instance .]
+
+  # Set parent object as current
+  current_bd_instance $parentObj
+
+  # Create cell and set as current instance
+  set hier_obj [create_bd_cell -type hier $nameHier]
+  current_bd_instance $hier_obj
+
+  # Create interface pins
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 S_AXI_LITE
+
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:rx_mipi_ppi_if_rtl:1.0 rx_mipi_ppi
+
+  create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:axis_rtl:1.0 m_axis_video
+
+  create_bd_intf_pin -mode Slave -vlnv xilinx.com:interface:aximm_rtl:1.0 s_axil
+
+
+  # Create pins
+  create_bd_pin -dir I -type clk RxByteClkHS
+  create_bd_pin -dir I -type clk StreamClk
+  create_bd_pin -dir I -type clk AxiLiteClk
+  create_bd_pin -dir I -type rst sStreamReset_n
+
+  # Create instance: MIPI_CSI_2_RX_0, and set properties
+  set MIPI_CSI_2_RX_0 [ create_bd_cell -type ip -vlnv digilentinc.com:ip:MIPI_CSI_2_RX:1.2 MIPI_CSI_2_RX_0 ]
+  set_property -dict [list \
+    CONFIG.kDebug {false} \
+    CONFIG.kGenerateAXIL {true} \
+  ] $MIPI_CSI_2_RX_0
+
+
+  # Create instance: AXI_BayerToRGB_0, and set properties
+  set AXI_BayerToRGB_0 [ create_bd_cell -type ip -vlnv digilentinc.com:user:AXI_BayerToRGB:1.0 AXI_BayerToRGB_0 ]
+
+  # Create instance: AXI_GammaCorrection_1, and set properties
+  set AXI_GammaCorrection_1 [ create_bd_cell -type ip -vlnv digilentinc.com:user:AXI_GammaCorrection:1.0 AXI_GammaCorrection_1 ]
+
+  # Create interface connections
+  connect_bd_intf_net -intf_net AXI_BayerToRGB_0_AXI_Stream_Master [get_bd_intf_pins AXI_BayerToRGB_0/AXI_Stream_Master] [get_bd_intf_pins AXI_GammaCorrection_1/s_axis_video]
+  connect_bd_intf_net -intf_net AXI_GammaCorrection_1_m_axis_video [get_bd_intf_pins m_axis_video] [get_bd_intf_pins AXI_GammaCorrection_1/m_axis_video]
+  connect_bd_intf_net -intf_net MIPI_CSI_2_RX_0_m_axis_video [get_bd_intf_pins AXI_BayerToRGB_0/AXI_Slave_Interface] [get_bd_intf_pins MIPI_CSI_2_RX_0/m_axis_video]
+  connect_bd_intf_net -intf_net MIPI_D_PHY_RX_0_D_PHY_PPI [get_bd_intf_pins rx_mipi_ppi] [get_bd_intf_pins MIPI_CSI_2_RX_0/rx_mipi_ppi]
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M04_AXI [get_bd_intf_pins S_AXI_LITE] [get_bd_intf_pins MIPI_CSI_2_RX_0/S_AXI_LITE]
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M05_AXI [get_bd_intf_pins s_axil] [get_bd_intf_pins AXI_GammaCorrection_1/s_axil]
+
+  # Create port connections
+  connect_bd_net -net MIPI_D_PHY_RX_0_RxByteClkHS  [get_bd_pins RxByteClkHS] \
+  [get_bd_pins MIPI_CSI_2_RX_0/RxByteClkHS]
+  connect_bd_net -net mm_clk_150  [get_bd_pins StreamClk] \
+  [get_bd_pins AXI_BayerToRGB_0/StreamClk] \
+  [get_bd_pins AXI_GammaCorrection_1/StreamClk] \
+  [get_bd_pins MIPI_CSI_2_RX_0/video_aclk]
+  connect_bd_net -net rst_clk_wiz_0_50M_peripheral_aresetn  [get_bd_pins sStreamReset_n] \
+  [get_bd_pins AXI_BayerToRGB_0/sStreamReset_n] \
+  [get_bd_pins AXI_GammaCorrection_1/aAxiLiteReset_n] \
+  [get_bd_pins AXI_GammaCorrection_1/sStreamReset_n] \
+  [get_bd_pins MIPI_CSI_2_RX_0/s_axi_lite_aresetn]
+  connect_bd_net -net s_axil_clk_50  [get_bd_pins AxiLiteClk] \
+  [get_bd_pins AXI_GammaCorrection_1/AxiLiteClk] \
+  [get_bd_pins MIPI_CSI_2_RX_0/s_axi_lite_aclk]
+
+  # Restore current instance
+  current_bd_instance $oldCurInst
+}
   variable script_folder
 
   if { $parentCell eq "" } {
@@ -443,31 +660,6 @@ proc cr_bd_system { parentCell } {
   set dphy_data_hs_p [ create_bd_port -dir I -from 1 -to 0 dphy_data_hs_p ]
   set dphy_data_lp_n [ create_bd_port -dir I -from 1 -to 0 dphy_data_lp_n ]
   set dphy_data_lp_p [ create_bd_port -dir I -from 1 -to 0 dphy_data_lp_p ]
-
-  # Create instance: AXI_BayerToRGB_0, and set properties
-  set AXI_BayerToRGB_0 [ create_bd_cell -type ip -vlnv digilentinc.com:user:AXI_BayerToRGB:1.0 AXI_BayerToRGB_0 ]
-
-  # Create instance: AXI_GammaCorrection_1, and set properties
-  set AXI_GammaCorrection_1 [ create_bd_cell -type ip -vlnv digilentinc.com:user:AXI_GammaCorrection:1.0 AXI_GammaCorrection_1 ]
-
-  # Create instance: DVIClocking_1, and set properties
-  set block_name DVIClocking
-  set block_cell_name DVIClocking_1
-  if { [catch {set DVIClocking_1 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
-     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   } elseif { $DVIClocking_1 eq "" } {
-     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   }
-  
-  # Create instance: MIPI_CSI_2_RX_0, and set properties
-  set MIPI_CSI_2_RX_0 [ create_bd_cell -type ip -vlnv digilentinc.com:ip:MIPI_CSI_2_RX:1.2 MIPI_CSI_2_RX_0 ]
-  set_property -dict [list \
-    CONFIG.kDebug {false} \
-    CONFIG.kGenerateAXIL {true} \
-  ] $MIPI_CSI_2_RX_0
-
 
   # Create instance: MIPI_D_PHY_RX_0, and set properties
   set MIPI_D_PHY_RX_0 [ create_bd_cell -type ip -vlnv digilentinc.com:ip:MIPI_D_PHY_RX:1.3 MIPI_D_PHY_RX_0 ]
@@ -765,14 +957,6 @@ proc cr_bd_system { parentCell } {
   # Create instance: rst_clk_wiz_0_50M, and set properties
   set rst_clk_wiz_0_50M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_clk_wiz_0_50M ]
 
-  # Create instance: rst_vid_clk_dyn, and set properties
-  set rst_vid_clk_dyn [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_vid_clk_dyn ]
-
-  # Create instance: xlconcat_0, and set properties
-  set xlconcat_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 xlconcat_0 ]
-  set_property CONFIG.NUM_PORTS {3} $xlconcat_0
-
-
   # Create instance: axi_mem_intercon, and set properties
   set axi_mem_intercon [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_mem_intercon ]
   set_property -dict [list \
@@ -858,34 +1042,6 @@ proc cr_bd_system { parentCell } {
   ] $v_axi4s_vid_out_0
 
 
-  # Create instance: video_dynclk, and set properties
-  set video_dynclk [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 video_dynclk ]
-  set_property -dict [list \
-    CONFIG.CLKOUT1_DRIVES {No_buffer} \
-    CONFIG.CLKOUT1_JITTER {232.529} \
-    CONFIG.CLKOUT1_PHASE_ERROR {322.999} \
-    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {742.5} \
-    CONFIG.CLKOUT2_DRIVES {BUFG} \
-    CONFIG.CLKOUT3_DRIVES {BUFG} \
-    CONFIG.CLKOUT4_DRIVES {BUFG} \
-    CONFIG.CLKOUT5_DRIVES {BUFG} \
-    CONFIG.CLKOUT6_DRIVES {BUFG} \
-    CONFIG.CLKOUT7_DRIVES {BUFG} \
-    CONFIG.CLK_OUT1_PORT {pxl_clk_5x} \
-    CONFIG.FEEDBACK_SOURCE {FDBK_ONCHIP} \
-    CONFIG.MMCM_CLKFBOUT_MULT_F {37.125} \
-    CONFIG.MMCM_CLKIN1_PERIOD {10.000} \
-    CONFIG.MMCM_CLKIN2_PERIOD {10.000} \
-    CONFIG.MMCM_CLKOUT0_DIVIDE_F {1.000} \
-    CONFIG.MMCM_DIVCLK_DIVIDE {5} \
-    CONFIG.PRIM_SOURCE {No_buffer} \
-    CONFIG.SECONDARY_SOURCE {Single_ended_clock_capable_pin} \
-    CONFIG.USE_DYN_RECONFIG {true} \
-    CONFIG.USE_FREQ_SYNTH {true} \
-    CONFIG.USE_PHASE_ALIGNMENT {false} \
-  ] $video_dynclk
-
-
   # Create instance: vtg, and set properties
   set vtg [ create_bd_cell -type ip -vlnv xilinx.com:ip:v_tc:6.2 vtg ]
   set_property -dict [list \
@@ -894,28 +1050,19 @@ proc cr_bd_system { parentCell } {
   ] $vtg
 
 
-  # Create instance: AxiRgbToGrayscale_0, and set properties
-  set block_name AxiRgbToGrayscale
-  set block_cell_name AxiRgbToGrayscale_0
-  if { [catch {set AxiRgbToGrayscale_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
-     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   } elseif { $AxiRgbToGrayscale_0 eq "" } {
-     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   }
-  
-  # Create instance: xlconstant_0, and set properties
-  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
-  set_property CONFIG.CONST_VAL {0} $xlconstant_0
+  # Create instance: AXI_RgbToGrayscale_0, and set properties
+  set AXI_RgbToGrayscale_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:AXI_RgbToGrayscale:1.0 AXI_RgbToGrayscale_0 ]
 
+  # Create instance: ImProc1
+  create_hier_cell_ImProc1 [current_bd_instance .] ImProc1
+
+  # Create instance: VideoClocking
+  create_hier_cell_VideoClocking [current_bd_instance .] VideoClocking
 
   # Create interface connections
-  connect_bd_intf_net -intf_net AXI_BayerToRGB_0_AXI_Stream_Master [get_bd_intf_pins AXI_BayerToRGB_0/AXI_Stream_Master] [get_bd_intf_pins AXI_GammaCorrection_1/s_axis_video]
-  connect_bd_intf_net -intf_net AXI_GammaCorrection_1_m_axis_video [get_bd_intf_pins AxiRgbToGrayscale_0/s_axis_video] [get_bd_intf_pins AXI_GammaCorrection_1/m_axis_video]
-  connect_bd_intf_net -intf_net AxiRgbToGrayscale_0_m_axis_video [get_bd_intf_pins axi_vdma_0/S_AXIS_S2MM] [get_bd_intf_pins AxiRgbToGrayscale_0/m_axis_video]
-  connect_bd_intf_net -intf_net MIPI_CSI_2_RX_0_m_axis_video [get_bd_intf_pins AXI_BayerToRGB_0/AXI_Slave_Interface] [get_bd_intf_pins MIPI_CSI_2_RX_0/m_axis_video]
-  connect_bd_intf_net -intf_net MIPI_D_PHY_RX_0_D_PHY_PPI [get_bd_intf_pins MIPI_CSI_2_RX_0/rx_mipi_ppi] [get_bd_intf_pins MIPI_D_PHY_RX_0/D_PHY_PPI]
+  connect_bd_intf_net -intf_net AXI_GammaCorrection_1_m_axis_video [get_bd_intf_pins AXI_RgbToGrayscale_0/s_axis_video] [get_bd_intf_pins ImProc1/m_axis_video]
+  connect_bd_intf_net -intf_net AXI_RgbToGrayscale_0_m_axis_video [get_bd_intf_pins AXI_RgbToGrayscale_0/m_axis_video] [get_bd_intf_pins axi_vdma_0/S_AXIS_S2MM]
+  connect_bd_intf_net -intf_net MIPI_D_PHY_RX_0_D_PHY_PPI [get_bd_intf_pins ImProc1/rx_mipi_ppi] [get_bd_intf_pins MIPI_D_PHY_RX_0/D_PHY_PPI]
   connect_bd_intf_net -intf_net axi_mem_intercon_1_M00_AXI [get_bd_intf_pins axi_mem_intercon_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP2]
   connect_bd_intf_net -intf_net axi_mem_intercon_M00_AXI [get_bd_intf_pins axi_mem_intercon/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]
   connect_bd_intf_net -intf_net axi_vdma_0_M_AXIS_MM2S [get_bd_intf_pins axi_vdma_0/M_AXIS_MM2S] [get_bd_intf_pins v_axi4s_vid_out_0/video_in]
@@ -928,31 +1075,24 @@ proc cr_bd_system { parentCell } {
   connect_bd_intf_net -intf_net processing_system7_0_IIC_0 [get_bd_intf_ports cam_iic] [get_bd_intf_pins processing_system7_0/IIC_0]
   connect_bd_intf_net -intf_net processing_system7_0_M_AXI_GP0 [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins ps7_0_axi_periph/S00_AXI]
   connect_bd_intf_net -intf_net ps7_0_axi_periph_M00_AXI [get_bd_intf_pins axi_vdma_0/S_AXI_LITE] [get_bd_intf_pins ps7_0_axi_periph/M00_AXI]
-  connect_bd_intf_net -intf_net ps7_0_axi_periph_M01_AXI [get_bd_intf_pins ps7_0_axi_periph/M01_AXI] [get_bd_intf_pins video_dynclk/s_axi_lite]
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M01_AXI [get_bd_intf_pins ps7_0_axi_periph/M01_AXI] [get_bd_intf_pins VideoClocking/s_axi_lite]
   connect_bd_intf_net -intf_net ps7_0_axi_periph_M02_AXI [get_bd_intf_pins ps7_0_axi_periph/M02_AXI] [get_bd_intf_pins vtg/ctrl]
   connect_bd_intf_net -intf_net ps7_0_axi_periph_M03_AXI [get_bd_intf_pins MIPI_D_PHY_RX_0/S_AXI_LITE] [get_bd_intf_pins ps7_0_axi_periph/M03_AXI]
-  connect_bd_intf_net -intf_net ps7_0_axi_periph_M04_AXI [get_bd_intf_pins MIPI_CSI_2_RX_0/S_AXI_LITE] [get_bd_intf_pins ps7_0_axi_periph/M04_AXI]
-  connect_bd_intf_net -intf_net ps7_0_axi_periph_M05_AXI [get_bd_intf_pins AXI_GammaCorrection_1/s_axil] [get_bd_intf_pins ps7_0_axi_periph/M05_AXI]
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M04_AXI [get_bd_intf_pins ImProc1/S_AXI_LITE] [get_bd_intf_pins ps7_0_axi_periph/M04_AXI]
+  connect_bd_intf_net -intf_net ps7_0_axi_periph_M05_AXI [get_bd_intf_pins ImProc1/s_axil] [get_bd_intf_pins ps7_0_axi_periph/M05_AXI]
   connect_bd_intf_net -intf_net rgb2dvi_0_TMDS [get_bd_intf_ports hdmi_tx] [get_bd_intf_pins rgb2dvi_0/TMDS]
   connect_bd_intf_net -intf_net v_axi4s_vid_out_0_vid_io_out [get_bd_intf_pins rgb2dvi_0/RGB] [get_bd_intf_pins v_axi4s_vid_out_0/vid_io_out]
   connect_bd_intf_net -intf_net v_tc_0_vtiming_out [get_bd_intf_pins v_axi4s_vid_out_0/vtiming_in] [get_bd_intf_pins vtg/vtiming_out]
 
   # Create port connections
-  connect_bd_net -net DVIClocking_1_SerialClk  [get_bd_pins DVIClocking_1/SerialClk] \
+  connect_bd_net -net DVIClocking_1_SerialClk  [get_bd_pins VideoClocking/SerialClk] \
   [get_bd_pins rgb2dvi_0/SerialClk]
-  connect_bd_net -net DVIClocking_1_aLockedOut  [get_bd_pins DVIClocking_1/aLockedOut] \
-  [get_bd_pins rst_vid_clk_dyn/dcm_locked]
   connect_bd_net -net MIPI_D_PHY_RX_0_RxByteClkHS  [get_bd_pins MIPI_D_PHY_RX_0/RxByteClkHS] \
-  [get_bd_pins MIPI_CSI_2_RX_0/RxByteClkHS]
-  connect_bd_net -net PixelClk_Generator_clk_out1  [get_bd_pins DVIClocking_1/PixelClk] \
+  [get_bd_pins ImProc1/RxByteClkHS]
+  connect_bd_net -net PixelClk_Generator_clk_out1  [get_bd_pins VideoClocking/slowest_sync_clk] \
   [get_bd_pins rgb2dvi_0/PixelClk] \
-  [get_bd_pins rst_vid_clk_dyn/slowest_sync_clk] \
   [get_bd_pins v_axi4s_vid_out_0/vid_io_out_clk] \
   [get_bd_pins vtg/clk]
-  connect_bd_net -net axi_vdma_0_mm2s_introut  [get_bd_pins axi_vdma_0/mm2s_introut] \
-  [get_bd_pins xlconcat_0/In1]
-  connect_bd_net -net axi_vdma_0_s2mm_introut  [get_bd_pins axi_vdma_0/s2mm_introut] \
-  [get_bd_pins xlconcat_0/In2]
   connect_bd_net -net clk_wiz_0_locked  [get_bd_pins clk_wiz_0/locked] \
   [get_bd_pins rst_clk_wiz_0_50M/dcm_locked]
   connect_bd_net -net dphy_clk_lp_n_1  [get_bd_ports dphy_clk_lp_n] \
@@ -968,9 +1108,6 @@ proc cr_bd_system { parentCell } {
   connect_bd_net -net dphy_data_lp_p_1  [get_bd_ports dphy_data_lp_p] \
   [get_bd_pins MIPI_D_PHY_RX_0/dphy_data_lp_p]
   connect_bd_net -net mm_clk_150  [get_bd_pins clk_wiz_0/clk_out2] \
-  [get_bd_pins AXI_BayerToRGB_0/StreamClk] \
-  [get_bd_pins AXI_GammaCorrection_1/StreamClk] \
-  [get_bd_pins MIPI_CSI_2_RX_0/video_aclk] \
   [get_bd_pins axi_mem_intercon/ACLK] \
   [get_bd_pins axi_mem_intercon/S00_ACLK] \
   [get_bd_pins axi_mem_intercon/M00_ACLK] \
@@ -983,13 +1120,15 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins axi_vdma_0/s_axis_s2mm_aclk] \
   [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] \
   [get_bd_pins processing_system7_0/S_AXI_HP2_ACLK] \
-  [get_bd_pins v_axi4s_vid_out_0/aclk]
+  [get_bd_pins v_axi4s_vid_out_0/aclk] \
+  [get_bd_pins ImProc1/StreamClk] \
+  [get_bd_pins AXI_RgbToGrayscale_0/i_aclk]
   connect_bd_net -net processing_system7_0_FCLK_CLK0  [get_bd_pins processing_system7_0/FCLK_CLK0] \
   [get_bd_pins clk_wiz_0/clk_in1] \
-  [get_bd_pins video_dynclk/clk_in1]
+  [get_bd_pins VideoClocking/clk_in1]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N  [get_bd_pins processing_system7_0/FCLK_RESET0_N] \
   [get_bd_pins rst_clk_wiz_0_50M/ext_reset_in] \
-  [get_bd_pins rst_vid_clk_dyn/ext_reset_in]
+  [get_bd_pins VideoClocking/ext_reset_in]
   connect_bd_net -net ref_clk_200  [get_bd_pins clk_wiz_0/clk_out3] \
   [get_bd_pins MIPI_D_PHY_RX_0/RefClk]
   connect_bd_net -net rst_clk_wiz_0_50M_interconnect_aresetn  [get_bd_pins rst_clk_wiz_0_50M/interconnect_aresetn] \
@@ -997,10 +1136,6 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins axi_mem_intercon_1/ARESETN] \
   [get_bd_pins ps7_0_axi_periph/ARESETN]
   connect_bd_net -net rst_clk_wiz_0_50M_peripheral_aresetn  [get_bd_pins rst_clk_wiz_0_50M/peripheral_aresetn] \
-  [get_bd_pins AXI_BayerToRGB_0/sStreamReset_n] \
-  [get_bd_pins AXI_GammaCorrection_1/aAxiLiteReset_n] \
-  [get_bd_pins AXI_GammaCorrection_1/sStreamReset_n] \
-  [get_bd_pins MIPI_CSI_2_RX_0/s_axi_lite_aresetn] \
   [get_bd_pins MIPI_D_PHY_RX_0/s_axi_lite_aresetn] \
   [get_bd_pins axi_mem_intercon/S00_ARESETN] \
   [get_bd_pins axi_mem_intercon/M00_ARESETN] \
@@ -1015,18 +1150,17 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins ps7_0_axi_periph/M04_ARESETN] \
   [get_bd_pins ps7_0_axi_periph/M05_ARESETN] \
   [get_bd_pins v_axi4s_vid_out_0/aresetn] \
-  [get_bd_pins video_dynclk/s_axi_aresetn] \
   [get_bd_pins vtg/s_axi_aresetn] \
-  [get_bd_pins AxiRgbToGrayscale_0/i_aresetn]
+  [get_bd_pins ImProc1/sStreamReset_n] \
+  [get_bd_pins VideoClocking/s_axi_aresetn] \
+  [get_bd_pins AXI_RgbToGrayscale_0/i_aresetn]
   connect_bd_net -net rst_clk_wiz_0_50M_peripheral_reset  [get_bd_pins rst_clk_wiz_0_50M/peripheral_reset] \
   [get_bd_pins MIPI_D_PHY_RX_0/aRst]
-  connect_bd_net -net rst_vid_clk_dyn_peripheral_aresetn  [get_bd_pins rst_vid_clk_dyn/peripheral_aresetn] \
+  connect_bd_net -net rst_vid_clk_dyn_peripheral_aresetn  [get_bd_pins VideoClocking/peripheral_aresetn] \
   [get_bd_pins vtg/resetn]
-  connect_bd_net -net rst_vid_clk_dyn_peripheral_reset  [get_bd_pins rst_vid_clk_dyn/peripheral_reset] \
+  connect_bd_net -net rst_vid_clk_dyn_peripheral_reset  [get_bd_pins VideoClocking/peripheral_reset] \
   [get_bd_pins v_axi4s_vid_out_0/vid_io_out_reset]
   connect_bd_net -net s_axil_clk_50  [get_bd_pins clk_wiz_0/clk_out1] \
-  [get_bd_pins AXI_GammaCorrection_1/AxiLiteClk] \
-  [get_bd_pins MIPI_CSI_2_RX_0/s_axi_lite_aclk] \
   [get_bd_pins MIPI_D_PHY_RX_0/s_axi_lite_aclk] \
   [get_bd_pins axi_vdma_0/s_axi_lite_aclk] \
   [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] \
@@ -1039,30 +1173,20 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins ps7_0_axi_periph/M04_ACLK] \
   [get_bd_pins ps7_0_axi_periph/M05_ACLK] \
   [get_bd_pins rst_clk_wiz_0_50M/slowest_sync_clk] \
-  [get_bd_pins video_dynclk/s_axi_aclk] \
   [get_bd_pins vtg/s_axi_aclk] \
-  [get_bd_pins AxiRgbToGrayscale_0/i_aclk]
+  [get_bd_pins ImProc1/AxiLiteClk] \
+  [get_bd_pins VideoClocking/s_axi_aclk]
   connect_bd_net -net v_axi4s_vid_out_0_locked  [get_bd_pins v_axi4s_vid_out_0/locked] \
   [get_bd_pins rgb2dvi_0/aRst_n]
   connect_bd_net -net v_axi4s_vid_out_0_vtg_ce  [get_bd_pins v_axi4s_vid_out_0/vtg_ce] \
   [get_bd_pins vtg/gen_clken]
-  connect_bd_net -net v_tc_0_irq  [get_bd_pins vtg/irq] \
-  [get_bd_pins xlconcat_0/In0]
-  connect_bd_net -net video_dynclk_locked  [get_bd_pins video_dynclk/locked] \
-  [get_bd_pins DVIClocking_1/aLockedIn]
-  connect_bd_net -net video_dynclk_pxl_clk_5x  [get_bd_pins video_dynclk/pxl_clk_5x] \
-  [get_bd_pins DVIClocking_1/PixelClk5X]
-  connect_bd_net -net xlconcat_0_dout  [get_bd_pins xlconcat_0/dout] \
-  [get_bd_pins processing_system7_0/IRQ_F2P]
-  connect_bd_net -net xlconstant_0_dout  [get_bd_pins xlconstant_0/dout] \
-  [get_bd_pins AxiRgbToGrayscale_0/i_pass_through]
 
   # Create address segments
-  assign_bd_address -offset 0x43C10000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs AXI_GammaCorrection_1/s_axil/reg0] -force
-  assign_bd_address -offset 0x43C20000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs MIPI_CSI_2_RX_0/S_AXI_LITE/S_AXI_LITE_reg] -force
+  assign_bd_address -offset 0x43C10000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs ImProc1/AXI_GammaCorrection_1/s_axil/reg0] -force
+  assign_bd_address -offset 0x43C20000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs ImProc1/MIPI_CSI_2_RX_0/S_AXI_LITE/S_AXI_LITE_reg] -force
   assign_bd_address -offset 0x43C30000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs MIPI_D_PHY_RX_0/S_AXI_LITE/S_AXI_LITE_reg] -force
   assign_bd_address -offset 0x43000000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_vdma_0/S_AXI_LITE/Reg] -force
-  assign_bd_address -offset 0x43C40000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs video_dynclk/s_axi_lite/Reg] -force
+  assign_bd_address -offset 0x43C40000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs VideoClocking/video_dynclk/s_axi_lite/Reg] -force
   assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs vtg/ctrl/Reg] -force
   assign_bd_address -offset 0x00000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces axi_vdma_0/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] -force
   assign_bd_address -offset 0x00000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces axi_vdma_0/Data_S2MM] [get_bd_addr_segs processing_system7_0/S_AXI_HP2/HP2_DDR_LOWOCM] -force
@@ -1071,16 +1195,15 @@ proc cr_bd_system { parentCell } {
   # Restore current instance
   current_bd_instance $oldCurInst
 
+  validate_bd_design
   save_bd_design
-common::send_gid_msg -ssname BD::TCL -id 2050 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
-
   close_bd_design $design_name 
 }
 # End of cr_bd_system()
 
 cr_bd_system ""
+set_property GENERATE_SYNTH_CHECKPOINT "0" [get_files system.bd ] 
 set_property REGISTERED_WITH_MANAGER "1" [get_files system.bd ] 
-set_property SYNTH_CHECKPOINT_MODE "Hierarchical" [get_files system.bd ] 
 
 
 # Create wrapper file for system.bd
