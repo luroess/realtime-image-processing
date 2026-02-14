@@ -1,6 +1,6 @@
 # Realtime Streaming Image Processing (FPGA) - Zybo Z7-10 + Pcam 5C
 
-Team: Lukas Roess, Valentin Bumeder, Jan Duchscherer
+Team: Lukas Roess, Valentin Bumeder, Jan Duchscherer, Justin Löber
 
 Target: [Digilent Zybo Z7-10 (Zynq-7010)](https://digilent.com/reference/programmable-logic/zybo-z7/start) + [Pcam 5C (OV5640)](https://digilent.com/reference/add-ons/pcam-5c/start)
 
