@@ -181,7 +181,13 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 # Set IP repository paths
 set obj [get_filesets sources_1]
 if { $obj != {} } {
-   set_property "ip_repo_paths" "[file normalize "$origin_dir/hw.ipdefs/repo"]" $obj
+   # Keep both external/custom repos in the recreated project so BD IPs and custom IPs resolve.
+   set repo_paths [list \
+    [file normalize "$origin_dir/hw.ipdefs/repo"] \
+    [file normalize "$origin_dir/../rtl/RGB_TO_GRAYSCALE"] \
+   ]
+   set_property "ip_repo_paths" $repo_paths [current_project]
+   set_property "ip_repo_paths" $repo_paths $obj
 
    # Rebuild user ip_repo's index before adding any source files
    update_ip_catalog -rebuild
@@ -314,7 +320,7 @@ if { [get_files DVIClocking.vhd] == "" } {
 
 # Proc to create BD system
 proc cr_bd_system { parentCell } {
-# The design that will be created by this Tcl proc contains the following 
+# The design that will be created by this Tcl proc contains the following
 # module references:
 # DVIClocking
 
@@ -333,7 +339,7 @@ proc cr_bd_system { parentCell } {
   ##################################################################
   set bCheckIPs 1
   if { $bCheckIPs == 1 } {
-     set list_check_ips "\ 
+     set list_check_ips "\
   digilentinc.com:ip:MIPI_D_PHY_RX:1.3\
   xilinx.com:ip:processing_system7:5.5\
   digilentinc.com:ip:rgb2dvi:1.4\
@@ -370,7 +376,7 @@ proc cr_bd_system { parentCell } {
   ##################################################################
   set bCheckModules 1
   if { $bCheckModules == 1 } {
-     set list_check_mods "\ 
+     set list_check_mods "\
   DVIClocking\
   "
 
@@ -395,7 +401,7 @@ proc cr_bd_system { parentCell } {
     return 3
   }
 
-  
+
 # Hierarchical cell: VideoClocking
 proc create_hier_cell_VideoClocking { parentCell nameHier } {
 
@@ -454,7 +460,7 @@ proc create_hier_cell_VideoClocking { parentCell nameHier } {
      catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
      return 1
    }
-  
+
   # Create instance: video_dynclk, and set properties
   set video_dynclk [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 video_dynclk ]
   set_property -dict [list \
@@ -517,7 +523,7 @@ proc create_hier_cell_VideoClocking { parentCell nameHier } {
   # Restore current instance
   current_bd_instance $oldCurInst
 }
-  
+
 # Hierarchical cell: ImProc1
 proc create_hier_cell_ImProc1 { parentCell nameHier } {
 
@@ -1197,13 +1203,21 @@ proc create_hier_cell_ImProc1 { parentCell nameHier } {
 
   validate_bd_design
   save_bd_design
-  close_bd_design $design_name 
+  close_bd_design $design_name
 }
 # End of cr_bd_system()
 
 cr_bd_system ""
-set_property GENERATE_SYNTH_CHECKPOINT "0" [get_files system.bd ] 
-set_property REGISTERED_WITH_MANAGER "1" [get_files system.bd ] 
+set_property GENERATE_SYNTH_CHECKPOINT "1" [get_files system.bd ]
+set_property REGISTERED_WITH_MANAGER "1" [get_files system.bd ]
+
+# Generate and export BD/IP output products up-front.
+# This avoids missing sub-IP artifacts in hw.gen (e.g. ila_sfen_rxclk.xci in MIPI_D_PHY_RX).
+set bd_obj [get_files -quiet system.bd]
+if { $bd_obj ne "" } {
+  generate_target all $bd_obj
+  export_ip_user_files -of_objects $bd_obj -sync -force
+}
 
 
 # Create wrapper file for system.bd
