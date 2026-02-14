@@ -18,19 +18,12 @@
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
- "[file normalize "$origin_dir/archive_project_summary.txt"]"\
-  ]
-  foreach ifile $files {
-    if { ![file isfile $ifile] } {
-      puts " Could not find local file $ifile "
-      set status false
-    }
-  }
-
-  set files [list \
  "[file normalize "$origin_dir/hw.srcs/sources_1/imports/hdl/SyncAsync.vhd"]"\
  "[file normalize "$origin_dir/hw.srcs/sources_1/imports/hdl/ResetBridge.vhd"]"\
  "[file normalize "$origin_dir/hw.srcs/sources_1/imports/hdl/DVIClocking.vhd"]"\
+ "[file normalize "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd"]"\
+ "[file normalize "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"]"\
+ "[file normalize "$origin_dir/archive_project_summary.txt"]"\
  "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/auto.xdc"]"\
  "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/timing.xdc"]"\
  "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/ZyboZ7_A.xdc"]"\
@@ -119,7 +112,7 @@ if { $::argc > 0 } {
 }
 
 # Set the directory path for the original project from where this script was exported
-set orig_proj_dir "[file normalize "$origin_dir/"]"
+set orig_proj_dir "[file normalize "$origin_dir/vivado_project"]"
 
 # Check for paths and files needed for project creation
 set validate_required 0
@@ -195,14 +188,11 @@ set files [list \
  [file normalize "${origin_dir}/hw.srcs/sources_1/imports/hdl/SyncAsync.vhd"] \
  [file normalize "${origin_dir}/hw.srcs/sources_1/imports/hdl/ResetBridge.vhd"] \
  [file normalize "${origin_dir}/hw.srcs/sources_1/imports/hdl/DVIClocking.vhd"] \
+ [file normalize "${origin_dir}/../rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd"] \
+ [file normalize "${origin_dir}/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"] \
+ [file normalize "${origin_dir}/archive_project_summary.txt"] \
 ]
 add_files -norecurse -fileset $obj $files
-
-# Add local files from the original project (-no_copy_sources specified)
-set files [list \
- [file normalize "${origin_dir}/archive_project_summary.txt" ]\
-]
-set added_files [add_files -fileset sources_1 $files]
 
 # Set 'sources_1' fileset file properties for remote files
 set file "$origin_dir/hw.srcs/sources_1/imports/hdl/SyncAsync.vhd"
@@ -216,6 +206,16 @@ set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
 set file "$origin_dir/hw.srcs/sources_1/imports/hdl/DVIClocking.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "file_type" -value "VHDL" -objects $file_obj
+
+set file "$origin_dir/../rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -239,7 +239,7 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize ${origin_dir}/hw.srcs/constrs_1/imports/constraints/auto.xdc]"
+set file "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/auto.xdc"]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
 set file "$origin_dir/hw.srcs/constrs_1/imports/constraints/auto.xdc"
 set file [file normalize $file]
@@ -247,7 +247,7 @@ set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize ${origin_dir}/hw.srcs/constrs_1/imports/constraints/timing.xdc]"
+set file "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/timing.xdc"]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
 set file "$origin_dir/hw.srcs/constrs_1/imports/constraints/timing.xdc"
 set file [file normalize $file]
@@ -255,7 +255,7 @@ set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize ${origin_dir}/hw.srcs/constrs_1/imports/constraints/ZyboZ7_A.xdc]"
+set file "[file normalize "$origin_dir/hw.srcs/constrs_1/imports/constraints/ZyboZ7_A.xdc"]"
 set file_added [add_files -norecurse -fileset $obj [list $file]]
 set file "$origin_dir/hw.srcs/constrs_1/imports/constraints/ZyboZ7_A.xdc"
 set file [file normalize $file]
@@ -279,12 +279,17 @@ set obj [get_filesets sim_1]
 set_property -name "sim_wrapper_top" -value "1" -objects $obj
 set_property -name "top" -value "DVIClocking" -objects $obj
 set_property -name "top_arch" -value "Behavioral" -objects $obj
+set_property -name "top_auto_set" -value "0" -objects $obj
 set_property -name "top_file" -value "$proj_dir/hw.srcs/sources_1/imports/hdl/DVIClocking.vhd" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Set 'utils_1' fileset object
 set obj [get_filesets utils_1]
-# Empty (no sources present)
+# Set 'utils_1' fileset file properties for remote files
+# None
+
+# Set 'utils_1' fileset file properties for local files
+# None
 
 # Set 'utils_1' fileset properties
 set obj [get_filesets utils_1]
@@ -306,7 +311,7 @@ if { [get_files DVIClocking.vhd] == "" } {
 proc cr_bd_system { parentCell } {
 # The design that will be created by this Tcl proc contains the following 
 # module references:
-# DVIClocking
+# DVIClocking, AxiRgbToGrayscale
 
 
 
@@ -336,6 +341,7 @@ proc cr_bd_system { parentCell } {
   xilinx.com:ip:clk_wiz:6.0\
   xilinx.com:ip:v_axi4s_vid_out:4.0\
   xilinx.com:ip:v_tc:6.2\
+  xilinx.com:ip:xlconstant:1.1\
   "
 
    set list_ips_missing ""
@@ -362,6 +368,7 @@ proc cr_bd_system { parentCell } {
   if { $bCheckModules == 1 } {
      set list_check_mods "\ 
   DVIClocking\
+  AxiRgbToGrayscale\
   "
 
    set list_mods_missing ""
@@ -887,9 +894,26 @@ proc cr_bd_system { parentCell } {
   ] $vtg
 
 
+  # Create instance: AxiRgbToGrayscale_0, and set properties
+  set block_name AxiRgbToGrayscale
+  set block_cell_name AxiRgbToGrayscale_0
+  if { [catch {set AxiRgbToGrayscale_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $AxiRgbToGrayscale_0 eq "" } {
+     catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
+  # Create instance: xlconstant_0, and set properties
+  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
+  set_property CONFIG.CONST_VAL {0} $xlconstant_0
+
+
   # Create interface connections
   connect_bd_intf_net -intf_net AXI_BayerToRGB_0_AXI_Stream_Master [get_bd_intf_pins AXI_BayerToRGB_0/AXI_Stream_Master] [get_bd_intf_pins AXI_GammaCorrection_1/s_axis_video]
-  connect_bd_intf_net -intf_net AXI_GammaCorrection_1_m_axis_video [get_bd_intf_pins AXI_GammaCorrection_1/m_axis_video] [get_bd_intf_pins axi_vdma_0/S_AXIS_S2MM]
+  connect_bd_intf_net -intf_net AXI_GammaCorrection_1_m_axis_video [get_bd_intf_pins AxiRgbToGrayscale_0/s_axis_video] [get_bd_intf_pins AXI_GammaCorrection_1/m_axis_video]
+  connect_bd_intf_net -intf_net AxiRgbToGrayscale_0_m_axis_video [get_bd_intf_pins axi_vdma_0/S_AXIS_S2MM] [get_bd_intf_pins AxiRgbToGrayscale_0/m_axis_video]
   connect_bd_intf_net -intf_net MIPI_CSI_2_RX_0_m_axis_video [get_bd_intf_pins AXI_BayerToRGB_0/AXI_Slave_Interface] [get_bd_intf_pins MIPI_CSI_2_RX_0/m_axis_video]
   connect_bd_intf_net -intf_net MIPI_D_PHY_RX_0_D_PHY_PPI [get_bd_intf_pins MIPI_CSI_2_RX_0/rx_mipi_ppi] [get_bd_intf_pins MIPI_D_PHY_RX_0/D_PHY_PPI]
   connect_bd_intf_net -intf_net axi_mem_intercon_1_M00_AXI [get_bd_intf_pins axi_mem_intercon_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP2]
@@ -992,7 +1016,8 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins ps7_0_axi_periph/M05_ARESETN] \
   [get_bd_pins v_axi4s_vid_out_0/aresetn] \
   [get_bd_pins video_dynclk/s_axi_aresetn] \
-  [get_bd_pins vtg/s_axi_aresetn]
+  [get_bd_pins vtg/s_axi_aresetn] \
+  [get_bd_pins AxiRgbToGrayscale_0/i_aresetn]
   connect_bd_net -net rst_clk_wiz_0_50M_peripheral_reset  [get_bd_pins rst_clk_wiz_0_50M/peripheral_reset] \
   [get_bd_pins MIPI_D_PHY_RX_0/aRst]
   connect_bd_net -net rst_vid_clk_dyn_peripheral_aresetn  [get_bd_pins rst_vid_clk_dyn/peripheral_aresetn] \
@@ -1015,7 +1040,8 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins ps7_0_axi_periph/M05_ACLK] \
   [get_bd_pins rst_clk_wiz_0_50M/slowest_sync_clk] \
   [get_bd_pins video_dynclk/s_axi_aclk] \
-  [get_bd_pins vtg/s_axi_aclk]
+  [get_bd_pins vtg/s_axi_aclk] \
+  [get_bd_pins AxiRgbToGrayscale_0/i_aclk]
   connect_bd_net -net v_axi4s_vid_out_0_locked  [get_bd_pins v_axi4s_vid_out_0/locked] \
   [get_bd_pins rgb2dvi_0/aRst_n]
   connect_bd_net -net v_axi4s_vid_out_0_vtg_ce  [get_bd_pins v_axi4s_vid_out_0/vtg_ce] \
@@ -1028,6 +1054,8 @@ proc cr_bd_system { parentCell } {
   [get_bd_pins DVIClocking_1/PixelClk5X]
   connect_bd_net -net xlconcat_0_dout  [get_bd_pins xlconcat_0/dout] \
   [get_bd_pins processing_system7_0/IRQ_F2P]
+  connect_bd_net -net xlconstant_0_dout  [get_bd_pins xlconstant_0/dout] \
+  [get_bd_pins AxiRgbToGrayscale_0/i_pass_through]
 
   # Create address segments
   assign_bd_address -offset 0x43C10000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs AXI_GammaCorrection_1/s_axil/reg0] -force
@@ -1043,8 +1071,9 @@ proc cr_bd_system { parentCell } {
   # Restore current instance
   current_bd_instance $oldCurInst
 
-  validate_bd_design
   save_bd_design
+common::send_gid_msg -ssname BD::TCL -id 2050 -severity "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
+
   close_bd_design $design_name 
 }
 # End of cr_bd_system()
@@ -1083,7 +1112,7 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
-set_property -name "needs_refresh" -value "1" -objects $obj
+set_property -name "incremental_checkpoint" -value "$proj_dir/hw.srcs/utils_1/imports/synth_1/system_wrapper.dcp" -objects $obj
 set_property -name "auto_incremental_checkpoint" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
@@ -1307,7 +1336,6 @@ set_property -name "options.warn_on_violation" -value "1" -objects $obj
 
 }
 set obj [get_runs impl_1]
-set_property -name "needs_refresh" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.verbose" -value "0" -objects $obj
