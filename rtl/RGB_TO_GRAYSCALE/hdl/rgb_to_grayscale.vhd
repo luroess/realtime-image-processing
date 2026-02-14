@@ -2,7 +2,7 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
-entity E_RgbToGrayscale is
+entity RgbToGrayscale is
   generic (
     -- Bit-width per color component (R, G, B).
     G_COMPONENT_WIDTH : positive := 8;
@@ -21,7 +21,7 @@ entity E_RgbToGrayscale is
   );
 end entity;
 
-architecture A_RtlComb of E_RgbToGrayscale is
+architecture A_RtlComb of RgbToGrayscale is
   constant C_RGB_WIDTH : positive := 3 * G_COMPONENT_WIDTH;
   constant C_R_MSB     : natural  := C_RGB_WIDTH - 1;
   constant C_R_LSB     : natural  := 2 * G_COMPONENT_WIDTH;

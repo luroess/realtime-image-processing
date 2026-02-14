@@ -67,6 +67,7 @@ foreach pattern [list \
         add_files -quiet -norecurse -fileset $src_set $files
     }
 }
+update_compile_order -fileset sources_1
 
 # Add constraints.
 set xdc_files [glob -nocomplain [file join $repo_root vivado src constraints *.xdc]]

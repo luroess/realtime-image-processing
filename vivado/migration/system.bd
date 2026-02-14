@@ -3181,10 +3181,10 @@
         "has_run_ip_tcl": "true",
         "parameters": {
           "GPIO_BOARD_INTERFACE": {
-            "value": "btns_4bits"
+            "value": "Custom"
           },
           "USE_BOARD_FLOW": {
-            "value": "true"
+            "value": "false"
           }
         }
       },
