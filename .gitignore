@@ -78,3 +78,25 @@ iseconfig/
 xlnx_auto_0_xdb/
 xst/
 isim/
+
+# -----------------------------------------------------------------------------
+# Canonical Vivado repository policy (script-based flow)
+# -----------------------------------------------------------------------------
+# Disposable recreated Vivado workspace
+vivado/proj/
+
+# Migration-only unzipped Vivado GUI workspace (not canonical in Git)
+vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/
+vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/ip_repo/
+vivado/Zybo-Z7-10-Pcam-5C-hw.xpr-backup/
+
+# Allow pinned canonical IP dependency submodule
+!vivado/ip_repo/
+!vivado/ip_repo/vivado-library/
+
+# Keep artifact directories present even when empty
+!vivado/artifacts/
+!vivado/artifacts/handoff/
+!vivado/artifacts/archive/
+!vivado/artifacts/handoff/.keep
+!vivado/artifacts/archive/.keep
