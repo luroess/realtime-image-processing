@@ -86,4 +86,5 @@ begin
                         s_axis_video_tuser;
   m_axis_gray8_tlast <= '0' when s_cond_reset_tvalid_gray else
                         s_axis_video_tlast;
+
 end architecture;
