@@ -56,5 +56,5 @@ This file collects the full list of board, tool, and design references used with
 - [BT656_to_AXI4S](https://github.com/dylanmsu/BT656_to_AXI4S)
 
 ### Non-VHDL
+- [Image-processing---Verilog](https://github.com/Galapple/Image-processing---Verilog)
 - [/georgeyhere/FPGA-Video-Processing](https://github.com/georgeyhere/FPGA-Video-Processing/tree/master)
-- [/Galapple/Image-processing---Verilog](https://github.com/Galapple/Image-processing---Verilog)

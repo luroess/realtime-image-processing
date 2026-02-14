@@ -7,14 +7,15 @@ TOPLEVEL ?= example_passthrough
 MODULE ?= tests.test_example
 
 # Add DUT sources here. Keep both lists available for future VHDL/Verilog DUT swaps.
-VHDL_SOURCES += $(abspath ../rtl/EXAMPLE_PASSTHROUGH/hdl/example_passthrough.vhd)
+VHDL_SOURCES += $(shell find $(abspath ../rtl) -name '*.vhd')
 VERILOG_SOURCES +=
 
 # Let cocotb discover local testbench modules (drivers/monitors/models).
 export PYTHONPATH := $(abspath .):$(PYTHONPATH)
 
-.PHONY: clean-sim
-clean-sim:
-	rm -rf sim_build
+# GHDL specific flags to generate a waveform file
+ifeq ($(SIM), ghdl)
+    SIM_ARGS += --wave=sim_build/wave.ghw
+endif
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

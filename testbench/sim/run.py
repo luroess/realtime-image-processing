@@ -123,6 +123,27 @@ def _collect_sources(repo_root: Path, config: dict[str, Any]) -> list[Path]:
     raise ValueError("Target must define either 'sources' or 'component'.")
 
 
+def _resolve_parameters(config: dict[str, Any]) -> dict[str, object]:
+    """Resolve HDL generic/parameter overrides for cocotb runner."""
+    raw = config.get("generics", {})
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("'generics' must be a mapping of name -> value.")
+
+    resolved: dict[str, object] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str) or not key:
+            raise ValueError("Generic names must be non-empty strings.")
+        if not isinstance(value, (int, float, bool, str)):
+            raise ValueError(
+                f"Unsupported generic type for '{key}': {type(value).__name__}",
+            )
+        resolved[key] = value
+
+    return resolved
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run cocotb simulation target.")
     parser.add_argument(
@@ -181,6 +202,7 @@ def main() -> None:
     toplevel = str(config["toplevel"])
     test_module = str(config["test_module"])
     waves = bool(config["waves"])
+    parameters = _resolve_parameters(config)
 
     sources = _collect_sources(repo_root=repo_root, config=config)
 
@@ -213,6 +235,7 @@ def main() -> None:
         build_dir=build_dir,
         test_dir=test_dir,
         waves=waves,
+        parameters=parameters,
     )
 
     if waves:
