@@ -1,0 +1,6 @@
+# Vivado hardware artifacts tracked with Git LFS
+vivado/artifacts/**/*.bit filter=lfs diff=lfs merge=lfs -text
+vivado/artifacts/**/*.xsa filter=lfs diff=lfs merge=lfs -text
+vivado/artifacts/**/*.ltx filter=lfs diff=lfs merge=lfs -text
+vivado/artifacts/**/*.dcp filter=lfs diff=lfs merge=lfs -text
+vivado/artifacts/**/*.zip filter=lfs diff=lfs merge=lfs -text
