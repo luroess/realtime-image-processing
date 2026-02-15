@@ -20,7 +20,7 @@ from verification.scoreboard import Scoreboard
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
 S_AXIS_PREFIX = "s_axis_video"
-M_AXIS_PREFIX = "m_axis_video"
+M_AXIS_PREFIX = "m_axis_rgb888"
 RESET_ACTIVE_LEVEL = False
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,14 +35,19 @@ def _sim_artifact_dir() -> Path:
 
 def _expected_gray_rgb(image: Image) -> Image:
     """Compute expected grayscale output with Y replicated into RGB channels."""
+    gray_u8 = _expected_gray8_plane(image)
+    gray_rgb = np.stack((gray_u8, gray_u8, gray_u8), axis=2)
+    return Image(gray_rgb)
+
+
+def _expected_gray8_plane(image: Image) -> np.ndarray:
+    """Compute expected grayscale plane (Y only)."""
     pixels_u16 = image.pixels.astype(np.uint16)
     r = pixels_u16[:, :, 0]
     g = pixels_u16[:, :, 1]
     b = pixels_u16[:, :, 2]
     y = (r >> 2) + (g >> 1) + (b >> 2)
-    gray_u8 = y.astype(np.uint8)
-    gray_rgb = np.stack((gray_u8, gray_u8, gray_u8), axis=2)
-    return Image(gray_rgb)
+    return y.astype(np.uint8)
 
 
 @dataclass(slots=True)
@@ -79,6 +84,7 @@ class AxiRgbToGrayscaleTestbench:
         self.i_clk = getattr(dut, ACLK_SIGNAL)
         self.i_rst_n = getattr(dut, ARESETN_SIGNAL)
         self.i_pass_through = getattr(dut, "i_pass_through", None)
+        self.m_axis_gray8_tready = getattr(dut, "m_axis_gray8_tready", None)
 
         self.s_axis_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
         self.s_axis_tdata = getattr(dut, f"{S_AXIS_PREFIX}_tdata")
@@ -92,6 +98,7 @@ class AxiRgbToGrayscaleTestbench:
 
         self.source: AxiVideoStreamSource | None = None
         self.sink: AxiVideoStreamSink | None = None
+        self.gray8_sink: AxiVideoStreamSink | None = None
         self.scoreboard = Scoreboard()
         self.handshake_stats = HandshakeStats()
 
@@ -107,6 +114,8 @@ class AxiRgbToGrayscaleTestbench:
         self.s_axis_tlast.value = 0
         self.s_axis_tuser.value = 0
         self.m_axis_tready.value = 0
+        if self.m_axis_gray8_tready is not None:
+            self.m_axis_gray8_tready.value = 0
         if self.i_pass_through is not None:
             self.i_pass_through.value = int(self.cfg.pass_through)
 
@@ -136,6 +145,18 @@ class AxiRgbToGrayscaleTestbench:
             prefix=M_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
         )
+        self.gray8_sink = AxiVideoStreamSink(
+            dut=self.dut,
+            i_clk=self.i_clk,
+            i_rst_n=self.i_rst_n,
+            prefix="m_axis_gray8",
+            reset_active_level=RESET_ACTIVE_LEVEL,
+            frame_type="gray8",
+        )
+
+        # Keep gray output consumer ready to allow lockstep fan-out from the DUT.
+        if self.m_axis_gray8_tready is not None:
+            self.m_axis_gray8_tready.value = 1
 
     def _start_optional_tasks(self, *, width: int, height: int) -> None:
         if self.cfg.check_handshake:
@@ -190,6 +211,23 @@ class AxiRgbToGrayscaleTestbench:
         if self.sink is not None:
             self.sink.set_pause(False)
 
+    async def _recv_gray8_plane(
+        self,
+        *,
+        width: int,
+        height: int,
+        timeout_ns: int,
+    ) -> np.ndarray:
+        assert self.gray8_sink is not None
+        result = await self.gray8_sink.recv_image(
+            width=width,
+            height=height,
+            timeout_ns=timeout_ns,
+            frame_type="gray8",
+        )
+        assert isinstance(result, np.ndarray)
+        return result
+
     async def run_frame(
         self,
         *,
@@ -200,8 +238,10 @@ class AxiRgbToGrayscaleTestbench:
         await self.initialize()
         assert self.source is not None
         assert self.sink is not None
+        assert self.gray8_sink is not None
 
         expected = image if self.cfg.pass_through else _expected_gray_rgb(image)
+        expected_gray8 = _expected_gray8_plane(image)
 
         self._start_optional_tasks(width=image.width, height=image.height)
         try:
@@ -224,6 +264,15 @@ class AxiRgbToGrayscaleTestbench:
                 received_image.to_png(output_path)
 
             self.scoreboard.compare(expected=expected, received=received_image)
+            received_gray8 = await self._recv_gray8_plane(
+                width=image.width,
+                height=image.height,
+                timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
+            )
+            if not np.array_equal(received_gray8, expected_gray8):
+                raise AssertionError(
+                    "Gray8 output mismatch against expected grayscale plane.",
+                )
             await self._finish_optional_tasks(width=image.width, height=image.height)
         finally:
             self._stop_optional_tasks()
@@ -239,11 +288,11 @@ class AxiRgbToGrayscaleTestbench:
             await RisingEdge(self.i_clk)
             await ReadOnly()
 
-            self._assert_resolved(self.m_axis_tvalid, "m_axis_video_tvalid")
-            self._assert_resolved(self.m_axis_tready, "m_axis_video_tready")
-            self._assert_resolved(self.m_axis_tdata, "m_axis_video_tdata")
-            self._assert_resolved(self.m_axis_tlast, "m_axis_video_tlast")
-            self._assert_resolved(self.m_axis_tuser, "m_axis_video_tuser")
+            self._assert_resolved(self.m_axis_tvalid, M_AXIS_PREFIX + "_tvalid")
+            self._assert_resolved(self.m_axis_tready, M_AXIS_PREFIX + "_tready")
+            self._assert_resolved(self.m_axis_tdata, M_AXIS_PREFIX + "_tdata")
+            self._assert_resolved(self.m_axis_tlast, M_AXIS_PREFIX + "_tlast")
+            self._assert_resolved(self.m_axis_tuser, M_AXIS_PREFIX + "_tuser")
 
             if int(self.i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
                 ready_low_run = 0
