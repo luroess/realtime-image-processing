@@ -8,6 +8,7 @@ from pathlib import Path
 
 import cocotb
 import numpy as np
+from typing import List
 from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
 from common.pause import drive_sink_pause
@@ -23,6 +24,53 @@ S_AXIS_PREFIX = "s_axis_video"
 M_AXIS_PREFIX = "m_axis_window"
 RESET_ACTIVE_LEVEL = False
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _windows_from_image(image: Image, wndw_size: int) -> List[np.ndarray]:
+    """
+    For each pixel in the image, extract a wndw_size * wndw_size RGB window
+    centered on that pixel. Out-of-bounds areas are filled with zeros.
+
+    Args:
+        image: Image dataclass containing .pixels (H, W, 3) uint8 array
+        wndw_size: Size of the square window (must be odd)
+
+    Returns:
+        List of windows, each a (wndw_size, wndw_size, 3) uint8 array.
+        Windows are ordered in row-major order (y-major).
+    """
+
+    if wndw_size % 2 == 0:
+        raise ValueError(f"Expected odd window size, got {wndw_size}")
+
+    h, w, c = image.height, image.width, image.channels
+    pad = wndw_size // 2
+
+    # Zero-pad the image (constant 0 padding)
+    padded = np.pad(
+        image.pixels,
+        pad_width=((pad, pad), (pad, pad), (0, 0)),
+        mode="constant",
+        constant_values=0,
+    )
+
+    windows = np.zeros(
+        (h * w, wndw_size, wndw_size, c),
+        dtype=np.uint8,
+    )
+
+    index = 0
+    for y in range(h):
+        for x in range(w):
+            y0 = y
+            x0 = x
+            windows[index] = padded[
+                y0 : y0 + wndw_size,
+                x0 : x0 + wndw_size
+            ]
+            index += 1
+
+    return windows
 
 
 def _sim_artifact_dir() -> Path:
@@ -189,7 +237,8 @@ class AxiRgbToWindowTestbench:
         assert self.source is not None
         assert self.sink is not None
 
-        #expected = image if self.cfg.pass_through
+        expected_windows = _windows_from_image(image=image, wndw_size=3)
+        print("First expected window is:", expected_windows[0])
 
         self._start_optional_tasks(width=image.width, height=image.height)
         try:
@@ -202,16 +251,15 @@ class AxiRgbToWindowTestbench:
             min_timeout_ns = (
                 image.width * image.height * self.cfg.recv_timeout_per_pixel_ns
             )
-            # received_image = await self.sink.recv_image(
-            #     width=image.width,
-            #     height=image.height,
-            #     timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
-            # )
+            received_windows = await self.sink.recv_windows(
+                width=image.width,
+                height=image.height,
+                timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
+                wndw_size=3,
+                pxl_width=24,
+            )
 
-            #if output_path is not None:
-            #    received_image.to_png(output_path)
-
-            #self.scoreboard.compare(expected=expected, received=received_image)
+            self.scoreboard.compare_windows(expected=expected_windows, received=received_windows)
             await self._finish_optional_tasks(width=image.width, height=image.height)
         finally:
             self._stop_optional_tasks()
