@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import warnings
 import numpy as np
+from typing import List
 from models.image_model import Image
 
 
@@ -34,3 +36,35 @@ class Scoreboard:
             f"First pixel mismatch at index={idx} (x={int(x)}, y={int(y)}, ch={ch}): "
             f"expected={exp_px}, received={got_px}",
         )
+
+    def compare_windows(w1: List[np.ndarray], w2: List[np.ndarray]) -> List[int]:
+        """
+        Compare two lists of windows and return a list of indices where
+        the windows differ. If the lists have different lengths, a warning
+        is issued and only the overlapping portion is compared.
+
+        Returns:
+            A list of indices i such that w1[i] != w2[i].
+        """
+
+        len1 = len(w1)
+        len2 = len(w2)
+
+        if len1 != len2:
+            warnings.warn(
+                f"Window lists have different lengths: {len1} vs {len2}. "
+                f"Comparing only the first {min(len1, len2)} windows."
+            )
+
+        limit = min(len1, len2)
+        mismatches = []
+
+        for i in range(limit):
+            if not np.array_equal(w1[i], w2[i]):
+                mismatches.append(i)
+
+        if len(mismatches > 0):
+            raise AssertionError(
+                f"Window mismatch(es) at {mismatches}"
+            )
+        return mismatches
