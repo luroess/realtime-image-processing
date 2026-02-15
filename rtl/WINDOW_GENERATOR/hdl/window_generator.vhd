@@ -31,7 +31,8 @@ entity window_generator is
     -- AXI4-Stream Video Master (output)
     m_axis_window_tvalid : out std_logic;
     m_axis_window_tready : in  std_logic;
-    m_axis_window_tdata  : out t_wndw;
+    --m_axis_window_tdata  : out t_wndw;
+    m_axis_window_tdata  : out t_wndw_flat_t;
     m_axis_window_tuser  : out std_logic; -- SOF
     m_axis_window_tlast  : out std_logic  -- EOL
   );
@@ -55,7 +56,7 @@ architecture A_Rtl of window_generator is
   -- signals
   ------------------------------------------------------------------
   -- buffers
-  signal buf_reg : t_buf; -- pixel buffer
+  signal buf_reg  : t_buf; -- pixel buffer
   signal sof_reg  : std_logic_vector((C_FILL_MIN-1)+2 downto 0) := (others => '0'); -- control signal buffer (+2 for internal delay s_data -> wndw -> m_data)
   signal eol_reg  : std_logic_vector((C_FILL_MIN-1)+2 downto 0) := (others => '0'); -- control signal buffer (+2 for internal delay s_data -> wndw -> m_data)
   signal rdy_reg  : std_logic := '0';
@@ -69,7 +70,35 @@ architecture A_Rtl of window_generator is
 
   -- window data
   signal wndw : t_wndw;
+  -- signal wndw_2d : t_wndw_t := (others => (others => C_ZERO));
   signal wndw_valid : std_logic := '0';
+
+  ------------------------------------------------------------------
+  -- functions
+  ------------------------------------------------------------------
+  -- 2D window array to flat_window (std_logic_vector)
+  function f_pack_2d_wndw(i_w : t_wndw_t) return t_wndw_flat_t is
+    variable v_flat : t_wndw_flat_t := (others => '0');
+    variable v_idx  : natural;
+  begin
+    for r in 0 to G_KERNEL_SIZE-1 loop
+      for c in 0 to G_KERNEL_SIZE-1 loop
+        v_idx := r*G_KERNEL_SIZE + c;
+        v_flat((v_idx+1)*G_PIXEL_WIDTH-1 downto v_idx*G_PIXEL_WIDTH) := i_w(r,c);
+      end loop;
+    end loop;
+    return v_flat;
+  end function;
+
+  -- 1D window array to flat_window (std_logic_vector)
+  function f_pack_1d_wndw(i_w : t_wndw) return t_wndw_flat_t is
+    variable v_flat : t_wndw_flat_t := (others => '0');
+  begin
+    for i in 0 to G_KERNEL_SIZE*G_KERNEL_SIZE-1 loop
+      v_flat((i+1)*G_PIXEL_WIDTH-1 downto i*G_PIXEL_WIDTH) := i_w(i);
+    end loop;
+    return v_flat;
+  end function;
 
 begin
 
@@ -77,6 +106,11 @@ begin
   -- Line buffering
   ------------------------------------------------------------------
   process(i_clk)
+    ------------------------------------------------------------------
+    -- variables
+    ------------------------------------------------------------------
+    variable v_col_cnt_out  : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter
+    variable v_row_cnt_out  : natural range 0 to G_ROW+1 := 0; -- row counter
   begin
     if rising_edge(i_clk) then
       if i_rst_n = '0' then
@@ -86,17 +120,20 @@ begin
         pxl_cnt     <= 0;
         col_cnt_out <= 0;
         row_cnt_out <= 0;
+        v_col_cnt_out := 0;
+        v_row_cnt_out := 0;
         -- clear registers
         sof_reg     <= (others => '0');
         eol_reg     <= (others => '0');
         rdy_reg     <= '0';
         wndw_valid  <= '0';
         wndw        <= (others => C_ZERO);
+        --wndw_2d     <= (others => (others => C_ZERO));
         buf_reg     <= (others => C_ZERO);
         -- reset outputs
         s_axis_video_tready   <= '0';
         m_axis_window_tvalid  <= '0';
-        m_axis_window_tdata   <= (others => C_ZERO);
+        m_axis_window_tdata   <= (others => '0');
         m_axis_window_tuser   <= '0';
         m_axis_window_tlast   <= '0';
       else
@@ -129,22 +166,26 @@ begin
           eol_reg <= eol_reg(eol_reg'high-1 downto eol_reg'low) & s_axis_video_tlast; -- shift in current value
 
           -- increment pixels received
-          if pxl_cnt <= C_FILL_MIN then -- only use this counter after reset for first fill of buffer until valid output can be produced
+          if pxl_cnt < 2*C_FILL_MIN then -- only use this counter after reset for first fill of buffer until valid output can be produced
             pxl_cnt <= pxl_cnt + 1;
           end if;
 
           -- handle output counters
-          if pxl_cnt > C_FILL_MIN then 
+          if pxl_cnt > C_FILL_MIN+1 then 
             -- EOL
             if eol_reg(eol_reg'high) = '1' then
               col_cnt_out <= 0;
+              v_col_cnt_out := 0;
               row_cnt_out <= row_cnt_out + 1;
+              v_row_cnt_out := v_row_cnt_out + 1;
             else
               col_cnt_out <= col_cnt_out + 1;
+              v_col_cnt_out := v_col_cnt_out + 1;
             end if;
             -- SOF
             if sof_reg(sof_reg'high) = '1' then
               row_cnt_out <= 0;
+              v_row_cnt_out := 0;
             end if;
           end if;
 
@@ -184,9 +225,15 @@ begin
 
         ------------------------------------------------------------------
         -- 3x3 Window generation with Zero Padding
+        -- 1D window:
         -- wndw(0)   wndw(1)   wndw(2)
         -- wndw(3)   wndw(4)   wndw(5)
         -- wndw(6)   wndw(7)   wndw(8)
+        --
+        -- 2D window (row,col):
+        -- (0,0)   (0,1)   (0,2)
+        -- (1,0)   (1,1)   (1,2)
+        -- (2,0)   (2,1)   (2,2)
         ------------------------------------------------------------------       
 
         --default to normal case (no edge pixel)
@@ -200,85 +247,68 @@ begin
         wndw(7) <= buf_reg(2*G_LINE_WIDTH+1);
         wndw(8) <= buf_reg(2*G_LINE_WIDTH+2);
 
+        -- 2D array not supported by surfer yet
+        -- wndw_2d(0,0) <= buf_reg(0);
+        -- wndw_2d(0,1) <= buf_reg(1);
+        -- wndw_2d(0,2) <= buf_reg(2);
+        -- wndw_2d(1,0) <= buf_reg(G_LINE_WIDTH+0);
+        -- wndw_2d(1,1) <= buf_reg(G_LINE_WIDTH+1);
+        -- wndw_2d(1,2) <= buf_reg(G_LINE_WIDTH+2);
+        -- wndw_2d(2,0) <= buf_reg(2*G_LINE_WIDTH+0);
+        -- wndw_2d(2,1) <= buf_reg(2*G_LINE_WIDTH+1);
+        -- wndw_2d(2,2) <= buf_reg(2*G_LINE_WIDTH+2);
+
         -- edge cases
         -- first and last line
-        if row_cnt_out < 1 then -- first row in frame
+        --if row_cnt_out < 1 then -- first row in frame
+        if v_row_cnt_out < 1 then -- first row in frame
           wndw(0) <= C_ZERO;
           wndw(1) <= C_ZERO;
           wndw(2) <= C_ZERO;
-        elsif row_cnt_out > G_ROW-1 then -- last row in frame
+          -- wndw_2d(0,0) <= C_ZERO;
+          -- wndw_2d(0,1) <= C_ZERO;
+          -- wndw_2d(0,2) <= C_ZERO;
+        --elsif row_cnt_out > G_ROW-1 then -- last row in frame
+        elsif v_row_cnt_out >= G_ROW-1 then -- last row in frame
           wndw(6) <= C_ZERO;
           wndw(7) <= C_ZERO;
           wndw(8) <= C_ZERO;
+          -- wndw_2d(2,0) <= C_ZERO;
+          -- wndw_2d(2,1) <= C_ZERO;
+          -- wndw_2d(2,2) <= C_ZERO;
         end if;
 
         -- first and last column
-        if col_cnt_out < 1 then -- first column in line
+        --if col_cnt_out < 1 then -- first column in line
+        if v_col_cnt_out < 1 then -- first column in line
           wndw(0) <= C_ZERO;
           wndw(3) <= C_ZERO;
           wndw(6) <= C_ZERO;
-        elsif col_cnt_out > G_LINE_WIDTH-1 then -- last column in line
+          -- wndw_2d(0,0) <= C_ZERO;
+          -- wndw_2d(1,0) <= C_ZERO;
+          -- wndw_2d(2,0) <= C_ZERO;
+        --elsif col_cnt_out > G_LINE_WIDTH-1 then -- last column in line
+        elsif v_col_cnt_out >= G_LINE_WIDTH-1 then -- last column in line
           wndw(2) <= C_ZERO;
           wndw(5) <= C_ZERO;
           wndw(8) <= C_ZERO;
+          -- wndw_2d(0,2) <= C_ZERO;
+          -- wndw_2d(1,2) <= C_ZERO;
+          -- wndw_2d(2,2) <= C_ZERO;
         end if;
 
         ------------------------------------------------------------------
         -- AXI Stream Master outputs
         ------------------------------------------------------------------
-        m_axis_window_tvalid <= wndw_valid;
-        m_axis_window_tdata  <= wndw;
-        m_axis_window_tlast  <= eol_reg(eol_reg'high);
-        m_axis_window_tuser  <= sof_reg(sof_reg'high);
+        m_axis_window_tvalid  <= wndw_valid;
+        -- m_axis_window_tdata  <= wndw;
+        -- m_axis_window_tdata   <= f_pack_2d_wndw(wndw_2d);
+        m_axis_window_tdata   <= f_pack_1d_wndw(wndw);
+        m_axis_window_tlast   <= eol_reg(eol_reg'high);
+        m_axis_window_tuser   <= sof_reg(sof_reg'high);
 
       end if; -- end rst
     end if; -- end rising edge
   end process;
-
-  ------------------------------------------------------------------
-  -- 3x3 Window generation with Zero Padding
-  -- wndw(0)   wndw(1)   wndw(2)
-  -- wndw(3)   wndw(4)   wndw(5)
-  -- wndw(6)   wndw(7)   wndw(8)
-  ------------------------------------------------------------------
-  -- process(col_cnt, row_cnt)
-  --   variable c : integer;
-  --   variable r : integer;
-  -- begin
-  --   c := integer(col_cnt);
-  --   r := integer(row_cnt);
-
-  --   --default to normal case (no edge pixel)
-  --   wndw(0) <= buf_reg(0);
-  --   wndw(1) <= buf_reg(1);
-  --   wndw(2) <= buf_reg(2);
-  --   wndw(3) <= buf_reg(G_LINE_WIDTH+0);
-  --   wndw(4) <= buf_reg(G_LINE_WIDTH+1); -- pixel that convolution produces result for
-  --   wndw(5) <= buf_reg(G_LINE_WIDTH+2);
-  --   wndw(6) <= buf_reg(2*G_LINE_WIDTH+0);
-  --   wndw(7) <= buf_reg(2*G_LINE_WIDTH+1);
-  --   wndw(8) <= buf_reg(2*G_LINE_WIDTH+2);
-
-  --   -- edge cases
-  --   if r < 1 then -- first image row
-  --     wndw(0) <= C_ZERO;
-  --     wndw(1) <= C_ZERO;
-  --     wndw(2) <= C_ZERO;
-  --   elsif r > G_ROW-1 then -- last image row
-  --     wndw(6) <= C_ZERO;
-  --     wndw(7) <= C_ZERO;
-  --     wndw(8) <= C_ZERO;
-  --   end if;
-
-  --   if c < 1 then -- first image column
-  --     wndw(0) <= C_ZERO;
-  --     wndw(3) <= C_ZERO;
-  --     wndw(6) <= C_ZERO;
-  --   elsif c > G_LINE_WIDTH-1 then
-  --     wndw(2) <= C_ZERO;
-  --     wndw(5) <= C_ZERO;
-  --     wndw(8) <= C_ZERO;
-  --   end if;
-  -- end process;
 
 end architecture;
