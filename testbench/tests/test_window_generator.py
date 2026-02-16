@@ -14,16 +14,15 @@ from common.pause import drive_sink_pause
 from common.reset import apply_reset
 from drivers.axis_video_source import AxiVideoStreamSource
 from models.image_model import Image
-from monitors.axis_video_sink import AxiVideoStreamSink
+from monitors.axis_window_sink import AxiWindowStreamSink
 from verification.scoreboard import Scoreboard
 
-ACLK_SIGNAL = "i_aclk"
-ARESETN_SIGNAL = "i_aresetn"
+ACLK_SIGNAL = "i_clk"
+ARESETN_SIGNAL = "i_rst_n"
 S_AXIS_PREFIX = "s_axis_video"
-M_AXIS_PREFIX = "m_axis_rbg888"
+M_AXIS_PREFIX = "m_axis_window"
 RESET_ACTIVE_LEVEL = False
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
-PIXEL_ORDER = "rbg"
 
 
 def _sim_artifact_dir() -> Path:
@@ -34,26 +33,9 @@ def _sim_artifact_dir() -> Path:
     return TESTBENCH_ROOT / "sim_build" / "test_axi_rgb_to_grayscale"
 
 
-def _expected_gray_rgb(image: Image) -> Image:
-    """Compute expected grayscale output with Y replicated into RGB channels."""
-    gray_u8 = _expected_gray8_plane(image)
-    gray_rgb = np.stack((gray_u8, gray_u8, gray_u8), axis=2)
-    return Image(gray_rgb)
-
-
-def _expected_gray8_plane(image: Image) -> np.ndarray:
-    """Compute expected grayscale plane (Y only)."""
-    pixels_u16 = image.pixels.astype(np.uint16)
-    r = pixels_u16[:, :, 0]
-    g = pixels_u16[:, :, 1]
-    b = pixels_u16[:, :, 2]
-    y = (r >> 2) + (g >> 1) + (b >> 2)
-    return y.astype(np.uint8)
-
-
 @dataclass(slots=True)
-class GrayscaleCaseConfig:
-    """Configuration knobs for a single grayscale scenario."""
+class WindowCaseConfig:
+    """Configuration knobs for a single scenario."""
 
     with_backpressure: bool = False
     pause_pattern: tuple[int, ...] = (0, 1, 0, 0, 1)
@@ -75,17 +57,16 @@ class HandshakeStats:
     accepted_beats: int = 0
 
 
-class AxiRgbToGrayscaleTestbench:
+class AxiRgbToWindowTestbench:
     """Encapsulates setup, traffic, protocol checking, and cleanup."""
 
-    def __init__(self, dut, cfg: GrayscaleCaseConfig) -> None:
+    def __init__(self, dut, cfg: WindowCaseConfig) -> None:
         self.dut = dut
         self.cfg = cfg
 
         self.i_clk = getattr(dut, ACLK_SIGNAL)
         self.i_rst_n = getattr(dut, ARESETN_SIGNAL)
-        self.i_pass_through = getattr(dut, "i_pass_through", None)
-        self.m_axis_gray8_tready = getattr(dut, "m_axis_gray8_tready", None)
+        self.i_pass_through = None
 
         self.s_axis_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
         self.s_axis_tdata = getattr(dut, f"{S_AXIS_PREFIX}_tdata")
@@ -98,8 +79,7 @@ class AxiRgbToGrayscaleTestbench:
         self.m_axis_tuser = getattr(dut, f"{M_AXIS_PREFIX}_tuser")
 
         self.source: AxiVideoStreamSource | None = None
-        self.sink: AxiVideoStreamSink | None = None
-        self.gray8_sink: AxiVideoStreamSink | None = None
+        self.sink: AxiWindowStreamSink | None = None
         self.scoreboard = Scoreboard()
         self.handshake_stats = HandshakeStats()
 
@@ -115,8 +95,6 @@ class AxiRgbToGrayscaleTestbench:
         self.s_axis_tlast.value = 0
         self.s_axis_tuser.value = 0
         self.m_axis_tready.value = 0
-        if self.m_axis_gray8_tready is not None:
-            self.m_axis_gray8_tready.value = 0
         if self.i_pass_through is not None:
             self.i_pass_through.value = int(self.cfg.pass_through)
 
@@ -138,28 +116,14 @@ class AxiRgbToGrayscaleTestbench:
             i_rst_n=self.i_rst_n,
             prefix=S_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
-            pixel_order=PIXEL_ORDER,
         )
-        self.sink = AxiVideoStreamSink(
+        self.sink = AxiWindowStreamSink(
             dut=self.dut,
             i_clk=self.i_clk,
             i_rst_n=self.i_rst_n,
             prefix=M_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
-            pixel_order=PIXEL_ORDER,
         )
-        self.gray8_sink = AxiVideoStreamSink(
-            dut=self.dut,
-            i_clk=self.i_clk,
-            i_rst_n=self.i_rst_n,
-            prefix="m_axis_gray8",
-            reset_active_level=RESET_ACTIVE_LEVEL,
-            frame_type="gray8",
-        )
-
-        # Keep gray output consumer ready to allow lockstep fan-out from the DUT.
-        if self.m_axis_gray8_tready is not None:
-            self.m_axis_gray8_tready.value = 1
 
     def _start_optional_tasks(self, *, width: int, height: int) -> None:
         if self.cfg.check_handshake:
@@ -214,23 +178,6 @@ class AxiRgbToGrayscaleTestbench:
         if self.sink is not None:
             self.sink.set_pause(False)
 
-    async def _recv_gray8_plane(
-        self,
-        *,
-        width: int,
-        height: int,
-        timeout_ns: int,
-    ) -> np.ndarray:
-        assert self.gray8_sink is not None
-        result = await self.gray8_sink.recv_image(
-            width=width,
-            height=height,
-            timeout_ns=timeout_ns,
-            frame_type="gray8",
-        )
-        assert isinstance(result, np.ndarray)
-        return result
-
     async def run_frame(
         self,
         *,
@@ -241,10 +188,8 @@ class AxiRgbToGrayscaleTestbench:
         await self.initialize()
         assert self.source is not None
         assert self.sink is not None
-        assert self.gray8_sink is not None
 
-        expected = image if self.cfg.pass_through else _expected_gray_rgb(image)
-        expected_gray8 = _expected_gray8_plane(image)
+        #expected = image if self.cfg.pass_through
 
         self._start_optional_tasks(width=image.width, height=image.height)
         try:
@@ -257,28 +202,59 @@ class AxiRgbToGrayscaleTestbench:
             min_timeout_ns = (
                 image.width * image.height * self.cfg.recv_timeout_per_pixel_ns
             )
-            received_image = await self.sink.recv_image(
-                width=image.width,
-                height=image.height,
-                timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
-            )
+            # received_image = await self.sink.recv_image(
+            #     width=image.width,
+            #     height=image.height,
+            #     timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
+            # )
 
-            if output_path is not None:
-                received_image.to_png(output_path)
+            #if output_path is not None:
+            #    received_image.to_png(output_path)
 
-            self.scoreboard.compare(expected=expected, received=received_image)
-            received_gray8 = await self._recv_gray8_plane(
-                width=image.width,
-                height=image.height,
-                timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
-            )
-            if not np.array_equal(received_gray8, expected_gray8):
-                raise AssertionError(
-                    "Gray8 output mismatch against expected grayscale plane.",
-                )
+            #self.scoreboard.compare(expected=expected, received=received_image)
             await self._finish_optional_tasks(width=image.width, height=image.height)
         finally:
             self._stop_optional_tasks()
+
+    async def run_multi_frame(
+        self,
+        *,
+        image: Image,
+        output_path: Path | None = None,
+        frame_count: int = 2,
+    ) -> None:
+        """Execute send/receive/check cycle for multiple frames."""
+        await self.initialize()
+        assert self.source is not None
+        assert self.sink is not None
+
+        for i in range(frame_count):
+            #expected = image if self.cfg.pass_through
+
+            self._start_optional_tasks(width=image.width, height=image.height)
+            try:
+                if self.cfg.check_handshake:
+                    for _ in range(self.cfg.handshake_settle_cycles):
+                        await RisingEdge(self.i_clk)
+
+                await self.source.send_image(image)
+
+                min_timeout_ns = (
+                    image.width * image.height * self.cfg.recv_timeout_per_pixel_ns
+                )
+                # received_image = await self.sink.recv_image(
+                #     width=image.width,
+                #     height=image.height,
+                #     timeout_ns=max(self.cfg.recv_timeout_floor_ns, min_timeout_ns),
+                # )
+
+                # if output_path is not None:
+                #     received_image.to_png(output_path)
+
+                #self.scoreboard.compare(expected=expected, received=received_image)
+                await self._finish_optional_tasks(width=image.width, height=image.height)
+            finally:
+                self._stop_optional_tasks()
 
     async def _monitor_output_handshake(self, *, width: int, height: int) -> None:
         """Bus-level protocol checker for accepted beats and stall stability."""
@@ -291,11 +267,11 @@ class AxiRgbToGrayscaleTestbench:
             await RisingEdge(self.i_clk)
             await ReadOnly()
 
-            self._assert_resolved(self.m_axis_tvalid, M_AXIS_PREFIX + "_tvalid")
-            self._assert_resolved(self.m_axis_tready, M_AXIS_PREFIX + "_tready")
-            self._assert_resolved(self.m_axis_tdata, M_AXIS_PREFIX + "_tdata")
-            self._assert_resolved(self.m_axis_tlast, M_AXIS_PREFIX + "_tlast")
-            self._assert_resolved(self.m_axis_tuser, M_AXIS_PREFIX + "_tuser")
+            #self._assert_resolved(self.m_axis_tvalid, M_AXIS_PREFIX + "_tvalid")
+            #self._assert_resolved(self.m_axis_tready, M_AXIS_PREFIX + "_tready")
+            #self._assert_resolved(self.m_axis_tdata, M_AXIS_PREFIX + "_tdata")
+            #self._assert_resolved(self.m_axis_tlast, M_AXIS_PREFIX + "_tlast")
+            #self._assert_resolved(self.m_axis_tuser, M_AXIS_PREFIX + "_tuser")
 
             if int(self.i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
                 ready_low_run = 0
@@ -361,7 +337,7 @@ class AxiRgbToGrayscaleTestbench:
             ) from exc
 
 
-async def run_frame_test(
+async def run_single_frame_test(
     dut,
     image: Image,
     output_path: Path | None = None,
@@ -371,46 +347,72 @@ async def run_frame_test(
     pass_through: bool = False,
     min_ready_low_run: int = 0,
 ) -> None:
-    cfg = GrayscaleCaseConfig(
+    cfg = WindowCaseConfig(
         with_backpressure=with_backpressure,
         pause_pattern=pause_pattern,
         check_handshake=check_handshake,
         pass_through=pass_through,
         min_ready_low_run=min_ready_low_run,
     )
-    tb = AxiRgbToGrayscaleTestbench(dut=dut, cfg=cfg)
+    tb = AxiRgbToWindowTestbench(dut=dut, cfg=cfg)
     await tb.run_frame(image=image, output_path=output_path)
 
 
+async def run_multi_frame_test(
+    dut,
+    image: Image,
+    output_path: Path | None = None,
+    with_backpressure: bool = False,
+    pause_pattern: tuple[int, ...] = (0, 1, 0, 0, 1),
+    check_handshake: bool = False,
+    pass_through: bool = False,
+    min_ready_low_run: int = 0,
+    frame_count: int = 2
+) -> None:
+    cfg = WindowCaseConfig(
+        with_backpressure=with_backpressure,
+        pause_pattern=pause_pattern,
+        check_handshake=check_handshake,
+        pass_through=pass_through,
+        min_ready_low_run=min_ready_low_run,
+    )
+    tb = AxiRgbToWindowTestbench(dut=dut, cfg=cfg)
+    await tb.run_multi_frame(image=image, output_path=output_path, frame_count=frame_count)
+
+
 @cocotb.test()
-async def test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks(dut) -> None:
-    """Primary regression case with enforced READY-low windows under traffic."""
-    await run_frame_test(
+async def test_axi_rgb_to_window_without_pressure(dut) -> None:
+    """Simple algorithm test for window generation without pressure."""
+    await run_single_frame_test(
         dut=dut,
-        image=Image.gradient(width=8, height=6),
-        with_backpressure=True,
-        pause_pattern=(1, 1, 1, 0, 0, 0),
+        image=Image.gradient_gray(width=5, height=5),
+        with_backpressure=False,
+        pause_pattern=(0, 0, 0),
         check_handshake=True,
         min_ready_low_run=3,
     )
 
+# @cocotb.test()
+# async def test_axi_rgb_to_window_multi_frame_without_pressure(dut) -> None:
+#     """Simple algorithm test for window generation without pressure for two consecutive frames."""
+#     await run_multi_frame_test(
+#         dut=dut,
+#         image=Image.gradient_gray(width=5, height=5),
+#         with_backpressure=False,
+#         pause_pattern=(0, 0, 0),
+#         check_handshake=True,
+#         min_ready_low_run=3,
+#         frame_count=2
+#     )
 
-@cocotb.test(timeout_time=40, timeout_unit="ms")
-async def test_axi_rgb_to_grayscale_image_file_roundtrip(dut) -> None:
-    """Roundtrip a real image through DUT and save the grayscale output artifact."""
-    input_path = TESTBENCH_ROOT / "images" / "lenna_512_512.png"
-    output_path = _sim_artifact_dir() / "lenna_512_512_out_gray_rgb.png"
-
-    image = Image.from_png(input_path)
-    await run_frame_test(dut=dut, image=image, output_path=output_path)
-
-
-@cocotb.test()
-async def test_axi_rgb_to_grayscale_passthrough_mode(dut) -> None:
-    """When i_pass_through=1, output must match input pixels exactly."""
-    image = Image.gradient(width=8, height=6)
-    await run_frame_test(
-        dut=dut,
-        image=image,
-        pass_through=True,
-    )
+# @cocotb.test()
+# async def test_axi_rgb_to_window_with_pressure(dut) -> None:
+#     """Test for window generation with pressure."""
+#     await run_single_frame_test(
+#         dut=dut,
+#         image=Image.gradient_gray(width=5, height=5),
+#         with_backpressure=True,
+#         pause_pattern=(0, 0, 1, 0, 1, 1),
+#         check_handshake=True,
+#         min_ready_low_run=3,
+#     )

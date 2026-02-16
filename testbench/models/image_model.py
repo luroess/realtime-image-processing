@@ -45,6 +45,24 @@ class Image:
         b = (x * 13 + y * 2) % 256
         pixels = np.stack([r, g, b], axis=2).astype(np.uint8)
         return cls(pixels=pixels)
+    
+    @classmethod
+    def gradient_gray(cls, width: int, height: int) -> Image:
+        """
+        Generate a grayscale image where r = g = b, with values increasing
+        monotonically across the entire image, starting at 1.
+        """
+        # Total number of pixels
+        total = width * height
+        # Create a ramp from 1 to total (or clipped to 255)
+        ramp = np.arange(1, total + 1, dtype=np.uint32)
+        # Wrap values into 0–255 range (uint8)
+        ramp = (ramp % 256).astype(np.uint8)
+        # Reshape into (height, width)
+        gray = ramp.reshape((height, width))
+        # Stack into RGB channels
+        pixels = np.stack([gray, gray, gray], axis=2)
+        return cls(pixels=pixels)
 
     @classmethod
     def from_png(cls, path: str | Path) -> Image:
