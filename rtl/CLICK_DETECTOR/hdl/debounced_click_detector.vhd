@@ -14,7 +14,7 @@ entity DebouncedClickDetector is
     o_pass_grayscale  : out std_logic;
     o_pass_lowpass_filter  : out std_logic;
     o_pass_sobel  : out std_logic;
-    o_led : out STD_LOGIC_VECTOR (3 downto 0)  -- 4 LEDs
+    o_led            : out std_logic_vector(3 downto 0)  -- 4 LEDs
   );
 end entity;
 
