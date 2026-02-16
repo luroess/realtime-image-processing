@@ -16,15 +16,15 @@
 6. Run Synthesis
 7. Run Implementation
 8. Generate Bitstream
-9. Go to *File > Export > Hardware* and save to a in repo */vivado-outputs/<new_folder>* (keep different states of "deployments")
-10. Go to *File > Export > Bitstream File* and save to a in repo */vivado-outputs/<new_folder>* (keep different states of "deployments")
+9. Go to *File > Export > Hardware* and save it in the repository directory */vivado_outputs/<new_folder>/* (keep different states of "deployments")
+10. Go to *File > Export > Bitstream File* and save it in the repository directory */vivado_outputs/<new_folder>/* (keep different states of "deployments")
 
 ## Vitis Deployment + Testing
 1. Open basic Vitis Project: *Zybo-Z7-10-Pcam-5C-sw.ide*
 2. Clear hw_pcam build. 
 3. Clear pcam_hdmi build.
-4. Open hw_pcam build settings: *hw_pcam > Switch / re-read XSA* > Select exported XSA-File in folder */vivado-outputs/<new_folder>*
-3. Open pcam_hdmi build settings: *pcam_hdmi > launch.json > Bitstream File* > Select exported Vivado Bitstream File in folder */vivado-outputs/<new_folder>*
+4. Open hw_pcam build settings: *hw_pcam > Switch / re-read XSA* > Select exported XSA-File in folder */vivado_outputs/<new_folder>/*
+3. Open pcam_hdmi build settings: *pcam_hdmi > launch.json > Bitstream File* > Select exported Vivado Bitstream File in folder */vivado_outputs/<new_folder>/*
 
 ## Dummy Project "Button Example"
 1. Add new Source to Vivado (HDL-File): 
