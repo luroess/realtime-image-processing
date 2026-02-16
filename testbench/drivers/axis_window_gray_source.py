@@ -8,6 +8,12 @@ import numpy as np
 from cocotbext.axi import AxiStreamBus, AxiStreamFrame, AxiStreamSource
 
 
+class _KnownIdleAxiStreamSource(AxiStreamSource):
+    """AxiStreamSource variant that avoids X-initialization on sidebands."""
+
+    _init_x = False
+
+
 class AxiWindowGraySource:
     """Send a gray image as a stream of 3x3 zero-padded windows."""
 
@@ -19,7 +25,7 @@ class AxiWindowGraySource:
         prefix: str = "s_axis_video",
         reset_active_level: bool = False,
     ) -> None:
-        self._source = AxiStreamSource(
+        self._source = _KnownIdleAxiStreamSource(
             bus=AxiStreamBus.from_prefix(dut, prefix),
             clock=i_clk,
             reset=i_rst_n,
@@ -27,11 +33,19 @@ class AxiWindowGraySource:
         )
         self._byte_lanes = int(self._source.byte_lanes)
         self._source.log.setLevel(logging.WARNING)
+        self._drive_idle_known()
 
         if self._byte_lanes != 9:
             raise AssertionError(
                 f"Expected 9 byte lanes for 3x3 gray window input, got {self._byte_lanes}",
             )
+
+    def _drive_idle_known(self) -> None:
+        self._source.bus.tdata.value = 0
+        if hasattr(self._source.bus, "tlast"):
+            self._source.bus.tlast.value = 0
+        if hasattr(self._source.bus, "tuser"):
+            self._source.bus.tuser.value = 0
 
     async def send_gray_image(self, gray_plane: np.ndarray) -> None:
         if gray_plane.ndim != 2:
@@ -55,3 +69,4 @@ class AxiWindowGraySource:
             await self._source.send(AxiStreamFrame(tdata=line_bytes, tuser=tuser))
 
         await self._source.wait()
+        self._drive_idle_known()
