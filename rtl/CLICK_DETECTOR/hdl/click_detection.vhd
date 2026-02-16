@@ -1,16 +1,16 @@
 library ieee;
-  use ieee.std_logic_1164.all;
-  use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity ClickDetector is
   generic (
     G_CLK_FREQ_HZ    : integer := 100_000_000; -- 100 MHz
-    G_CLICK_TIMER_NS : integer := 500_000_000  -- 0.5 s
+    G_CLICK_TIMER_NS : integer := 500_000_000 -- 0.5 s
   );
   port (
-    i_clk           : in  std_logic;
-    i_rst           : in  std_logic;
-    i_btn_debounced : in  std_logic;
+    i_clk           : in std_logic;
+    i_rst_n         : in std_logic;
+    i_btn_debounced : in std_logic;
     o_single_click  : out std_logic; -- default mode
     o_double_click  : out std_logic;
     o_triple_click  : out std_logic
@@ -36,19 +36,19 @@ architecture A_Rtl of ClickDetector is
 
 begin
 
-  P_STATE_MACHINE: process (i_clk)
+  P_STATE_MACHINE : process (i_clk)
   begin
 
     if rising_edge(i_clk) then
-      if i_rst = '1' then
-        s_current_state <= ST_IDLE;
-        s_counter <= 0;
-        s_timer <= 0;
-        s_btn_prev <= '0';
+      if i_rst_n /= '1' then
+        s_current_state   <= ST_IDLE;
+        s_counter         <= 0;
+        s_timer           <= 0;
+        s_btn_prev        <= '0';
         s_btn_rising_edge <= '0';
-        o_single_click <= '1';
-        o_double_click <= '0';
-        o_triple_click <= '0';
+        o_single_click    <= '1';
+        o_double_click    <= '0';
+        o_triple_click    <= '0';
       else
         if i_btn_debounced = '1' and s_btn_prev = '0' then
           s_btn_rising_edge <= '1';
@@ -71,7 +71,7 @@ begin
               if s_counter < 3 then
                 s_counter <= s_counter + 1;
               end if;
-              s_timer <= 1;
+              s_timer         <= 1;
               s_current_state <= ST_BTN_RELEASED;
             end if;
 
@@ -93,7 +93,7 @@ begin
                 o_triple_click <= '1';
               end if;
               s_current_state <= ST_IDLE;
-              s_counter <= 0;
+              s_counter       <= 0;
             else
               s_timer <= s_timer + 1;
             end if;
