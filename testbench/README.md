@@ -47,6 +47,8 @@ Use `targets.toml` as the single source of truth for simulation targets.
 uv run tb-sim --list-targets
 uv run tb-sim --target test_example
 uv run tb-sim --target example_passthrough
+uv run tb-sim --target test_debouncer
+uv run tb-sim --target test_click_detector
 uv run tb-sim --toplevel example_passthrough
 ```
 
