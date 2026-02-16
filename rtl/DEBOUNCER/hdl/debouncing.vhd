@@ -1,16 +1,16 @@
 library ieee;
-  use ieee.std_logic_1164.all;
-  use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity Debouncer is
   generic (
     G_CLK_FREQ_HZ : integer := 100_000_000; -- 100 MHz
-    G_DEBOUNCE_NS : integer := 10_000_000   -- 10 ms
+    G_DEBOUNCE_NS : integer := 10_000_000 -- 10 ms
   );
   port (
-    i_rst           : in  std_logic;
-    i_clk           : in  std_logic;
-    i_btn           : in  std_logic;
+    i_rst_n         : in std_logic;
+    i_clk           : in std_logic;
+    i_btn           : in std_logic;
     o_btn_debounced : out std_logic
   );
 end entity;
@@ -27,10 +27,10 @@ architecture A_Rtl of Debouncer is
 begin
 
   -- Synchronizer for metastability mitigation
-  P_SYNC: process (i_clk)
+  P_SYNC : process (i_clk)
   begin
     if rising_edge(i_clk) then
-      if i_rst = '1' then
+      if i_rst_n /= '1' then
         s_sync1 <= '0';
         s_sync2 <= '0';
       else
@@ -41,12 +41,12 @@ begin
   end process;
 
   -- Debounce logic: counter-based stability detection
-  P_REG_DEBOUNCE: process (i_clk)
+  P_REG_DEBOUNCE : process (i_clk)
   begin
     if rising_edge(i_clk) then
-      if i_rst = '1' then
+      if i_rst_n /= '1' then
         s_stable_btn <= '0';
-        s_counter <= 0;
+        s_counter    <= 0;
       else
         if s_sync2 /= s_stable_btn then
           if s_counter < C_COUNT_MAX then

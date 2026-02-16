@@ -12,13 +12,13 @@ BOUNCE_NS = 20
 
 async def apply_reset(dut, cycles: int = 5) -> None:
     """Apply Reset"""
-    dut.i_rst.value = 1
+    dut.i_rst_n.value = 0
     dut.i_btn.value = 0
 
     for _ in range(cycles):
         await RisingEdge(dut.i_clk)
 
-    dut.i_rst.value = 0
+    dut.i_rst_n.value = 1
     await RisingEdge(dut.i_clk)
 
     await check_debounced(dut, 0, 10)
