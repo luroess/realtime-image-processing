@@ -12,43 +12,6 @@ DEBOUNCE_MARGIN_NS = 30
 BOUNCE_NS = 20
 
 
-# async def apply_reset(dut, cycles: int = 5) -> None:
-#     """Apply Reset"""
-#     dut.i_rst_n.value = 0
-#     dut.i_btn.value = 0
-
-#     for _ in range(cycles):
-#         await RisingEdge(dut.i_clk)
-
-#     dut.i_rst_n.value = 1
-#     await RisingEdge(dut.i_clk)
-
-#     await check_debounced(dut, 0, 10)
-
-
-# async def check_debounced(dut, expected, duration_ns):
-#     """Wait duration_ns and check that the debounced output is stable."""
-#     if duration_ns != 0:
-#         await Timer(duration_ns, unit="ns")
-#     if dut.o_btn_debounced.value != expected:
-#         raise AssertionError(
-#             f"Debounced output mismatch! Expected {expected}, got {int(dut.o_btn_debounced.value)}",
-#         )
-
-
-# async def set_i_btn_value_and_wait(
-#     dut,
-#     i_btn_value,
-#     wait_duration,
-#     wait_duration_unit="ns",
-# ):
-#     """Set input button value and wait for defined time."""
-#     dut.i_btn.value = i_btn_value
-
-#     if wait_duration != 0:
-#         await Timer(wait_duration, unit=wait_duration_unit)
-
-
 @cocotb.test()
 async def debouncer_test(dut):
     """Cocotb testbench for Debouncer with automatic checking"""
