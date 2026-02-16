@@ -1,0 +1,56 @@
+library ieee;
+  use ieee.std_logic_1164.all;
+
+entity AXI_SobelFilter is
+  generic (
+    -- Threshold in range 0..2040 for 8-bit input
+    G_SOBEL_TRESHOLD : natural := 200
+  );
+  port (
+    i_aclk              : in  std_logic;
+    i_aresetn           : in  std_logic;
+
+    -- AXI4-Stream Video Slave (input: 3x3 window 8-bit gray)
+    s_axis_video_tvalid : in  std_logic;
+    s_axis_video_tready : out std_logic;
+    s_axis_video_tdata  : in  std_logic_vector(71 downto 0);
+    s_axis_video_tuser  : in  std_logic; -- SOF passthrough
+    s_axis_video_tlast  : in  std_logic; -- EOL passthrough
+
+    -- AXI4-Stream Video Master (output)
+    m_axis_window_tvalid : out std_logic;
+    m_axis_window_tready : in  std_logic;
+    m_axis_window_tdata  : out std_logic_vector(7 downto 0);
+    m_axis_window_tuser  : out std_logic; -- SOF passthrough
+    m_axis_window_tlast  : out std_logic  -- EOL passthrough
+  );
+end entity;
+
+architecture A_Rtl of AXI_SobelFilter is
+  signal s_sobel_pixel : std_logic_vector(7 downto 0);
+  signal s_tvalid      : std_logic;
+begin
+  U_SobelCore3x3: entity work.E_SobelCore3x3
+    generic map (
+      G_SOBEL_TRESHOLD => G_SOBEL_TRESHOLD
+    )
+    port map (
+      i_window     => s_axis_video_tdata,
+      o_edge_pixel => s_sobel_pixel
+    );
+
+  -- AXI-stream passthrough timing
+  s_axis_video_tready <= '0' when (i_aresetn = '0') else
+                         m_axis_window_tready;
+
+  s_tvalid <= '0' when (i_aresetn = '0') else
+              s_axis_video_tvalid;
+  m_axis_window_tvalid <= s_tvalid;
+
+  m_axis_window_tdata <= (others => '0') when (s_tvalid = '0') else
+                         s_sobel_pixel;
+  m_axis_window_tuser <= '0' when (s_tvalid = '0') else
+                         s_axis_video_tuser;
+  m_axis_window_tlast <= '0' when (s_tvalid = '0') else
+                         s_axis_video_tlast;
+end architecture;
