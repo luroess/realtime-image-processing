@@ -49,3 +49,12 @@ sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
 
     [targets.test_debounced_click_detector.generics]
     G_DEBOUNCE_NS = 100
+
+[targets.axi_sobel_filter]
+description = "AXI4-Stream Sobel edge detection checks."
+toplevel    = "axi_sobelfilter"
+test_module = "tests.test_axi_sobel_filter"
+sources     = [
+  "rtl/SOBEL_FILTER/sobel_core_3x3.vhd",
+  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+]
