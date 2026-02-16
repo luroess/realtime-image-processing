@@ -19,13 +19,13 @@ entity AXI_RgbToGrayscale is
     s_axis_video_tuser   : in  std_logic; -- SOF
     s_axis_video_tlast   : in  std_logic; -- EOL
 
-    -- AXI4-Stream RGB Master (output):
-    -- i_pass_through='1' forwards input RGB, i_pass_through='0' emits grayscale RGB.
-    m_axis_rgb888_tvalid : out std_logic;
-    m_axis_rgb888_tready : in  std_logic;
-    m_axis_rgb888_tdata  : out std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
-    m_axis_rgb888_tuser  : out std_logic; -- SOF
-    m_axis_rgb888_tlast  : out std_logic; -- EOL
+    -- AXI4-Stream RGB Master (output)
+    -- i_pass_through='1' forwards input RBG, i_pass_through='0'
+    m_axis_rbg888_tvalid : out std_logic;
+    m_axis_rbg888_tready : in  std_logic;
+    m_axis_rbg888_tdata  : out std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
+    m_axis_rbg888_tuser  : out std_logic; -- SOF
+    m_axis_rbg888_tlast  : out std_logic; -- EOL
 
     -- AXI4-Stream Grayscale Master (output)
     m_axis_gray8_tvalid  : out std_logic;
@@ -38,8 +38,8 @@ end entity;
 
 architecture A_Rtl of AXI_RgbToGrayscale is
   signal s_gray8                  : std_logic_vector(G_COMPONENT_WIDTH - 1 downto 0);
-  signal s_rgb888                 : std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
-  signal s_rgb888_tvalid          : std_logic;
+  signal s_rbg888                 : std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
+  signal s_rbg888_tvalid          : std_logic;
   signal s_gray8_tvalid           : std_logic;
   signal s_cond_reset_tvalid_rgb  : boolean := false;
   signal s_cond_reset_tvalid_gray : boolean := false;
@@ -51,33 +51,33 @@ begin
     port map (
       i_rgb888 => s_axis_video_tdata,
       o_gray8  => s_gray8,
-      o_rgb888 => s_rgb888
+      o_rbg888 => s_rbg888
     );
 
   -- Input beat is accepted only when both downstream interfaces are ready.
   s_axis_video_tready <= '0' when (i_aresetn = '0') else
-                           (m_axis_rgb888_tready and m_axis_gray8_tready);
+                           (m_axis_rbg888_tready and m_axis_gray8_tready);
 
   -- Keep RGB valid behavior unchanged for backpressure visibility on this channel.
-  s_rgb888_tvalid <= '0' when (i_aresetn = '0') else
+  s_rbg888_tvalid <= '0' when (i_aresetn = '0') else
                        (s_axis_video_tvalid and m_axis_gray8_tready);
-  m_axis_rgb888_tvalid <= s_rgb888_tvalid;
+  m_axis_rbg888_tvalid <= s_rbg888_tvalid;
 
   -- Gate gray valid with RGB ready to avoid consuming duplicated beats while RGB is stalled.
   s_gray8_tvalid <= '0' when (i_aresetn = '0') else
-                      (s_axis_video_tvalid and m_axis_rgb888_tready);
+                      (s_axis_video_tvalid and m_axis_rbg888_tready);
   m_axis_gray8_tvalid <= s_gray8_tvalid;
 
   -- Keep outputs deterministic when idle/reset.
-  s_cond_reset_tvalid_rgb  <= (i_aresetn = '0') or (s_rgb888_tvalid = '0');
+  s_cond_reset_tvalid_rgb  <= (i_aresetn = '0') or (s_rbg888_tvalid = '0');
   s_cond_reset_tvalid_gray <= (i_aresetn = '0') or (s_gray8_tvalid = '0');
 
-  m_axis_rgb888_tdata <= (others => '0')   when s_cond_reset_tvalid_rgb else
+  m_axis_rbg888_tdata <= (others => '0')   when s_cond_reset_tvalid_rgb else
                         s_axis_video_tdata when (i_pass_through = '1') else
-                        s_rgb888;
-  m_axis_rgb888_tuser <= '0' when s_cond_reset_tvalid_rgb else
+                        s_rbg888;
+  m_axis_rbg888_tuser <= '0' when s_cond_reset_tvalid_rgb else
                          s_axis_video_tuser;
-  m_axis_rgb888_tlast <= '0' when s_cond_reset_tvalid_rgb else
+  m_axis_rbg888_tlast <= '0' when s_cond_reset_tvalid_rgb else
                          s_axis_video_tlast;
 
   m_axis_gray8_tdata <= (others => '0') when s_cond_reset_tvalid_gray else

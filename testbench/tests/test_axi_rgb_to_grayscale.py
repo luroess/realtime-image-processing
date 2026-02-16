@@ -20,9 +20,10 @@ from verification.scoreboard import Scoreboard
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
 S_AXIS_PREFIX = "s_axis_video"
-M_AXIS_PREFIX = "m_axis_rgb888"
+M_AXIS_PREFIX = "m_axis_rbg888"
 RESET_ACTIVE_LEVEL = False
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
+PIXEL_ORDER = "rbg"
 
 
 def _sim_artifact_dir() -> Path:
@@ -137,6 +138,7 @@ class AxiRgbToGrayscaleTestbench:
             i_rst_n=self.i_rst_n,
             prefix=S_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
+            pixel_order=PIXEL_ORDER,
         )
         self.sink = AxiVideoStreamSink(
             dut=self.dut,
@@ -144,6 +146,7 @@ class AxiRgbToGrayscaleTestbench:
             i_rst_n=self.i_rst_n,
             prefix=M_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
+            pixel_order=PIXEL_ORDER,
         )
         self.gray8_sink = AxiVideoStreamSink(
             dut=self.dut,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from cocotbext.axi import (  # type: ignore[missing-imports]
     AxiStreamBus,
@@ -28,7 +29,11 @@ class AxiVideoStreamSource:
         i_rst_n,
         prefix: str = "s_axis_video",
         reset_active_level: bool = True,
+        pixel_order: Literal["rgb", "rbg"] = "rbg",
     ) -> None:
+        if pixel_order not in ("rgb", "rbg"):
+            raise ValueError(f"Unsupported pixel_order: {pixel_order}")
+
         bus = AxiStreamBus.from_prefix(dut, prefix)
         self._source = _KnownIdleAxiStreamSource(
             bus=bus,
@@ -38,6 +43,7 @@ class AxiVideoStreamSource:
         )
         self._byte_lanes = int(self._source.byte_lanes)
         self._byte_size = int(self._source.byte_size)
+        self._pixel_order = pixel_order
         self._source.log.setLevel(logging.WARNING)
         self._drive_idle_known()
 
@@ -95,7 +101,12 @@ class AxiVideoStreamSource:
             for x in range(image.width):
                 r, g, b = (int(v) & 0xFF for v in image.pixels[y, x])
                 # cocotbext-axi packs lane 0 into TDATA[7:0], lane 1 into [15:8], lane 2 into [23:16].
-                line_bytes.extend((b, g, r))
+                # 'rgb' wire order means TDATA[23:0]=R|G|B -> bytes (B,G,R).
+                # 'rbg' wire order means TDATA[23:0]=R|B|G -> bytes (G,B,R).
+                if self._pixel_order == "rgb":
+                    line_bytes.extend((b, g, r))
+                else:
+                    line_bytes.extend((g, b, r))
 
             self._validate_line_geometry(
                 line_bytes_len=len(line_bytes),

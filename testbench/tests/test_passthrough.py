@@ -21,6 +21,7 @@ S_AXIS_PREFIX = "s_axis_video"
 M_AXIS_PREFIX = "m_axis_video"
 RESET_ACTIVE_LEVEL = True
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
+PIXEL_ORDER = "rbg"
 
 
 @dataclass(slots=True)
@@ -124,6 +125,7 @@ class PassthroughTestbench:
             i_rst_n=self.i_rst_n,
             prefix=S_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
+            pixel_order=PIXEL_ORDER,
         )
         self.sink = AxiVideoStreamSink(
             dut=self.dut,
@@ -131,6 +133,7 @@ class PassthroughTestbench:
             i_rst_n=self.i_rst_n,
             prefix=M_AXIS_PREFIX,
             reset_active_level=RESET_ACTIVE_LEVEL,
+            pixel_order=PIXEL_ORDER,
         )
 
     def _start_optional_tasks(self, *, width: int, height: int) -> None:

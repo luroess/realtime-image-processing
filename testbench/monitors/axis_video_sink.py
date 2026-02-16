@@ -22,9 +22,12 @@ class AxiVideoStreamSink:
         prefix: str = "m_axis_video",
         reset_active_level: bool = True,
         frame_type: Literal["rgb888", "gray8"] = "rgb888",
+        pixel_order: Literal["rgb", "rbg"] = "rbg",
     ) -> None:
         if frame_type not in ("rgb888", "gray8"):
             raise ValueError(f"Unsupported frame_type: {frame_type}")
+        if pixel_order not in ("rgb", "rbg"):
+            raise ValueError(f"Unsupported pixel_order: {pixel_order}")
 
         self._sink = AxiStreamSink(
             bus=AxiStreamBus.from_prefix(dut, prefix),
@@ -33,6 +36,7 @@ class AxiVideoStreamSink:
             reset_active_level=reset_active_level,
         )
         self._byte_lanes = int(self._sink.byte_lanes)
+        self._pixel_order = pixel_order
         self._sink.log.setLevel(logging.WARNING)
 
     def set_pause_generator(self, generator=None) -> None:
@@ -49,6 +53,7 @@ class AxiVideoStreamSink:
         width: int,
         *,
         byte_lanes: int,
+        pixel_order: Literal["rgb", "rbg"],
     ) -> list[tuple[int, int, int]]:
         data = bytes(frame.tdata)
         if byte_lanes != 3:
@@ -68,8 +73,13 @@ class AxiVideoStreamSink:
 
         for x in range(width):
             base = x * 3
-            b = int(data[base + 0])
-            g = int(data[base + 1])
+            if pixel_order == "rgb":
+                b = int(data[base + 0])
+                g = int(data[base + 1])
+            else:
+                # Wire order R|B|G packs bytes as (G,B,R) for little-endian AXIS lanes.
+                g = int(data[base + 0])
+                b = int(data[base + 1])
             r = int(data[base + 2])
             pixels.append((r, g, b))
 
@@ -124,8 +134,8 @@ class AxiVideoStreamSink:
 
         return [int(v) for v in data]
 
-    @staticmethod
     def _decode_line(
+        self,
         frame,
         width: int,
         *,
@@ -138,6 +148,7 @@ class AxiVideoStreamSink:
                 frame,
                 width,
                 byte_lanes=byte_lanes,
+                pixel_order=self._pixel_order,
             )
 
         if frame_type == "gray8":
