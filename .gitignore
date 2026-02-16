@@ -78,3 +78,15 @@ iseconfig/
 xlnx_auto_0_xdb/
 xst/
 isim/
+
+# -----------------------------------------------------------------------------
+# Local Vivado/Vitis backup and machine-local metadata
+# -----------------------------------------------------------------------------
+vivado/*.zip
+vivado/* copy/
+vivado/**/hw.board/
+vivado/**/archive_project_summary.txt
+vivado/**/ip_status_*.rpt
+vivado/**/_ide/.peers.ini
+vivado/**/_ide/.vitisPlatformRepo.json
+vivado/**/_ide/settings.json
