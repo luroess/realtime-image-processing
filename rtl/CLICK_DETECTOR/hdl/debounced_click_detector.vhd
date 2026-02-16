@@ -9,11 +9,12 @@ entity DebouncedClickDetector is
   port (
     i_clk           : in  std_logic;
     i_rst_n           : in  std_logic;
-    i_btn           : in  std_logic;
+    i_btn           : in std_logic_vector (3 downto 0);
     o_btn_debounced : out std_logic;
     o_pass_grayscale  : out std_logic;
     o_pass_lowpass_filter  : out std_logic;
-    o_pass_sobel  : out std_logic
+    o_pass_sobel  : out std_logic;
+    o_led : out STD_LOGIC_VECTOR (3 downto 0)  -- 4 LEDs
   );
 end entity;
 
@@ -39,7 +40,8 @@ begin
     i_btn_debounced => s_btn_debounced,
     o_pass_grayscale => o_pass_grayscale,
     o_pass_lowpass_filter  => o_pass_lowpass_filter,
-    o_pass_sobel  => o_pass_sobel
+    o_pass_sobel  => o_pass_sobel,
+    o_led => o_led
   );
 
   o_btn_debounced <= s_btn_debounced;

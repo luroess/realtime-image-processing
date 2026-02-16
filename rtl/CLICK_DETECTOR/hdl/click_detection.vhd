@@ -9,7 +9,9 @@ entity ClickDetector is
     i_btn_debounced       : in std_logic;
     o_pass_grayscale      : out std_logic;
     o_pass_lowpass_filter : out std_logic;
-    o_pass_sobel          : out std_logic
+    o_pass_sobel          : out std_logic;
+    o_led : out STD_LOGIC_VECTOR (3 downto 0)  -- 4 LEDs
+
   );
 end entity;
 
@@ -45,6 +47,10 @@ begin
     o_pass_grayscale      <= '1';
     o_pass_lowpass_filter <= '1';
     o_pass_sobel          <= '1';
+    o_led(0) <= '1';
+    o_led(1) <= '0';
+    o_led(2) <= '0';
+    o_led(3) <= '0';
 
     case s_current_state is
       when ST_PASSTHROUGH =>
@@ -54,6 +60,7 @@ begin
 
       when ST_GRAYSCALE =>
         o_pass_grayscale <= '0';
+        o_led(1) <= '1';
         if i_btn_debounced = '1' and s_btn_prev = '0' then
           s_next_state <= ST_LOWPASS;
         end if;
@@ -61,6 +68,8 @@ begin
       when ST_LOWPASS =>
         o_pass_grayscale      <= '0';
         o_pass_lowpass_filter <= '0';
+        o_led(1) <= '1';
+        o_led(2) <= '1';
         if i_btn_debounced = '1' and s_btn_prev = '0' then
           s_next_state <= ST_SOBEL;
         end if;
@@ -69,6 +78,9 @@ begin
         o_pass_grayscale      <= '0';
         o_pass_lowpass_filter <= '0';
         o_pass_sobel          <= '0';
+        o_led(1) <= '1';
+        o_led(2) <= '1';
+        o_led(3) <= '1';
         if i_btn_debounced = '1' and s_btn_prev = '0' then
           s_next_state <= ST_PASSTHROUGH;
         end if;
