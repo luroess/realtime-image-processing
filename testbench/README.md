@@ -52,6 +52,9 @@ uv run tb-sim --target example_passthrough
 uv run tb-sim --target test_example
 uv run tb-sim --target axi_rgb_to_grayscale
 uv run tb-sim --target window_generator
+uv run tb-sim --target test_debouncer
+uv run tb-sim --target test_click_detector
+uv run tb-sim --target test_debounced_click_detector
 uv run tb-sim --toplevel example_passthrough
 ```
 

@@ -26,3 +26,26 @@ description = "AXI4-Stream pixels to window transformation checks."
 toplevel    = "window_generator"
 test_module = "tests.test_window_generator"
 sources     = ["rtl/WINDOW_GENERATOR/hdl/*.vhd"]
+[targets.test_debouncer]
+description = "Debouncer checks."
+toplevel    = "debouncer"
+test_module = "tests.test_debouncing"
+sources     = ["rtl/DEBOUNCER/hdl/*.vhd"]
+
+    [targets.test_debouncer.generics]
+    G_DEBOUNCE_NS = 100
+
+[targets.test_click_detector]
+description = "Click Detector checks."
+toplevel    = "clickdetector"
+test_module = "tests.test_click_detection"
+sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
+
+[targets.test_debounced_click_detector]
+description = "Debounced Click Detector checks."
+toplevel    = "debouncedclickdetector"
+test_module = "tests.test_debounced_click_detector"
+sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
+
+    [targets.test_debounced_click_detector.generics]
+    G_DEBOUNCE_NS = 100
