@@ -58,10 +58,10 @@
 ## Vivado Configuration for Debouncer + Click Detection
 
 1. Add Source to Vivado (see dummy button implementation)
-2. Update Constraints-File *ZyboZ7_A.xdc* (see dummy button implemenation)
-3. Open Block Design (see dummy button implemenation)
-4. Create Ports for btn & led in Block Design (see dummy button implemenation)
-5. Add Module to Block Design (see dummy button implemenation)
+2. Update Constraints-File *ZyboZ7_A.xdc* (see dummy button implementation)
+3. Open Block Design (see dummy button implementation)
+4. Create Ports for btn & led in Block Design (see dummy button implementation)
+5. Add Module to Block Design (see dummy button implementation)
 6. Wire ports in block design: 
 ![Wiring of Ports in Block Design](../figures/vivado_block_wiring.png)
 7. Execute Vivado + Vitis Build Workflow
