@@ -6,6 +6,14 @@
 3. Open Block Design and lock IP Block *Zybo-Z7-10-Pcam-5C-hw.xpr* (Tab 'IP Sources' > 'Source File Properties' > 'USER_LOCKED')
 4. Test Vivado Build Workflow (see below)
 
+## Vivado Setup (Git)
+1. Checkout Branch *vivado-button-integration-vcs*
+2. Open project file *vivado/hw.xrp*
+3. Generate Block Design
+4. Create HDL Wrapper
+5. Reset Output Products
+6. Generate Output Products
+
 ## Vivado Build Workflow
 1. Open Block Design: *Tab 'Sources' > Sub-Tab 'Hierarchy'*
 2. Right-Click node *'system_i (system.bd)'*
