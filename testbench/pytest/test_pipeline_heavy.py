@@ -1,4 +1,4 @@
-"""Pytest wrappers for fast cocotb tb-sim pipeline orchestration."""
+"""Pytest wrappers for heavy cocotb tb-sim pipeline orchestration."""
 
 from __future__ import annotations
 
@@ -15,74 +15,33 @@ from typing import Any
 
 import pytest
 
-# TODO(config-surface): Keep pytest wrapper defaults aligned with tb-sim target registry and CI expectations.
+# TODO(config-surface): Keep heavy-tier defaults aligned with long-run CI budget and tb-sim registry definitions.
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 TARGETS_FILE = TESTBENCH_ROOT / "targets.toml"
-FAST_TARGETS: tuple[str, ...] = (
+HEAVY_TARGETS: tuple[str, ...] = (
     "example_passthrough",
     "axi_rgb_to_grayscale",
     "window_generator",
     "axi_sobel_filter",
     "axi_fast_filter",
-    "axi_filter_wrapper",
     "axi_filter_wrapper_stress",
-    "axi_edge_overlay_pipeline",
     "axi_filter_wrapper_fast",
 )
-# FIXME(filter-drift): Keep these filter expressions synchronized with actual cocotb test names to avoid silently skipping intended coverage.
-FAST_TEST_FILTERS: dict[str, str] = {
-    "example_passthrough": (
-        "test_passthrough_single_frame|"
-        "test_passthrough_with_backpressure_three_cycle_breaks|"
-        "test_passthrough_stress_matrix"
-    ),
-    "axi_rgb_to_grayscale": (
-        "test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks|"
-        "test_axi_rgb_to_grayscale_passthrough_mode|"
-        "test_axi_rgb_to_grayscale_stress_matrix"
-    ),
-    "window_generator": (
-        "test_axi_rgb_to_window_without_pressure|"
-        "test_axi_rgb_to_window_with_pressure|"
-        "test_axi_rgb_to_window_multi_frame_without_pressure|"
-        "test_axi_rgb_to_window_stress_matrix"
-    ),
-    "axi_sobel_filter": (
-        "test_axi_sobel_filter_gradient_gray_windows|"
-        "test_axi_sobel_filter_stress_fast"
-    ),
-    "axi_fast_filter": (
-        "test_axi_fast_filter_gradient_gray_windows|"
-        "test_axi_fast_filter_checkerboard_backpressure_handshake|"
-        "test_axi_fast_filter_impulse_mixed_throttle|"
-        "test_axi_fast_filter_lenna_end_to_end|"
-        "test_axi_fast_filter_mountains_center_crop_end_to_end|"
-        "test_axi_fast_filter_stress_fast"
-    ),
-    "axi_filter_wrapper": (
-        "test_axi_windowed_filter_wrapper_simple_image|"
-        "test_axi_windowed_filter_wrapper_lenna_end_to_end|"
-        "test_axi_windowed_filter_wrapper_backpressure_handshake_only"
-    ),
-    "axi_filter_wrapper_stress": "test_axi_windowed_filter_wrapper_stress_fast",
-    "axi_edge_overlay_pipeline": (
-        "test_axi_edge_overlay_pipeline_gradient_overlay|"
-        "test_axi_edge_overlay_pipeline_overlay_disabled_passthrough|"
-        "test_axi_edge_overlay_pipeline_backpressure_protocol"
-    ),
-    "axi_filter_wrapper_fast": (
-        "test_axi_filter_wrapper_fast_simple_image|"
-        "test_axi_filter_wrapper_fast_lenna_end_to_end|"
-        "test_axi_filter_wrapper_fast_mountains_center_crop_end_to_end|"
-        "test_axi_filter_wrapper_fast_backpressure_handshake_only|"
-        "test_axi_filter_wrapper_fast_stress_fast"
-    ),
+# FIXME(filter-drift): Keep heavy filters synchronized with cocotb test renames so randomized stress cases are not silently skipped.
+HEAVY_TEST_FILTERS: dict[str, str] = {
+    "example_passthrough": "test_passthrough_stress_matrix",
+    "axi_rgb_to_grayscale": "test_axi_rgb_to_grayscale_stress_matrix",
+    "window_generator": "test_axi_rgb_to_window_stress_matrix",
+    "axi_sobel_filter": "test_axi_sobel_filter_stress_heavy_randomized",
+    "axi_fast_filter": "test_axi_fast_filter_stress_heavy_randomized",
+    "axi_filter_wrapper_stress": "test_axi_windowed_filter_wrapper_stress_heavy_randomized",
+    "axi_filter_wrapper_fast": "test_axi_filter_wrapper_fast_stress_heavy_randomized",
 }
 
 
 @dataclass(frozen=True, slots=True)
 class JunitSummary:
-    # TODO(summary-schema): Extend this structure only when parser and failure formatting are updated together.
+    # TODO(summary-schema): Extend fields only with matching parser and reporter updates.
     tests: int
     failures: int
     errors: int
@@ -92,7 +51,7 @@ class JunitSummary:
 
 @lru_cache(maxsize=1)
 def _load_target_registry() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
-    # TODO(registry-cache): Preserve caching to avoid repeated TOML parsing during repeated target loops.
+    # TODO(registry-cache): Keep target registry cached to reduce overhead in repeated heavy loops.
     with TARGETS_FILE.open("rb") as f:
         data = tomllib.load(f)
 
@@ -152,20 +111,20 @@ def _validate_filter_tokens(filters: dict[str, str]) -> None:
 
 
 def _sanitize_name(value: str) -> str:
-    # TODO(path-safety): Keep build-key sanitization strict so generated paths remain shell-safe across environments.
+    # TODO(path-safety): Preserve conservative name sanitization for simulator build directory compatibility.
     sanitized = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in value)
     return sanitized.strip("_") or "tb"
 
 
 def _derive_tb_name(test_module: str) -> str:
-    # TODO(module-derivation): Keep this derivation compatible with comma-separated module lists in targets.toml.
+    # TODO(module-derivation): Keep this helper aligned with how target entries encode module lists.
     first_module = test_module.split(",", maxsplit=1)[0].strip()
     leaf = first_module.split(".")[-1] if first_module else "tb"
     return _sanitize_name(leaf)
 
 
 def _merged_target_config(target: str) -> dict[str, Any]:
-    # FIXME(config-validation): Maintain required-field checks here so invalid target entries fail before spawning simulations.
+    # FIXME(config-validation): Maintain required-field validation so malformed target metadata fails early.
     defaults, targets = _load_target_registry()
     if target not in targets:
         valid = ", ".join(sorted(targets))
@@ -185,7 +144,7 @@ def _merged_target_config(target: str) -> dict[str, Any]:
 
 
 def _build_dir_for_target(target: str) -> Path:
-    # TODO(build-layout): Keep build directory resolution centralized to avoid divergence in XML discovery logic.
+    # TODO(build-layout): Keep build-path construction centralized for consistent artifact lookup.
     config = _merged_target_config(target)
     toplevel = str(config["toplevel"])
     test_module = str(config["test_module"])
@@ -200,7 +159,7 @@ def _build_dir_for_target(target: str) -> Path:
 
 
 def _junit_xml_candidates(build_dir: Path) -> list[Path]:
-    # TODO(xml-discovery): Preserve explicit candidate filtering to avoid parsing unrelated XML artifacts.
+    # TODO(xml-discovery): Keep result XML filtering narrow to avoid unrelated parser inputs.
     if not build_dir.exists():
         return []
 
@@ -213,7 +172,7 @@ def _junit_xml_candidates(build_dir: Path) -> list[Path]:
 
 
 def _select_results_xml(build_dir: Path, known_xml: set[Path]) -> Path | None:
-    # FIXME(result-selection): Revisit newest-file fallback if parallel runs start producing overlapping result sets.
+    # FIXME(result-selection): Rework fallback strategy if heavy runs start overlapping artifact timestamps.
     candidates = _junit_xml_candidates(build_dir)
     if not candidates:
         return None
@@ -226,7 +185,7 @@ def _select_results_xml(build_dir: Path, known_xml: set[Path]) -> Path | None:
 
 
 def _read_positive_int_env(name: str, default: int) -> int:
-    # TODO(env-guards): Keep strict integer validation so orchestration failures are reported with actionable messages.
+    # TODO(env-guards): Preserve strict env validation so misconfigured heavy runs fail with clear errors.
     raw = os.getenv(name, str(default)).strip()
     try:
         value = int(raw)
@@ -238,7 +197,7 @@ def _read_positive_int_env(name: str, default: int) -> int:
 
 
 def _read_bool_env(name: str, default: bool) -> bool:
-    # TODO(env-parsing): Preserve canonical boolean token parsing to keep CI env controls predictable.
+    # TODO(env-parsing): Keep accepted boolean tokens consistent with fast-tier wrapper behavior.
     raw = os.getenv(name)
     if raw is None:
         return default
@@ -251,7 +210,7 @@ def _read_bool_env(name: str, default: bool) -> bool:
 
 
 def _resolve_targets(default_targets: tuple[str, ...]) -> tuple[str, ...]:
-    # FIXME(target-coverage): Update default target list when merger modes split into dedicated simulation targets.
+    # FIXME(target-coverage): Expand heavy target selection when new merger modes gain dedicated stress scenarios.
     raw_targets = os.getenv("TB_STRESS_TARGETS", "").strip()
     if not raw_targets:
         return default_targets
@@ -269,7 +228,7 @@ def _resolve_targets(default_targets: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _format_command_output(process: subprocess.CompletedProcess[str], *, max_lines: int = 60) -> str:
-    # TODO(log-truncation): Keep bounded output formatting to prevent oversized pytest failure payloads.
+    # TODO(log-truncation): Keep output truncation bounded to maintain readable pytest failure summaries.
     lines: list[str] = []
     if process.stdout:
         lines.extend(f"stdout | {line}" for line in process.stdout.strip().splitlines())
@@ -286,7 +245,7 @@ def _format_command_output(process: subprocess.CompletedProcess[str], *, max_lin
 
 
 def _parse_results_xml(results_xml: Path) -> JunitSummary:
-    # FIXME(junit-schema): Adjust parser if junit emitter format changes, otherwise failed-case extraction can degrade.
+    # FIXME(junit-schema): Update XML parsing assumptions if tb-sim/junit format evolves.
     try:
         root = ET.parse(results_xml).getroot()
     except ET.ParseError as exc:
@@ -332,13 +291,12 @@ def _parse_results_xml(results_xml: Path) -> JunitSummary:
 def _run_tb_target(
     *,
     target: str,
-    tier: str,
     iteration: int,
     test_filter: str | None = None,
 ) -> None:
-    # TODO(run-orchestration): Keep target execution, XML parsing, and failure aggregation in one place for consistent behavior across tiers.
+    # TODO(run-orchestration): Keep heavy-tier command execution and result validation centralized for consistent failure handling.
     env = os.environ.copy()
-    env["TB_STRESS_TIER"] = tier
+    env["TB_STRESS_TIER"] = "heavy"
     env.pop("COCOTB_TESTCASE", None)
     if test_filter:
         env["COCOTB_TEST_FILTER"] = test_filter
@@ -400,22 +358,21 @@ def _run_tb_target(
     assert summary is not None
 
 
-@pytest.mark.fast
-def test_pipeline_fast_tier_targets() -> None:
-    # FIXME(filter-maintenance): Correct stale filter tokens promptly (for example missing passthrough test names) to avoid false confidence in fast-tier coverage.
-    _validate_filter_tokens(FAST_TEST_FILTERS)
-    targets = _resolve_targets(default_targets=FAST_TARGETS)
+@pytest.mark.heavy
+def test_pipeline_heavy_tier_targets() -> None:
+    # FIXME(heavy-budget): Rebalance repeat defaults and target set when additional mode combinations increase total runtime.
+    _validate_filter_tokens(HEAVY_TEST_FILTERS)
+    targets = _resolve_targets(default_targets=HEAVY_TARGETS)
     repeat = _read_positive_int_env("TB_STRESS_REPEAT", default=1)
     keep_going = _read_bool_env("TB_STRESS_KEEP_GOING", default=True)
 
     failures: list[str] = []
     for target in targets:
-        test_filter = FAST_TEST_FILTERS.get(target)
+        test_filter = HEAVY_TEST_FILTERS.get(target)
         for iteration in range(1, repeat + 1):
             try:
                 _run_tb_target(
                     target=target,
-                    tier="fast",
                     iteration=iteration,
                     test_filter=test_filter,
                 )
@@ -426,4 +383,4 @@ def test_pipeline_fast_tier_targets() -> None:
 
     if failures:
         joined = "\n\n".join(failures)
-        pytest.fail(f"Fast tier encountered one or more target failures:\n\n{joined}")
+        pytest.fail(f"Heavy tier encountered one or more target failures:\n\n{joined}")
