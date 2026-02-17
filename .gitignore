@@ -87,9 +87,12 @@ vivado/**/.Xil/
 
 # Block Design & IP output (generated)
 vivado/**/*.srcs/**/ip/
-vivado/**/*.srcs/**/bd/
+# vivado/**/*.srcs/**/bd/
 vivado/**/*.srcs/**/hdl/
 vivado/**/*.srcs/**/sim/
+
+# Track block design sources
+!vivado/**/*.srcs/**/bd/
 
 # IP repositories / vendor IP
 vivado/**/repo/
