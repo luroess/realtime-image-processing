@@ -66,6 +66,15 @@
 - Keep reset behavior explicit in every clocked process.
 - For resolution changes, update line-buffer bounds and any paired conversion/testbench assumptions together.
 
+## Commit workflow (required)
+
+- For multi-block implementation tasks, create short conventional commits autonomously after each finished block.
+- Preferred commit format: `<type>: <short summary>` with concise subjects, for example:
+  - `feat: add global doc query scope`
+  - `test: add regression checks for skill scripts`
+  - `chore: run isort on testbench python`
+- Do not squash unrelated blocks into one commit.
+
 ## Testbench workflow (required)
 
 The `testbench` directory is the cocotb verification package for AXI4-Stream video RTL blocks in `rtl/`. Use it as the default validation entrypoint for Python-based simulation.
