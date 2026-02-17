@@ -60,20 +60,40 @@ sources     = [
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
 ]
 
-[targets.axi_filter_wrapper]
-description = "AXI4-Stream internal window-generator + Sobel wrapper checks."
-toplevel    = "axi_filterwrapper"
-test_module = "tests.test_axi_filter_wrapper"
+[targets.axi_blurr_window_module]
+description = "AXI4-Stream internal window-generator + blurr window-module checks."
+toplevel    = "axi_blurrwindowmodule"
+test_module = "tests.test_axi_blurr_window_module"
+waves       = false
+sources     = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/BLURR_FILTER/blurr_core.vhd",
+  "rtl/BLURR_FILTER/axi_blurr_filter.vhd",
+  "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
+]
+
+  [targets.axi_blurr_window_module.parameters]
+  G_PIXEL_WIDTH = 8
+  G_KERNEL_SIZE = 3
+  G_LINE_WIDTH = 512
+  G_NUM_ROW = 512
+  G_COEFF_WIDTH = 8
+  G_NORMALIZE_DIVISOR = 16
+  G_BIAS = 0
+
+[targets.axi_sobel_window_module]
+description = "AXI4-Stream internal window-generator + Sobel window-module checks."
+toplevel    = "axi_sobelwindowmodule"
+test_module = "tests.test_axi_sobel_window_module"
 waves       = false
 sources     = [
   "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
   "rtl/SOBEL_FILTER/sobel_core.vhd",
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
-  "rtl/FILTER_WRAPPER/hdl/axi_filter_wrapper.vhd",
+  "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
 ]
 
-  [targets.axi_filter_wrapper.parameters]
-  G_FILTER_SELECT = 0
+  [targets.axi_sobel_window_module.parameters]
   G_PIXEL_WIDTH = 8
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 512
