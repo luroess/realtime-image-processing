@@ -152,7 +152,9 @@ uv run tb-sim --target window_generator
 ## Report compile quality gate (required)
 
 - Any edit under `docs/report/` must keep report compilation free of both errors and warnings.
+- All bibliography citations in report Typst sources must resolve in `docs/report/references.bib`.
 - Before ending a report-related task, run:
+  - `python3 docs/report/analysis/check_citations.py`
   - `make report-check`
 - `make report-check` compiles in both modes:
   - repo-root invocation with `--root .`
