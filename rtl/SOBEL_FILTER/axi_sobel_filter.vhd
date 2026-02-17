@@ -3,35 +3,45 @@ library ieee;
 
 entity AXI_SobelFilter is
   generic (
-    -- Threshold in range 0..2040 for 8-bit input
+    -- Pixel width in bits (default 8-bit grayscale).
+    G_PIXEL_WIDTH    : positive := 8;
+    -- Used for vector sizing only; Sobel computation is fixed to 3x3.
+    G_KERNEL_SIZE    : positive := 3;
+    -- Threshold in range 0..2040 for 8-bit input.
     G_SOBEL_TRESHOLD : natural := 200
   );
   port (
     i_aclk              : in  std_logic;
     i_aresetn           : in  std_logic;
 
-    -- AXI4-Stream Video Slave (input: 3x3 window 8-bit gray)
+    -- AXI4-Stream Video Slave (input: 3x3 gray window, flattened)
     s_axis_video_tvalid : in  std_logic;
     s_axis_video_tready : out std_logic;
-    s_axis_video_tdata  : in  std_logic_vector(71 downto 0);
+    s_axis_video_tdata  : in  std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
     s_axis_video_tuser  : in  std_logic; -- SOF passthrough
     s_axis_video_tlast  : in  std_logic; -- EOL passthrough
 
     -- AXI4-Stream Video Master (output)
     m_axis_window_tvalid : out std_logic;
     m_axis_window_tready : in  std_logic;
-    m_axis_window_tdata  : out std_logic_vector(7 downto 0);
+    m_axis_window_tdata  : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
     m_axis_window_tuser  : out std_logic; -- SOF passthrough
     m_axis_window_tlast  : out std_logic  -- EOL passthrough
   );
 end entity;
 
 architecture A_Rtl of AXI_SobelFilter is
-  signal s_sobel_pixel : std_logic_vector(7 downto 0);
+  signal s_sobel_pixel : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
   signal s_tvalid      : std_logic;
 begin
-  U_SobelCore3x3: entity work.E_SobelCore3x3
+  assert G_KERNEL_SIZE = 3
+    report "AXI_SobelFilter: fixed Sobel logic requires G_KERNEL_SIZE=3."
+    severity failure;
+
+  U_SobelCore: entity work.E_SobelCore
     generic map (
+      G_PIXEL_WIDTH    => G_PIXEL_WIDTH,
+      G_KERNEL_SIZE    => G_KERNEL_SIZE,
       G_SOBEL_TRESHOLD => G_SOBEL_TRESHOLD
     )
     port map (
