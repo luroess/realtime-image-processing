@@ -18,11 +18,11 @@ entity window_generator is
     i_aresetn         : in  std_logic;
 
     -- AXI4-Stream Video Slave (input)
-    s_axis_video_tvalid : in  std_logic;
-    s_axis_video_tready : out std_logic;
-    s_axis_video_tdata  : in  std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
-    s_axis_video_tuser  : in  std_logic; -- SOF
-    s_axis_video_tlast  : in  std_logic; -- EOL
+    s_axis_gray8_tvalid : in  std_logic;
+    s_axis_gray8_tready : out std_logic;
+    s_axis_gray8_tdata  : in  std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
+    s_axis_gray8_tuser  : in  std_logic; -- SOF
+    s_axis_gray8_tlast  : in  std_logic; -- EOL
 
     -- AXI4-Stream Video Master (output)
     m_axis_window_tvalid : out std_logic;
@@ -96,7 +96,7 @@ begin
 
   -- Expose input READY combinationally so upstream and internal handshake
   -- observe the same value in the same cycle.
-  s_axis_video_tready <= '0' when i_aresetn = '0' else
+  s_axis_gray8_tready <= '0' when i_aresetn = '0' else
                          '1' when pxl_cnt <= C_FILL_MIN else
                          m_axis_window_tready;
 
@@ -146,10 +146,10 @@ begin
           -- buffer filled: pass on downstream status
           v_in_ready := m_axis_window_tready;
           -- valid follows upstream VALID after warm-up and remains independent from READY
-          wndw_valid <= s_axis_video_tvalid;
+          wndw_valid <= s_axis_gray8_tvalid;
         end if;
         -- AXI Stream handshake occured for input data stream
-        if s_axis_video_tvalid = '1' and v_in_ready = '1' then
+        if s_axis_gray8_tvalid = '1' and v_in_ready = '1' then
           v_in_hs := '1';
 
           -- shift pixels in buffer
@@ -157,12 +157,12 @@ begin
             v_buf_now(i) := v_buf_now(i+1);
           end loop;
           -- append current pixel
-          v_buf_now(C_BUF_LEN-1) := s_axis_video_tdata;
+          v_buf_now(C_BUF_LEN-1) := s_axis_gray8_tdata;
           buf_reg <= v_buf_now;
 
           -- shift control signals
-          sof_reg <= sof_reg(sof_reg'high-1 downto sof_reg'low) & s_axis_video_tuser; -- shift in current value
-          eol_reg <= eol_reg(eol_reg'high-1 downto eol_reg'low) & s_axis_video_tlast; -- shift in current value
+          sof_reg <= sof_reg(sof_reg'high-1 downto sof_reg'low) & s_axis_gray8_tuser; -- shift in current value
+          eol_reg <= eol_reg(eol_reg'high-1 downto eol_reg'low) & s_axis_gray8_tlast; -- shift in current value
 
           -- increment pixels received
           if pxl_cnt < 2*C_FILL_MIN then -- only use this counter after reset for first fill of buffer until valid output can be produced
@@ -174,7 +174,7 @@ begin
             col_cnt <= col_cnt + 1;
           end if;
           -- reset column on EOL
-          if s_axis_video_tlast = '1' then -- EOL
+          if s_axis_gray8_tlast = '1' then -- EOL
             col_cnt <= 0;
             if row_cnt < G_NUM_ROW+1 then
               row_cnt <= row_cnt + 1;
@@ -182,7 +182,7 @@ begin
           end if;
 
           -- Reset row on SOF
-          if s_axis_video_tuser = '1' then
+          if s_axis_gray8_tuser = '1' then
             row_cnt <= 0;
             --col_cnt <= 0;
           end if;

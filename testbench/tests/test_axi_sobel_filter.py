@@ -16,8 +16,8 @@ from monitors.axis_gray_sink import AxiGrayStreamSink
 
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
-S_AXIS_PREFIX = "s_axis_video"
-M_AXIS_PREFIX = "m_axis_window"
+S_AXIS_PREFIX = "s_axis_window"
+M_AXIS_PREFIX = "m_axis_filter8"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]

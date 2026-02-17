@@ -20,7 +20,7 @@ from verification.scoreboard import Scoreboard
 
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
-S_AXIS_PREFIX = "s_axis_video"
+S_AXIS_PREFIX = "s_axis_gray8"
 M_AXIS_PREFIX = "m_axis_window"
 RESET_ACTIVE_LEVEL = False
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]

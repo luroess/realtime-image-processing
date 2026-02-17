@@ -3,11 +3,11 @@ library ieee;
 
 entity AXI_SobelFilter is
   generic (
-    -- Pixel width in bits (default 8-bit grayscale).
+    -- Pixel width in bits (default 8-bit grayscale)
     G_PIXEL_WIDTH    : positive := 8;
-    -- Used for vector sizing only; Sobel computation is fixed to 3x3.
+    -- Used for vector sizing only, Sobel computation is fixed to 3x3
     G_KERNEL_SIZE    : positive := 3;
-    -- Threshold in range 0..2040 for 8-bit input.
+    -- Threshold in range 0..2040 for 8-bit input
     G_SOBEL_THRESHOLD : natural := 200
   );
   port (
@@ -15,18 +15,18 @@ entity AXI_SobelFilter is
     i_aresetn           : in  std_logic;
 
     -- AXI4-Stream Video Slave (input: 3x3 gray window, flattened)
-    s_axis_video_tvalid : in  std_logic;
-    s_axis_video_tready : out std_logic;
-    s_axis_video_tdata  : in  std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
-    s_axis_video_tuser  : in  std_logic; -- SOF passthrough
-    s_axis_video_tlast  : in  std_logic; -- EOL passthrough
+    s_axis_window_tvalid : in  std_logic;
+    s_axis_window_tready : out std_logic;
+    s_axis_window_tdata  : in  std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
+    s_axis_window_tuser  : in  std_logic; -- SOF passthrough
+    s_axis_window_tlast  : in  std_logic; -- EOL passthrough
 
     -- AXI4-Stream Video Master (output)
-    m_axis_window_tvalid : out std_logic;
-    m_axis_window_tready : in  std_logic;
-    m_axis_window_tdata  : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
-    m_axis_window_tuser  : out std_logic; -- SOF passthrough
-    m_axis_window_tlast  : out std_logic  -- EOL passthrough
+    m_axis_filter8_tvalid : out std_logic;
+    m_axis_filter8_tready : in  std_logic;
+    m_axis_filter8_tdata  : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
+    m_axis_filter8_tuser  : out std_logic; -- SOF passthrough
+    m_axis_filter8_tlast  : out std_logic  -- EOL passthrough
   );
 end entity;
 
@@ -45,22 +45,22 @@ begin
       G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD
     )
     port map (
-      i_window     => s_axis_video_tdata,
+      i_window     => s_axis_window_tdata,
       o_edge_pixel => s_sobel_pixel
     );
 
   -- AXI-stream passthrough timing
-  s_axis_video_tready <= '0' when (i_aresetn = '0') else
-                         m_axis_window_tready;
+  s_axis_window_tready <= '0' when (i_aresetn = '0') else
+                         m_axis_filter8_tready;
 
   s_tvalid <= '0' when (i_aresetn = '0') else
-              s_axis_video_tvalid;
-  m_axis_window_tvalid <= s_tvalid;
+              s_axis_window_tvalid;
+  m_axis_filter8_tvalid <= s_tvalid;
 
-  m_axis_window_tdata <= (others => '0') when (s_tvalid = '0') else
+  m_axis_filter8_tdata <= (others => '0') when (s_tvalid = '0') else
                          s_sobel_pixel;
-  m_axis_window_tuser <= '0' when (s_tvalid = '0') else
-                         s_axis_video_tuser;
-  m_axis_window_tlast <= '0' when (s_tvalid = '0') else
-                         s_axis_video_tlast;
+  m_axis_filter8_tuser <= '0' when (s_tvalid = '0') else
+                         s_axis_window_tuser;
+  m_axis_filter8_tlast <= '0' when (s_tvalid = '0') else
+                         s_axis_window_tlast;
 end architecture;

@@ -3,7 +3,7 @@ library ieee;
 
 entity AXI_WindowedFilterWrapper is
   generic (
-    -- 0: Sobel, 1: Blur placeholder (center-pixel pass-through)
+    -- 0: Sobel, 1: Blur placeholder
     G_FILTER_SELECT  : natural := 0;
 
     -- Sobel generic
@@ -13,25 +13,25 @@ entity AXI_WindowedFilterWrapper is
     G_PIXEL_WIDTH                : positive := 8;
     G_KERNEL_SIZE                : positive := 3;
     G_LINE_WIDTH                 : positive := 1920;
-    G_NUM_ROW                        : positive := 1080
+    G_NUM_ROW                    : positive := 1080
   );
   port (
     i_aclk    : in  std_logic;
     i_aresetn : in  std_logic;
 
     -- AXI4-Stream grayscale input (gray8)
-    s_axis_video_tvalid : in  std_logic;
-    s_axis_video_tready : out std_logic;
-    s_axis_video_tdata  : in  std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
-    s_axis_video_tuser  : in  std_logic;
-    s_axis_video_tlast  : in  std_logic;
+    s_axis_gray8_tvalid : in  std_logic;
+    s_axis_gray8_tready : out std_logic;
+    s_axis_gray8_tdata  : in  std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
+    s_axis_gray8_tuser  : in  std_logic;
+    s_axis_gray8_tlast  : in  std_logic;
 
     -- AXI4-Stream filtered output (gray8)
-    m_axis_video_tvalid : out std_logic;
-    m_axis_video_tready : in  std_logic;
-    m_axis_video_tdata  : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
-    m_axis_video_tuser  : out std_logic;
-    m_axis_video_tlast  : out std_logic
+    m_axis_filter8_tvalid : out std_logic;
+    m_axis_filter8_tready : in  std_logic;
+    m_axis_filter8_tdata  : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
+    m_axis_filter8_tuser  : out std_logic;
+    m_axis_filter8_tlast  : out std_logic
   );
 end entity;
 
@@ -56,7 +56,7 @@ architecture A_Rtl of AXI_WindowedFilterWrapper is
   signal s_sobel_tuser  : std_logic := '0';
   signal s_sobel_tlast  : std_logic := '0';
 begin
-  -- AXI_SobelFilter currently requires 3x3 windows with 8-bit grayscale pixels.
+  -- AXI_SobelFilter currently requires 3x3 windows with 8-bit grayscale pixels
   assert G_KERNEL_SIZE = 3
     report "AXI_WindowedFilterWrapper with AXI_SobelFilter requires G_KERNEL_SIZE=3."
     severity failure;
@@ -77,11 +77,11 @@ begin
     port map (
       i_aclk               => i_aclk,
       i_aresetn            => i_aresetn,
-      s_axis_video_tvalid  => s_axis_video_tvalid,
-      s_axis_video_tready  => s_axis_video_tready,
-      s_axis_video_tdata   => s_axis_video_tdata,
-      s_axis_video_tuser   => s_axis_video_tuser,
-      s_axis_video_tlast   => s_axis_video_tlast,
+      s_axis_gray8_tvalid  => s_axis_gray8_tvalid,
+      s_axis_gray8_tready  => s_axis_gray8_tready,
+      s_axis_gray8_tdata   => s_axis_gray8_tdata,
+      s_axis_gray8_tuser   => s_axis_gray8_tuser,
+      s_axis_gray8_tlast   => s_axis_gray8_tlast,
       m_axis_window_tvalid => s_wndw_tvalid,
       m_axis_window_tready => s_wndw_tready,
       m_axis_window_tdata  => s_wndw_tdata,
@@ -102,42 +102,42 @@ begin
       port map (
         i_aclk               => i_aclk,
         i_aresetn            => i_aresetn,
-        s_axis_video_tvalid  => s_wndw_tvalid,
-        s_axis_video_tready  => s_wndw_tready,
-        s_axis_video_tdata   => s_wndw_tdata,
-        s_axis_video_tuser   => s_wndw_tuser,
-        s_axis_video_tlast   => s_wndw_tlast,
+        s_axis_filter8_tvalid  => s_wndw_tvalid,
+        s_axis_filter8_tready  => s_wndw_tready,
+        s_axis_filter8_tdata   => s_wndw_tdata,
+        s_axis_filter8_tuser   => s_wndw_tuser,
+        s_axis_filter8_tlast   => s_wndw_tlast,
         m_axis_window_tvalid => s_sobel_tvalid,
-        m_axis_window_tready => m_axis_video_tready,
+        m_axis_window_tready => m_axis_filter8_tready,
         m_axis_window_tdata  => s_sobel_tdata,
         m_axis_window_tuser  => s_sobel_tuser,
         m_axis_window_tlast  => s_sobel_tlast
       );
 
-    m_axis_video_tvalid <= s_sobel_tvalid;
-    m_axis_video_tdata  <= s_sobel_tdata;
-    m_axis_video_tuser  <= s_sobel_tuser;
-    m_axis_video_tlast  <= s_sobel_tlast;
+    m_axis_filter8_tvalid <= s_sobel_tvalid;
+    m_axis_filter8_tdata  <= s_sobel_tdata;
+    m_axis_filter8_tuser  <= s_sobel_tuser;
+    m_axis_filter8_tlast  <= s_sobel_tlast;
   end generate;
 
   G_BlurPlaceholderFilter: if G_FILTER_SELECT = C_FILTER_BLUR generate
     -- Placeholder path until blur filter module exists
     -- Uses center pixel of the window as pass-through gray output
-    s_wndw_tready <= m_axis_video_tready;
+    s_wndw_tready <= m_axis_filter8_tready;
 
-    m_axis_video_tvalid <= '0' when (i_aresetn = '0') else s_wndw_tvalid;
-    m_axis_video_tdata  <= (others => '0') when (i_aresetn = '0') else s_wndw_tdata(C_CENTER_MSB downto C_CENTER_LSB);
-    m_axis_video_tuser  <= '0' when (i_aresetn = '0') else s_wndw_tuser;
-    m_axis_video_tlast  <= '0' when (i_aresetn = '0') else s_wndw_tlast;
+    m_axis_filter8_tvalid <= '0' when (i_aresetn = '0') else s_wndw_tvalid;
+    m_axis_filter8_tdata  <= (others => '0') when (i_aresetn = '0') else s_wndw_tdata(C_CENTER_MSB downto C_CENTER_LSB);
+    m_axis_filter8_tuser  <= '0' when (i_aresetn = '0') else s_wndw_tuser;
+    m_axis_filter8_tlast  <= '0' when (i_aresetn = '0') else s_wndw_tlast;
   end generate;
 
   G_FilterDefault: if (G_FILTER_SELECT /= C_FILTER_SOBEL) and (G_FILTER_SELECT /= C_FILTER_BLUR) generate
     -- Safe default for unsupported filter selections
     s_wndw_tready <= '0';
-    m_axis_video_tvalid <= '0';
-    m_axis_video_tdata  <= (others => '0');
-    m_axis_video_tuser  <= '0';
-    m_axis_video_tlast  <= '0';
+    m_axis_filter8_tvalid <= '0';
+    m_axis_filter8_tdata  <= (others => '0');
+    m_axis_filter8_tuser  <= '0';
+    m_axis_filter8_tlast  <= '0';
   end generate;
 
 end architecture;

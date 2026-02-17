@@ -4,10 +4,9 @@ library ieee;
 
 entity E_SobelCore is
   generic (
-    -- Pixel width in bits (default 8-bit grayscale).
+    -- Pixel width in bits (default 8-bit grayscale)
     G_PIXEL_WIDTH    : positive := 8;
-    -- Used for vector sizing only
-    -- Sobel computation is fixed to 3x3
+    -- Used for vector sizing onl, Sobel computation is fixed to 3x3
     G_KERNEL_SIZE    : positive := 3;
     -- Threshold in range 0..2040 for 8-bit input
     G_SOBEL_THRESHOLD : natural := 200
@@ -39,7 +38,7 @@ begin
     report "E_SobelCore: fixed Sobel logic requires G_KERNEL_SIZE=3."
     severity failure;
 
-  -- Uses the first 3x3 pixels in row-major order from i_window.
+  -- Uses the first 3x3 pixels in row-major order from i_window
   s_p1_u <= unsigned(i_window((1 * G_PIXEL_WIDTH) - 1 downto (0 * G_PIXEL_WIDTH)));
   s_p2_u <= unsigned(i_window((2 * G_PIXEL_WIDTH) - 1 downto (1 * G_PIXEL_WIDTH)));
   s_p3_u <= unsigned(i_window((3 * G_PIXEL_WIDTH) - 1 downto (2 * G_PIXEL_WIDTH)));
