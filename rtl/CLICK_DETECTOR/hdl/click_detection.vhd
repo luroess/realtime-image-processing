@@ -8,7 +8,7 @@ entity ClickDetector is
     i_rst_n               : in std_logic;
     i_btn_debounced       : in std_logic;
     o_pass_grayscale      : out std_logic;
-    o_pass_lowpass_filter : out std_logic;
+    o_pass_blurr_filter : out std_logic;
     o_pass_sobel          : out std_logic;
     o_led                 : out std_logic_vector(3 downto 0)  -- 4 LEDs
   );
@@ -17,7 +17,7 @@ end entity;
 architecture A_Rtl of ClickDetector is
 
   -- State type and state registers
-  type state_t is (ST_PASSTHROUGH, ST_GRAYSCALE, ST_LOWPASS, ST_SOBEL);
+  type state_t is (ST_PASSTHROUGH, ST_GRAYSCALE, ST_BLURR, ST_SOBEL);
   signal s_current_state : state_t := ST_PASSTHROUGH;
   signal s_next_state    : state_t := ST_PASSTHROUGH;
 
@@ -44,7 +44,7 @@ begin
     s_next_state <= s_current_state;
 
     o_pass_grayscale      <= '1';
-    o_pass_lowpass_filter <= '1';
+    o_pass_blurr_filter <= '1';
     o_pass_sobel          <= '1';
     o_led(0) <= '1';
     o_led(1) <= '0';
@@ -61,12 +61,12 @@ begin
         o_pass_grayscale <= '0';
         o_led(1) <= '1';
         if i_btn_debounced = '1' and s_btn_prev = '0' then
-          s_next_state <= ST_LOWPASS;
+          s_next_state <= ST_BLURR;
         end if;
 
-      when ST_LOWPASS =>
+      when ST_BLURR =>
         o_pass_grayscale      <= '0';
-        o_pass_lowpass_filter <= '0';
+        o_pass_blurr_filter <= '0';
         o_led(1) <= '1';
         o_led(2) <= '1';
         if i_btn_debounced = '1' and s_btn_prev = '0' then
@@ -75,7 +75,7 @@ begin
 
       when ST_SOBEL =>
         o_pass_grayscale      <= '0';
-        o_pass_lowpass_filter <= '0';
+        o_pass_blurr_filter <= '0';
         o_pass_sobel          <= '0';
         o_led(1) <= '1';
         o_led(2) <= '1';

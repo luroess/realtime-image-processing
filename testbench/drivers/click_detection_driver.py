@@ -28,7 +28,7 @@ class ClickDetectionDriver:
     async def check_output(
         self,
         expected_pass_grayscale,
-        expected_pass_lowpass_filter,
+        expected_pass_blurr_filter,
         expected_pass_sobel,
         wait_duration_ns=0,
         stable_duration_ns=0,
@@ -42,9 +42,9 @@ class ClickDetectionDriver:
             raise AssertionError(
                 f"Pass Grayscale is not correct! Expected {expected_pass_grayscale} , got {int(self.dut.o_pass_grayscale.value)}",
             )
-        if self.dut.o_pass_lowpass_filter.value != expected_pass_lowpass_filter:
+        if self.dut.o_pass_blurr_filter.value != expected_pass_blurr_filter:
             raise AssertionError(
-                f"Pass Lowpass is not correct! Expected {expected_pass_lowpass_filter} , got {int(self.dut.o_pass_lowpass_filter.value)}",
+                f"Pass Blurr is not correct! Expected {expected_pass_blurr_filter} , got {int(self.dut.o_pass_blurr_filter.value)}",
             )
         if self.dut.o_pass_sobel.value != expected_pass_sobel:
             raise AssertionError(
@@ -54,7 +54,7 @@ class ClickDetectionDriver:
         if stable_duration_ns != 0:
             await self.check_output(
                 expected_pass_grayscale,
-                expected_pass_lowpass_filter,
+                expected_pass_blurr_filter,
                 expected_pass_sobel,
                 stable_duration_ns,
             )

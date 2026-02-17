@@ -44,9 +44,9 @@ async def test_debounced_click_detection(dut) -> None:
     await click_detection_driver.check_output(0, 1, 1, 20)
 
     # # --------------------------------------------------
-    # # Transition to ST_LOWPASS
+    # # Transition to ST_BLURR
     # # --------------------------------------------------
-    print(f"Transition to state ST_LOWPASS")
+    print(f"Transition to state ST_BLURR")
     await debouncing_driver.simulate_bouncing(0)
     await click_detection_driver.check_output(0, 1, 1, 0)
     await debouncing_driver.set_i_btn_value_and_wait(1, CLK_TIMER_NS)

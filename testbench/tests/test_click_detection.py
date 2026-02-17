@@ -30,9 +30,9 @@ async def test_click_state_machine(dut) -> None:
     await driver.check_output(0, 1, 1, 10, 50)
 
     # --------------------------------------------------
-    # Transition to ST_LOWPASS
+    # Transition to ST_BLURR
     # --------------------------------------------------
-    print(f"Transition to state ST_LOWPASS")
+    print(f"Transition to state ST_BLURR")
     await driver.transistion_state(1)
     await driver.check_output(0, 0, 1, 10, 50)
 
