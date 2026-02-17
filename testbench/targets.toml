@@ -26,14 +26,15 @@ description = "AXI4-Stream pixels to window transformation checks."
 toplevel    = "window_generator"
 test_module = "tests.test_window_generator"
 sources     = ["rtl/WINDOW_GENERATOR/hdl/*.vhd"]
+
 [targets.test_debouncer]
 description = "Debouncer checks."
 toplevel    = "debouncer"
 test_module = "tests.test_debouncing"
 sources     = ["rtl/DEBOUNCER/hdl/*.vhd"]
 
-    [targets.test_debouncer.generics]
-    G_DEBOUNCE_NS = 100
+  [targets.test_debouncer.parameters]
+  G_DEBOUNCE_NS = 100
 
 [targets.test_click_detector]
 description = "Click Detector checks."
@@ -47,8 +48,8 @@ toplevel    = "debouncedclickdetector"
 test_module = "tests.test_debounced_click_detector"
 sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
 
-    [targets.test_debounced_click_detector.generics]
-    G_DEBOUNCE_NS = 100
+  [targets.test_debounced_click_detector.parameters]
+  G_DEBOUNCE_NS = 100
 
 [targets.axi_sobel_filter]
 description = "AXI4-Stream Sobel edge detection checks."
@@ -71,9 +72,9 @@ sources     = [
   "rtl/FILTER_WRAPPER/hdl/axi_windowed_filter_wrapper.vhd",
 ]
 
-[targets.axi_windowed_filter_wrapper.parameters]
-G_FILTER_SELECT = 0
-G_PIXEL_WIDTH = 8
-G_KERNEL_SIZE = 3
-G_LINE_WIDTH = 512
-G_ROW = 512
+  [targets.axi_windowed_filter_wrapper.parameters]
+  G_FILTER_SELECT = 0
+  G_PIXEL_WIDTH = 8
+  G_KERNEL_SIZE = 3
+  G_LINE_WIDTH = 512
+  G_ROW = 512
