@@ -92,24 +92,7 @@ vivado/**/*.srcs/**/hdl/
 vivado/**/*.srcs/**/sim/
 
 # IP repositories / vendor IP
-vivado/**/ipdefs/
 vivado/**/repo/
-
-# Aber nimm diese spezifische IP aus (check sie ein)
-!vivado/hw.ipdefs/repo/local/ip/AXI_BayerToRGB/
-!vivado/hw.ipdefs/repo/local/ip/AXI_BayerToRGB/**
-
-# Beispiel für mehrere IPs
-!vivado/hw.ipdefs/repo/local/ip/AXI_GammaCorrection/
-!vivado/hw.ipdefs/repo/local/ip/AXI_GammaCorrection/**
-
-# Beispiel für mehrere IPs
-!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_D_PHY_RX
-!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_D_PHY_RX/**
-
-# Beispiel für mehrere IPs
-!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_CSI_2_RX
-!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_CSI_2_RX/**
 
 # =============================================================================
 # IP Build Outputs
@@ -154,3 +137,27 @@ Thumbs.db
 *.tmp
 *.bak
 *.old
+
+# =============================================================================
+# Ausnahmen für getrackte „locked“ IPs
+# =============================================================================
+
+# Zuerst übergeordnete Ordner freigeben
+!vivado/hw.ipdefs/repo/
+!vivado/hw.ipdefs/repo/local/
+!vivado/hw.ipdefs/repo/local/ip/
+!vivado/hw.ipdefs/repo/vivado-library/
+!vivado/hw.ipdefs/repo/vivado-library/ip/
+
+# Dann gezielt die IPs freigeben
+!vivado/hw.ipdefs/repo/local/ip/AXI_BayerToRGB/
+!vivado/hw.ipdefs/repo/local/ip/AXI_BayerToRGB/**
+
+!vivado/hw.ipdefs/repo/local/ip/AXI_GammaCorrection/
+!vivado/hw.ipdefs/repo/local/ip/AXI_GammaCorrection/**
+
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_D_PHY_RX/
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_D_PHY_RX/**
+
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_CSI_2_RX/
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_CSI_2_RX/**
