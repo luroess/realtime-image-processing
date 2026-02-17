@@ -42,7 +42,7 @@ architecture A_Rtl of window_generator is
   subtype t_wndw_flat_t is std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
 
   constant C_ZERO : t_pxl := (others => '0');
-  constant C_BUF_LEN : positive := ((G_KERNEL_SIZE - 1) * G_LINE_WIDTH) + G_KERNEL_SIZE;
+  constant C_BUF_LEN : positive := ((G_KERNEL_SIZE - 1) * G_LINE_WIDTH) + G_KERNEL_SIZE + 1;
   constant C_FILL_MIN : positive := (G_LINE_WIDTH + 1) * ((G_KERNEL_SIZE - 1) / 2);
 
   ------------------------------------------------------------------
@@ -56,9 +56,8 @@ architecture A_Rtl of window_generator is
   ------------------------------------------------------------------
   -- buffers
   signal buf_reg  : t_buf; -- pixel buffer
-  signal sof_reg  : std_logic_vector((C_FILL_MIN-1)+2 downto 0) := (others => '0'); -- control signal buffer (+2 for internal delay s_data -> wndw -> m_data)
-  signal eol_reg  : std_logic_vector((C_FILL_MIN-1)+2 downto 0) := (others => '0'); -- control signal buffer (+2 for internal delay s_data -> wndw -> m_data)
-  signal rdy_reg  : std_logic := '0';
+  signal sof_reg  : std_logic_vector((C_FILL_MIN-1)+1 downto 0) := (others => '0'); -- control signal buffer aligned to output payload timing
+  signal eol_reg  : std_logic_vector((C_FILL_MIN-1)+1 downto 0) := (others => '0'); -- control signal buffer aligned to output payload timing
 
   -- counters
   signal col_cnt : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter needed for padding
@@ -71,6 +70,9 @@ architecture A_Rtl of window_generator is
   signal wndw : t_wndw;
   -- signal wndw_2d : t_wndw_t := (others => (others => C_ZERO));
   signal wndw_valid : std_logic := '0';
+  signal m_axis_window_tvalid_reg : std_logic := '0';
+  signal m_axis_window_tuser_reg  : std_logic := '0';
+  signal m_axis_window_tlast_reg  : std_logic := '0';
 
   ------------------------------------------------------------------
   -- functions
@@ -88,6 +90,16 @@ architecture A_Rtl of window_generator is
 
 begin
 
+  m_axis_window_tvalid <= m_axis_window_tvalid_reg;
+  m_axis_window_tuser  <= m_axis_window_tuser_reg;
+  m_axis_window_tlast  <= m_axis_window_tlast_reg;
+
+  -- Expose input READY combinationally so upstream and internal handshake
+  -- observe the same value in the same cycle.
+  s_axis_video_tready <= '0' when i_aresetn = '0' else
+                         '1' when pxl_cnt <= C_FILL_MIN else
+                         m_axis_window_tready;
+
   ------------------------------------------------------------------
   -- Line buffering
   ------------------------------------------------------------------
@@ -95,8 +107,12 @@ begin
     ------------------------------------------------------------------
     -- variables
     ------------------------------------------------------------------
-    variable v_col_cnt_out  : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter
-    variable v_row_cnt_out  : natural range 0 to G_ROW+1 := 0; -- row counter
+    variable v_in_ready     : std_logic := '0';
+    variable v_in_hs        : std_logic := '0';
+    variable v_buf_now      : t_buf;
+    variable v_wndw_now     : t_wndw;
+    variable v_col_out_next : natural range 0 to G_LINE_WIDTH+1;
+    variable v_row_out_next : natural range 0 to G_ROW+1;
   begin
     if rising_edge(i_aclk) then
       if i_aresetn = '0' then
@@ -106,45 +122,43 @@ begin
         pxl_cnt     <= 0;
         col_cnt_out <= 0;
         row_cnt_out <= 0;
-        v_col_cnt_out := 0;
-        v_row_cnt_out := 0;
         -- clear registers
         sof_reg     <= (others => '0');
         eol_reg     <= (others => '0');
-        rdy_reg     <= '0';
         wndw_valid  <= '0';
         wndw        <= (others => C_ZERO);
         buf_reg     <= (others => C_ZERO);
         -- reset outputs
-        s_axis_video_tready   <= '0';
-        m_axis_window_tvalid  <= '0';
+        m_axis_window_tvalid_reg  <= '0';
         m_axis_window_tdata   <= (others => '0');
-        m_axis_window_tuser   <= '0';
-        m_axis_window_tlast   <= '0';
+        m_axis_window_tuser_reg   <= '0';
+        m_axis_window_tlast_reg   <= '0';
       else
+        v_buf_now := buf_reg;
+        v_in_hs := '0';
 
         -- buffer fill control
-        if pxl_cnt <= C_FILL_MIN then -- <= because first pixel is counted as 1, while C_FILL_MIN starts at 0
+        if pxl_cnt <= C_FILL_MIN then -- warm-up: wait until taps for first output window are available
           -- buffer not filled: keep signalling ready, until buffer completely filled
-          s_axis_video_tready <= '1';
-          rdy_reg <= '1';
+          v_in_ready := '1';
           wndw_valid <= '0';
         else
           -- buffer filled: pass on downstream status
-          s_axis_video_tready <= m_axis_window_tready;
-          rdy_reg <= m_axis_window_tready;
-          wndw_valid <= '1'; -- ? put s_axis_video_tvalid here?
+          v_in_ready := m_axis_window_tready;
+          -- valid follows upstream VALID after warm-up and remains independent from READY
+          wndw_valid <= s_axis_video_tvalid;
         end if;
-
         -- AXI Stream handshake occured for input data stream
-        if s_axis_video_tvalid = '1' and rdy_reg = '1' then
+        if s_axis_video_tvalid = '1' and v_in_ready = '1' then
+          v_in_hs := '1';
 
           -- shift pixels in buffer
           for i in 0 to C_BUF_LEN-2 loop
-            buf_reg(i) <= buf_reg(i+1);
+            v_buf_now(i) := v_buf_now(i+1);
           end loop;
           -- append current pixel
-          buf_reg(C_BUF_LEN-1) <= s_axis_video_tdata;
+          v_buf_now(C_BUF_LEN-1) := s_axis_video_tdata;
+          buf_reg <= v_buf_now;
 
           -- shift control signals
           sof_reg <= sof_reg(sof_reg'high-1 downto sof_reg'low) & s_axis_video_tuser; -- shift in current value
@@ -155,31 +169,16 @@ begin
             pxl_cnt <= pxl_cnt + 1;
           end if;
 
-          -- handle output counters
-          if pxl_cnt > C_FILL_MIN+1 then
-            -- EOL
-            if eol_reg(eol_reg'high) = '1' then
-              col_cnt_out <= 0;
-              v_col_cnt_out := 0;
-              row_cnt_out <= row_cnt_out + 1;
-              v_row_cnt_out := v_row_cnt_out + 1;
-            else
-              col_cnt_out <= col_cnt_out + 1;
-              v_col_cnt_out := v_col_cnt_out + 1;
-            end if;
-            -- SOF
-            if sof_reg(sof_reg'high) = '1' then
-              row_cnt_out <= 0;
-              v_row_cnt_out := 0;
-            end if;
-          end if;
-
           -- counters
-          col_cnt <= col_cnt + 1;
+          if col_cnt < G_LINE_WIDTH+1 then
+            col_cnt <= col_cnt + 1;
+          end if;
           -- reset column on EOL
           if s_axis_video_tlast = '1' then -- EOL
             col_cnt <= 0;
-            row_cnt <= row_cnt + 1;
+            if row_cnt < G_ROW+1 then
+              row_cnt <= row_cnt + 1;
+            end if;
           end if;
 
           -- Reset row on SOF
@@ -191,6 +190,32 @@ begin
         end if; -- end handshake occured
 
         ------------------------------------------------------------------
+        -- AXI Stream Master coordinate tracking
+        ------------------------------------------------------------------
+        -- Derive coordinates for the next emitted output beat from the
+        -- currently accepted output beat.
+        v_col_out_next := col_cnt_out;
+        v_row_out_next := row_cnt_out;
+
+        if m_axis_window_tvalid_reg = '1' and m_axis_window_tready = '1' then
+          if m_axis_window_tuser_reg = '1' then
+            v_row_out_next := 0;
+            v_col_out_next := 0;
+          end if;
+
+          if m_axis_window_tlast_reg = '1' then
+            v_col_out_next := 0;
+            if v_row_out_next < G_ROW+1 then
+              v_row_out_next := v_row_out_next + 1;
+            end if;
+          else
+            if v_col_out_next < G_LINE_WIDTH+1 then
+              v_col_out_next := v_col_out_next + 1;
+            end if;
+          end if;
+        end if;
+
+        ------------------------------------------------------------------
         -- 3x3 Window generation with Zero Padding
         -- 1D window:
         -- wndw(0)   wndw(1)   wndw(2)
@@ -198,47 +223,58 @@ begin
         -- wndw(6)   wndw(7)   wndw(8)
         ------------------------------------------------------------------
 
-        --default to normal case (no edge pixel)
-        wndw(0) <= buf_reg(0);
-        wndw(1) <= buf_reg(1);
-        wndw(2) <= buf_reg(2);
-        wndw(3) <= buf_reg(G_LINE_WIDTH+0);
-        wndw(4) <= buf_reg(G_LINE_WIDTH+1); -- pixel that convolution produces result for
-        wndw(5) <= buf_reg(G_LINE_WIDTH+2);
-        wndw(6) <= buf_reg(2*G_LINE_WIDTH+0);
-        wndw(7) <= buf_reg(2*G_LINE_WIDTH+1);
-        wndw(8) <= buf_reg(2*G_LINE_WIDTH+2);
+        -- default to normal case (no edge pixel)
+        v_wndw_now(0) := buf_reg(1);
+        v_wndw_now(1) := buf_reg(2);
+        v_wndw_now(2) := buf_reg(3);
+        v_wndw_now(3) := buf_reg(G_LINE_WIDTH+1);
+        v_wndw_now(4) := buf_reg(G_LINE_WIDTH+2); -- pixel that convolution produces result for
+        v_wndw_now(5) := buf_reg(G_LINE_WIDTH+3);
+        v_wndw_now(6) := buf_reg(2*G_LINE_WIDTH+1);
+        v_wndw_now(7) := buf_reg(2*G_LINE_WIDTH+2);
+        v_wndw_now(8) := buf_reg(2*G_LINE_WIDTH+3);
 
         -- edge cases
         -- first and last line
-        if v_row_cnt_out < 1 then -- first row in frame
-          wndw(0) <= C_ZERO;
-          wndw(1) <= C_ZERO;
-          wndw(2) <= C_ZERO;
-        elsif v_row_cnt_out >= G_ROW-1 then -- last row in frame
-          wndw(6) <= C_ZERO;
-          wndw(7) <= C_ZERO;
-          wndw(8) <= C_ZERO;
+        if v_row_out_next < 1 then -- first row in frame
+          v_wndw_now(0) := C_ZERO;
+          v_wndw_now(1) := C_ZERO;
+          v_wndw_now(2) := C_ZERO;
+        elsif v_row_out_next >= G_ROW-1 then -- last row in frame
+          v_wndw_now(6) := C_ZERO;
+          v_wndw_now(7) := C_ZERO;
+          v_wndw_now(8) := C_ZERO;
         end if;
 
         -- first and last column
-        if v_col_cnt_out < 1 then -- first column in line
-          wndw(0) <= C_ZERO;
-          wndw(3) <= C_ZERO;
-          wndw(6) <= C_ZERO;
-        elsif v_col_cnt_out >= G_LINE_WIDTH-1 then -- last column in line
-          wndw(2) <= C_ZERO;
-          wndw(5) <= C_ZERO;
-          wndw(8) <= C_ZERO;
+        if v_col_out_next < 1 then -- first column in line
+          v_wndw_now(0) := C_ZERO;
+          v_wndw_now(3) := C_ZERO;
+          v_wndw_now(6) := C_ZERO;
+        elsif v_col_out_next >= G_LINE_WIDTH-1 then -- last column in line
+          v_wndw_now(2) := C_ZERO;
+          v_wndw_now(5) := C_ZERO;
+          v_wndw_now(8) := C_ZERO;
         end if;
 
         ------------------------------------------------------------------
         -- AXI Stream Master outputs
         ------------------------------------------------------------------
-        m_axis_window_tvalid  <= wndw_valid;
-        m_axis_window_tdata   <= f_pack_1d_wndw(wndw);
-        m_axis_window_tlast   <= eol_reg(eol_reg'high);
-        m_axis_window_tuser   <= sof_reg(sof_reg'high);
+        col_cnt_out <= v_col_out_next;
+        row_cnt_out <= v_row_out_next;
+
+        wndw <= v_wndw_now;
+        -- Hold payload stable while stalled (VALID=1, READY=0).
+        if m_axis_window_tready = '1' or m_axis_window_tvalid_reg = '0' then
+          if v_in_hs = '1' and pxl_cnt > C_FILL_MIN then
+            m_axis_window_tvalid_reg  <= '1';
+            m_axis_window_tdata   <= f_pack_1d_wndw(v_wndw_now);
+            m_axis_window_tlast_reg   <= eol_reg(eol_reg'high);
+            m_axis_window_tuser_reg   <= sof_reg(sof_reg'high);
+          else
+            m_axis_window_tvalid_reg  <= '0';
+          end if;
+        end if;
 
       end if; -- end rst
     end if; -- end rising edge
