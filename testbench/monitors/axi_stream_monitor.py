@@ -5,7 +5,6 @@ from __future__ import annotations
 import numpy as np
 from cocotb.queue import Queue
 from cocotb.triggers import RisingEdge, SimTimeoutError, with_timeout
-
 from models.image_model import Image
 
 

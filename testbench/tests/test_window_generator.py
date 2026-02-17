@@ -5,14 +5,17 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import List
 
 import cocotb
 import numpy as np
-from typing import List
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, ReadOnly, RisingEdge, with_timeout
 from common.pause import drive_sink_pause
 from common.reset import apply_reset
+from common.stress import (GrayFramePattern, PausePatternKind, StressConfig,
+                           build_gray_frame, build_pause_pattern, derived_seed,
+                           seeded_random, stress_config)
 from drivers.axis_gray_source import AxiGrayStreamSource
 from models.image_model import Image
 from monitors.axis_window_sink import AxiWindowStreamSink
@@ -99,6 +102,7 @@ class WindowCaseConfig:
     extra_transfer_guard_cycles: int = 80
     check_window_data: bool = True
     output_height: int | None = None
+    check_input_backpressure_propagation: bool = False
 
 
 @dataclass(slots=True)
@@ -109,6 +113,22 @@ class HandshakeStats:
     max_ready_low_run: int = 0
     accepted_beats: int = 0
     captured_windows: list[np.ndarray] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class InputBackpressureStats:
+    """Runtime statistics for input READY propagation checks."""
+
+    checked_cycles: int = 0
+    backpressure_cycles: int = 0
+
+
+@dataclass(slots=True)
+class WindowStressCase:
+    """One stress scenario containing traffic and handshake configuration."""
+
+    image: Image
+    cfg: WindowCaseConfig
 
 
 class AxiRgbToWindowTestbench:
@@ -123,6 +143,7 @@ class AxiRgbToWindowTestbench:
         self.i_pass_through = None
 
         self.s_axis_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
+        self.s_axis_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
         self.s_axis_tdata = getattr(dut, f"{S_AXIS_PREFIX}_tdata")
         self.s_axis_tlast = getattr(dut, f"{S_AXIS_PREFIX}_tlast")
         self.s_axis_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
@@ -136,10 +157,12 @@ class AxiRgbToWindowTestbench:
         self.sink: AxiWindowStreamSink | None = None
         self.scoreboard = Scoreboard()
         self.handshake_stats = HandshakeStats()
+        self.input_backpressure_stats = InputBackpressureStats()
 
         self._clock_started = False
         self._pause_task = None
         self._handshake_task = None
+        self._input_ready_task = None
 
     async def initialize(self) -> None:
         """Bring DUT to a known reset state and build stream endpoints."""
@@ -255,8 +278,9 @@ class AxiRgbToWindowTestbench:
 
         return windows
 
-    def _start_optional_tasks(self, *, width: int, expected_beats: int) -> None:
+    def _start_optional_tasks(self, *, width: int, height: int, expected_beats: int) -> None:
         self.handshake_stats = HandshakeStats()
+        self.input_backpressure_stats = InputBackpressureStats()
         if self.cfg.check_handshake:
             self._handshake_task = cocotb.start_soon(
                 self._monitor_output_handshake(
@@ -264,6 +288,15 @@ class AxiRgbToWindowTestbench:
                     expected_beats=expected_beats,
                     wndw_size=3,
                     pxl_width=8,
+                ),
+            )
+
+        if self.cfg.check_input_backpressure_propagation:
+            self._input_ready_task = cocotb.start_soon(
+                self._monitor_input_backpressure_propagation(
+                    width=width,
+                    height=height,
+                    wndw_size=3,
                 ),
             )
 
@@ -278,29 +311,39 @@ class AxiRgbToWindowTestbench:
             )
 
     async def _finish_optional_tasks(self, *, expected_beats: int) -> None:
-        if not self.cfg.check_handshake or self._handshake_task is None:
-            return
+        if self.cfg.check_handshake and self._handshake_task is not None:
+            await with_timeout(self._handshake_task, self.cfg.handshake_timeout_ns, "ns")
 
-        await with_timeout(self._handshake_task, self.cfg.handshake_timeout_ns, "ns")
+            if self.cfg.with_backpressure or self.cfg.min_ready_low_run > 0:
+                if self.cfg.min_ready_low_run > 0:
+                    assert (
+                        self.handshake_stats.max_ready_low_run >= self.cfg.min_ready_low_run
+                    ), (
+                        "Backpressure READY-low run too short: "
+                        f"observed={self.handshake_stats.max_ready_low_run}, "
+                        f"required>={self.cfg.min_ready_low_run}"
+                    )
 
-        if self.cfg.with_backpressure or self.cfg.min_ready_low_run > 0:
-            if self.cfg.min_ready_low_run > 0:
-                assert (
-                    self.handshake_stats.max_ready_low_run >= self.cfg.min_ready_low_run
-                ), (
-                    "Backpressure READY-low run too short: "
-                    f"observed={self.handshake_stats.max_ready_low_run}, "
-                    f"required>={self.cfg.min_ready_low_run}"
+                assert self.handshake_stats.saw_stall, (
+                    "Expected at least one VALID=1, READY=0 stall cycle."
                 )
 
-            assert self.handshake_stats.saw_stall, (
-                "Expected at least one VALID=1, READY=0 stall cycle."
+            assert self.handshake_stats.accepted_beats == expected_beats, (
+                "Output accepted-beat count mismatch. "
+                f"observed={self.handshake_stats.accepted_beats}, expected={expected_beats}"
             )
 
-        assert self.handshake_stats.accepted_beats == expected_beats, (
-            "Output accepted-beat count mismatch. "
-            f"observed={self.handshake_stats.accepted_beats}, expected={expected_beats}"
-        )
+        if self.cfg.check_input_backpressure_propagation and self._input_ready_task is not None:
+            await with_timeout(self._input_ready_task, self.cfg.handshake_timeout_ns, "ns")
+
+            assert self.input_backpressure_stats.checked_cycles > 0, (
+                "Input READY propagation checker did not observe post-warm-up cycles."
+            )
+            if self.cfg.with_backpressure:
+                assert self.input_backpressure_stats.backpressure_cycles > 0, (
+                    "Input READY propagation checker did not observe output-side "
+                    "backpressure after warm-up."
+                )
 
     def _stop_optional_tasks(self) -> None:
         if self._pause_task is not None:
@@ -310,6 +353,10 @@ class AxiRgbToWindowTestbench:
         if self._handshake_task is not None:
             self._handshake_task.cancel()
             self._handshake_task = None
+
+        if self._input_ready_task is not None:
+            self._input_ready_task.cancel()
+            self._input_ready_task = None
 
         if self.sink is not None:
             self.sink.set_pause(False)
@@ -366,7 +413,11 @@ class AxiRgbToWindowTestbench:
         else:
             expected_windows = expected_windows[start_index : start_index + expected_beats]
 
-        self._start_optional_tasks(width=image.width, expected_beats=expected_beats)
+        self._start_optional_tasks(
+            width=image.width,
+            height=image.height,
+            expected_beats=expected_beats,
+        )
         try:
             recv_task = None
             if not self.cfg.check_handshake:
@@ -526,6 +577,53 @@ class AxiRgbToWindowTestbench:
 
         self.handshake_stats.accepted_beats = accepted_beats
 
+    async def _monitor_input_backpressure_propagation(
+        self,
+        *,
+        width: int,
+        height: int,
+        wndw_size: int,
+    ) -> None:
+        """Check post-warm-up propagation of output READY to input READY."""
+        warmup_beats = self._warmup_beats(width=width, wndw_size=wndw_size)
+        total_input_beats = width * height
+        input_handshakes = 0
+        checked_cycles = 0
+        backpressure_cycles = 0
+
+        while input_handshakes < total_input_beats:
+            await FallingEdge(self.i_clk)
+            await ReadOnly()
+
+            if int(self.i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+                input_handshakes = 0
+                checked_cycles = 0
+                backpressure_cycles = 0
+                await RisingEdge(self.i_clk)
+                continue
+
+            s_valid = int(self.s_axis_tvalid.value)
+            s_ready = int(self.s_axis_tready.value)
+            m_ready = int(self.m_axis_tready.value)
+
+            if s_valid == 1 and s_ready == 1:
+                input_handshakes += 1
+
+            if input_handshakes > warmup_beats:
+                checked_cycles += 1
+                assert s_ready == m_ready, (
+                    "Input READY did not track output READY after warm-up: "
+                    f"s_axis_ready={s_ready}, m_axis_ready={m_ready}, "
+                    f"input_handshakes={input_handshakes}, warmup_beats={warmup_beats}"
+                )
+                if m_ready == 0:
+                    backpressure_cycles += 1
+
+            await RisingEdge(self.i_clk)
+
+        self.input_backpressure_stats.checked_cycles = checked_cycles
+        self.input_backpressure_stats.backpressure_cycles = backpressure_cycles
+
     @staticmethod
     def _assert_resolved(signal, signal_name: str) -> None:
         try:
@@ -547,6 +645,7 @@ async def run_single_frame_test(
     min_ready_low_run: int = 0,
     check_window_data: bool = True,
     output_height: int | None = None,
+    check_input_backpressure_propagation: bool = False,
 ) -> None:
     cfg = WindowCaseConfig(
         with_backpressure=with_backpressure,
@@ -556,6 +655,7 @@ async def run_single_frame_test(
         min_ready_low_run=min_ready_low_run,
         check_window_data=check_window_data,
         output_height=output_height,
+        check_input_backpressure_propagation=check_input_backpressure_propagation,
     )
     tb = AxiRgbToWindowTestbench(dut=dut, cfg=cfg)
     await tb.run_frame(image=image, output_path=output_path)
@@ -585,6 +685,121 @@ async def run_multi_frame_test(
     await tb.run_multi_frame(image=image, output_path=output_path, frame_count=frame_count)
 
 
+def _fast_stress_cases(*, base_seed: int) -> list[WindowStressCase]:
+    return [
+        WindowStressCase(
+            image=build_gray_frame(
+                pattern="gradient",
+                width=5,
+                height=5,
+                seed=derived_seed(base_seed=base_seed, salt="window-fast-gradient"),
+            ),
+            cfg=WindowCaseConfig(
+                check_handshake=True,
+            ),
+        ),
+        WindowStressCase(
+            image=build_gray_frame(
+                pattern="checkerboard",
+                width=5,
+                height=5,
+                seed=derived_seed(base_seed=base_seed, salt="window-fast-checkerboard"),
+            ),
+            cfg=WindowCaseConfig(
+                with_backpressure=True,
+                pause_pattern=build_pause_pattern(
+                    kind="burst",
+                    seed=derived_seed(base_seed=base_seed, salt="window-fast-burst"),
+                    length=8,
+                ),
+                check_handshake=True,
+                min_ready_low_run=2,
+                check_input_backpressure_propagation=True,
+            ),
+        ),
+        WindowStressCase(
+            image=build_gray_frame(
+                pattern="impulse",
+                width=5,
+                height=5,
+                seed=derived_seed(base_seed=base_seed, salt="window-fast-impulse"),
+            ),
+            cfg=WindowCaseConfig(
+                check_handshake=True,
+            ),
+        ),
+        WindowStressCase(
+            image=build_gray_frame(
+                pattern="noise",
+                width=5,
+                height=5,
+                seed=derived_seed(base_seed=base_seed, salt="window-fast-noise"),
+            ),
+            cfg=WindowCaseConfig(
+                check_handshake=True,
+            ),
+        ),
+    ]
+
+
+def _heavy_stress_cases(stress: StressConfig) -> list[WindowStressCase]:
+    rng = seeded_random(base_seed=stress.seed, salt="window-heavy-rng")
+    frame_patterns: tuple[GrayFramePattern, ...] = (
+        "gradient",
+        "checkerboard",
+        "impulse",
+        "noise",
+    )
+    pause_kinds: tuple[PausePatternKind, ...] = ("burst", "alternating", "random")
+
+    cases: list[WindowStressCase] = []
+    for case_idx in range(stress.cases):
+        frame_pattern = frame_patterns[rng.randrange(len(frame_patterns))]
+        frame_seed = derived_seed(base_seed=stress.seed, salt=f"window-heavy-frame-{case_idx}")
+
+        with_backpressure = bool(rng.getrandbits(1))
+        pause_kind = pause_kinds[rng.randrange(len(pause_kinds))]
+        pause_seed = derived_seed(base_seed=stress.seed, salt=f"window-heavy-pause-{case_idx}")
+        pause_length = rng.randint(6, 16)
+        pause_pattern = build_pause_pattern(
+            kind=pause_kind,
+            seed=pause_seed,
+            length=pause_length,
+        )
+
+        cases.append(
+            WindowStressCase(
+                image=build_gray_frame(
+                    pattern=frame_pattern,
+                    width=5,
+                    height=5,
+                    seed=frame_seed,
+                ),
+                cfg=WindowCaseConfig(
+                    with_backpressure=with_backpressure,
+                    pause_pattern=pause_pattern,
+                    check_handshake=False,
+                ),
+            ),
+        )
+
+    return cases
+
+
+async def _run_stress_matrix(
+    dut,
+    *,
+    cases: list[WindowStressCase],
+) -> None:
+    if not cases:
+        return
+
+    tb = AxiRgbToWindowTestbench(dut=dut, cfg=cases[0].cfg)
+    for case in cases:
+        tb.cfg = case.cfg
+        await tb.run_frame(image=case.image)
+
+
 @cocotb.test()
 async def test_axi_rgb_to_window_without_pressure(dut) -> None:
     """Simple algorithm test for window generation without pressure."""
@@ -608,6 +823,7 @@ async def test_axi_rgb_to_window_with_pressure(dut) -> None:
         pause_pattern=(0, 0, 1, 0, 1, 1),
         check_handshake=True,
         min_ready_low_run=1,
+        check_input_backpressure_propagation=True,
     )
 
 @cocotb.test()
@@ -623,3 +839,14 @@ async def test_axi_rgb_to_window_multi_frame_without_pressure(dut) -> None:
         check_window_data=False,
         frame_count=2
     )
+
+
+@cocotb.test()
+async def test_axi_rgb_to_window_stress_matrix(dut) -> None:
+    """Run fast default stress matrix and optional heavy randomized scenarios."""
+    stress = stress_config(default_fast_cases=4, default_heavy_cases=16)
+    cases = _fast_stress_cases(base_seed=stress.seed)
+    if stress.is_heavy:
+        cases.extend(_heavy_stress_cases(stress))
+
+    await _run_stress_matrix(dut=dut, cases=cases)

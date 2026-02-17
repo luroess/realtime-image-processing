@@ -12,6 +12,9 @@ from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
 from common.pause import drive_sink_pause
 from common.reset import apply_reset
+from common.stress import (GrayFramePattern, PausePatternKind, StressConfig,
+                           build_gray_frame, build_pause_pattern, derived_seed,
+                           seeded_random, stress_config)
 from drivers.axis_video_source import AxiVideoStreamSource
 from models.image_model import Image
 from monitors.axis_video_sink import AxiVideoStreamSink
@@ -73,6 +76,14 @@ class HandshakeStats:
     saw_stall: bool = False
     max_ready_low_run: int = 0
     accepted_beats: int = 0
+
+
+@dataclass(slots=True)
+class GrayscaleStressCase:
+    """One stress scenario containing traffic and handshake configuration."""
+
+    image: Image
+    cfg: GrayscaleCaseConfig
 
 
 class AxiRgbToGrayscaleTestbench:
@@ -382,6 +393,123 @@ async def run_frame_test(
     await tb.run_frame(image=image, output_path=output_path)
 
 
+def _fast_stress_cases(*, base_seed: int) -> list[GrayscaleStressCase]:
+    return [
+        GrayscaleStressCase(
+            image=build_gray_frame(
+                pattern="gradient",
+                width=8,
+                height=6,
+                seed=derived_seed(base_seed=base_seed, salt="gray-fast-gradient"),
+            ),
+            cfg=GrayscaleCaseConfig(),
+        ),
+        GrayscaleStressCase(
+            image=build_gray_frame(
+                pattern="checkerboard",
+                width=9,
+                height=7,
+                seed=derived_seed(base_seed=base_seed, salt="gray-fast-checkerboard"),
+            ),
+            cfg=GrayscaleCaseConfig(
+                with_backpressure=True,
+                pause_pattern=build_pause_pattern(
+                    kind="burst",
+                    seed=derived_seed(base_seed=base_seed, salt="gray-fast-burst"),
+                    length=8,
+                ),
+                check_handshake=True,
+                min_ready_low_run=2,
+            ),
+        ),
+        GrayscaleStressCase(
+            image=build_gray_frame(
+                pattern="impulse",
+                width=10,
+                height=6,
+                seed=derived_seed(base_seed=base_seed, salt="gray-fast-impulse"),
+            ),
+            cfg=GrayscaleCaseConfig(
+                pass_through=True,
+            ),
+        ),
+        GrayscaleStressCase(
+            image=build_gray_frame(
+                pattern="noise",
+                width=11,
+                height=7,
+                seed=derived_seed(base_seed=base_seed, salt="gray-fast-noise"),
+            ),
+            cfg=GrayscaleCaseConfig(
+                check_handshake=False,
+            ),
+        ),
+    ]
+
+
+def _heavy_stress_cases(stress: StressConfig) -> list[GrayscaleStressCase]:
+    rng = seeded_random(base_seed=stress.seed, salt="gray-heavy-rng")
+    frame_patterns: tuple[GrayFramePattern, ...] = (
+        "gradient",
+        "checkerboard",
+        "impulse",
+        "noise",
+    )
+    pause_kinds: tuple[PausePatternKind, ...] = ("burst", "alternating", "random")
+
+    cases: list[GrayscaleStressCase] = []
+    for case_idx in range(stress.cases):
+        width = rng.randint(6, 20)
+        height = rng.randint(4, 14)
+
+        frame_pattern = frame_patterns[rng.randrange(len(frame_patterns))]
+        frame_seed = derived_seed(base_seed=stress.seed, salt=f"gray-heavy-frame-{case_idx}")
+        pass_through = bool(rng.getrandbits(1))
+        with_backpressure = bool(rng.getrandbits(1))
+
+        pause_kind = pause_kinds[rng.randrange(len(pause_kinds))]
+        pause_seed = derived_seed(base_seed=stress.seed, salt=f"gray-heavy-pause-{case_idx}")
+        pause_length = rng.randint(6, 16)
+        pause_pattern = build_pause_pattern(
+            kind=pause_kind,
+            seed=pause_seed,
+            length=pause_length,
+        )
+
+        cases.append(
+            GrayscaleStressCase(
+                image=build_gray_frame(
+                    pattern=frame_pattern,
+                    width=width,
+                    height=height,
+                    seed=frame_seed,
+                ),
+                cfg=GrayscaleCaseConfig(
+                    with_backpressure=with_backpressure,
+                    pause_pattern=pause_pattern,
+                    check_handshake=False,
+                    pass_through=pass_through,
+                ),
+            ),
+        )
+
+    return cases
+
+
+async def _run_stress_matrix(
+    dut,
+    *,
+    cases: list[GrayscaleStressCase],
+) -> None:
+    if not cases:
+        return
+
+    tb = AxiRgbToGrayscaleTestbench(dut=dut, cfg=cases[0].cfg)
+    for case in cases:
+        tb.cfg = case.cfg
+        await tb.run_frame(image=case.image)
+
+
 @cocotb.test()
 async def test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks(dut) -> None:
     """Primary regression case with enforced READY-low windows under traffic."""
@@ -414,3 +542,14 @@ async def test_axi_rgb_to_grayscale_passthrough_mode(dut) -> None:
         image=image,
         pass_through=True,
     )
+
+
+@cocotb.test()
+async def test_axi_rgb_to_grayscale_stress_matrix(dut) -> None:
+    """Run fast default stress matrix and optional heavy randomized scenarios."""
+    stress = stress_config(default_fast_cases=4, default_heavy_cases=16)
+    cases = _fast_stress_cases(base_seed=stress.seed)
+    if stress.is_heavy:
+        cases.extend(_heavy_stress_cases(stress))
+
+    await _run_stress_matrix(dut=dut, cases=cases)

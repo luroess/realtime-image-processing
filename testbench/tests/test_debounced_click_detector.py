@@ -6,10 +6,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge, Timer
 from cocotb.utils import get_sim_time
-
-from drivers.debouncing_driver import DebouncingDriver
 from drivers.click_detection_driver import ClickDetectionDriver
-
+from drivers.debouncing_driver import DebouncingDriver
 
 # CONSTANTS
 CLK_PERIOD_NS = 10  # 100 MHz

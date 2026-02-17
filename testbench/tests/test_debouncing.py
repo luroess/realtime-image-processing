@@ -3,7 +3,6 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
-
 from drivers.debouncing_driver import DebouncingDriver
 
 CLK_PERIOD_NS = 10  # 100 MHz
