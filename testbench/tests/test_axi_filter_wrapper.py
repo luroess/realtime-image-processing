@@ -16,6 +16,7 @@ from monitors.axis_gray_sink import AxiGrayStreamSink
 
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
+PASS_THROUGH_SIGNAL = "i_pass_through"
 S_AXIS_PREFIX = "s_axis_gray8"
 M_AXIS_PREFIX = "m_axis_filter8"
 RESET_ACTIVE_LEVEL = False
@@ -91,10 +92,12 @@ def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
 async def run_wrapper_case(
     dut,
     gray_plane: np.ndarray,
+    pass_through: bool = False,
     output_path: Path | None = None,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    i_pass_through = getattr(dut, PASS_THROUGH_SIGNAL)
     m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
 
     i_rst_n.value = int(RESET_ACTIVE_LEVEL)
@@ -102,6 +105,7 @@ async def run_wrapper_case(
     getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
     getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
     getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    i_pass_through.value = int(pass_through)
     m_axis_tready.value = 0
 
     cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
@@ -130,8 +134,8 @@ async def run_wrapper_case(
     m_axis_tready.value = 1
 
     height, width = gray_plane.shape
-    expected = _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
-    flush_pixels = _warmup_beats(width=width)
+    expected = gray_plane if pass_through else _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
+    flush_pixels = 0 if pass_through else _warmup_beats(width=width)
     await source.send_image(
         _gray_plane_to_image(gray_plane),
         tail_padding_pixels=flush_pixels,
@@ -160,3 +164,10 @@ async def test_axi_windowed_filter_wrapper_lenna_end_to_end(dut) -> None:
     image = Image.from_png(input_path)
     gray = _gray_from_rgb(image)
     await run_wrapper_case(dut, gray, output_path=output_path)
+
+
+@cocotb.test(timeout_time=150, timeout_unit="ms")
+async def test_axi_windowed_filter_wrapper_passthrough_gray(dut) -> None:
+    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(dut, gray, pass_through=True)

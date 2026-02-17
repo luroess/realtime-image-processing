@@ -18,6 +18,8 @@ entity AXI_FilterWrapper is
   port (
     i_aclk    : in  std_logic;
     i_aresetn : in  std_logic;
+    -- when '1', bypass selected filter and forward input gray stream
+    i_pass_through : in  std_logic;
 
     -- AXI4-Stream grayscale input (gray8)
     s_axis_gray8_tvalid : in  std_logic;
@@ -44,6 +46,8 @@ architecture A_Rtl of AXI_FilterWrapper is
   constant C_CENTER_MSB        : natural  := ((C_CENTER_INDEX + 1) * G_PIXEL_WIDTH) - 1;
 
   -- Unified window stream feeding selected filter
+  signal s_axis_gray8_tready_filter : std_logic := '0';
+  signal s_axis_gray8_tvalid_filter : std_logic := '0';
   signal s_wndw_tvalid : std_logic := '0';
   signal s_wndw_tready : std_logic := '0';
   signal s_wndw_tdata  : std_logic_vector(C_WINDOW_DATA_WIDTH - 1 downto 0) := (others => '0');
@@ -55,7 +59,16 @@ architecture A_Rtl of AXI_FilterWrapper is
   signal s_sobel_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
   signal s_sobel_tuser  : std_logic := '0';
   signal s_sobel_tlast  : std_logic := '0';
+
+  -- Selected filter output (before pass-through mux)
+  signal s_filter8_tvalid : std_logic := '0';
+  signal s_filter8_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
+  signal s_filter8_tuser  : std_logic := '0';
+  signal s_filter8_tlast  : std_logic := '0';
 begin
+  -- Disable filter pipeline input while pass-through is active.
+  s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
+
   -- AXI_SobelFilter currently requires 3x3 windows with 8-bit grayscale pixels
   assert G_KERNEL_SIZE = 3
     report "AXI_FilterWrapper with AXI_SobelFilter requires G_KERNEL_SIZE=3."
@@ -77,8 +90,8 @@ begin
     port map (
       i_aclk               => i_aclk,
       i_aresetn            => i_aresetn,
-      s_axis_gray8_tvalid  => s_axis_gray8_tvalid,
-      s_axis_gray8_tready  => s_axis_gray8_tready,
+      s_axis_gray8_tvalid  => s_axis_gray8_tvalid_filter,
+      s_axis_gray8_tready  => s_axis_gray8_tready_filter,
       s_axis_gray8_tdata   => s_axis_gray8_tdata,
       s_axis_gray8_tuser   => s_axis_gray8_tuser,
       s_axis_gray8_tlast   => s_axis_gray8_tlast,
@@ -114,10 +127,10 @@ begin
         m_axis_filter8_tlast  => s_sobel_tlast
       );
 
-    m_axis_filter8_tvalid <= s_sobel_tvalid;
-    m_axis_filter8_tdata  <= s_sobel_tdata;
-    m_axis_filter8_tuser  <= s_sobel_tuser;
-    m_axis_filter8_tlast  <= s_sobel_tlast;
+    s_filter8_tvalid <= s_sobel_tvalid;
+    s_filter8_tdata  <= s_sobel_tdata;
+    s_filter8_tuser  <= s_sobel_tuser;
+    s_filter8_tlast  <= s_sobel_tlast;
   end generate;
 
   G_BlurPlaceholderFilter: if G_FILTER_SELECT = C_FILTER_BLUR generate
@@ -125,19 +138,40 @@ begin
     -- Uses center pixel of the window as pass-through gray output
     s_wndw_tready <= m_axis_filter8_tready;
 
-    m_axis_filter8_tvalid <= '0' when (i_aresetn = '0') else s_wndw_tvalid;
-    m_axis_filter8_tdata  <= (others => '0') when (i_aresetn = '0') else s_wndw_tdata(C_CENTER_MSB downto C_CENTER_LSB);
-    m_axis_filter8_tuser  <= '0' when (i_aresetn = '0') else s_wndw_tuser;
-    m_axis_filter8_tlast  <= '0' when (i_aresetn = '0') else s_wndw_tlast;
+    s_filter8_tvalid <= '0' when (i_aresetn = '0') else s_wndw_tvalid;
+    s_filter8_tdata  <= (others => '0') when (i_aresetn = '0') else s_wndw_tdata(C_CENTER_MSB downto C_CENTER_LSB);
+    s_filter8_tuser  <= '0' when (i_aresetn = '0') else s_wndw_tuser;
+    s_filter8_tlast  <= '0' when (i_aresetn = '0') else s_wndw_tlast;
   end generate;
 
   G_FilterDefault: if (G_FILTER_SELECT /= C_FILTER_SOBEL) and (G_FILTER_SELECT /= C_FILTER_BLUR) generate
     -- Safe default for unsupported filter selections
     s_wndw_tready <= '0';
-    m_axis_filter8_tvalid <= '0';
-    m_axis_filter8_tdata  <= (others => '0');
-    m_axis_filter8_tuser  <= '0';
-    m_axis_filter8_tlast  <= '0';
+    s_filter8_tvalid <= '0';
+    s_filter8_tdata  <= (others => '0');
+    s_filter8_tuser  <= '0';
+    s_filter8_tlast  <= '0';
   end generate;
+
+  -- Top-level AXI4-Stream mux: pass-through or selected filter output
+  s_axis_gray8_tready <= '0' when (i_aresetn = '0') else
+                         m_axis_filter8_tready when (i_pass_through = '1') else
+                         s_axis_gray8_tready_filter;
+
+  m_axis_filter8_tvalid <= '0' when (i_aresetn = '0') else
+                           s_axis_gray8_tvalid when (i_pass_through = '1') else
+                           s_filter8_tvalid;
+  m_axis_filter8_tdata <= (others => '0') when (i_aresetn = '0') else
+                          s_axis_gray8_tdata when (i_pass_through = '1') and (s_axis_gray8_tvalid = '1') else
+                          s_filter8_tdata when (i_pass_through /= '1') and (s_filter8_tvalid = '1') else
+                          (others => '0');
+  m_axis_filter8_tuser <= '0' when (i_aresetn = '0') else
+                          s_axis_gray8_tuser when (i_pass_through = '1') and (s_axis_gray8_tvalid = '1') else
+                          s_filter8_tuser when (i_pass_through /= '1') and (s_filter8_tvalid = '1') else
+                          '0';
+  m_axis_filter8_tlast <= '0' when (i_aresetn = '0') else
+                          s_axis_gray8_tlast when (i_pass_through = '1') and (s_axis_gray8_tvalid = '1') else
+                          s_filter8_tlast when (i_pass_through /= '1') and (s_filter8_tvalid = '1') else
+                          '0';
 
 end architecture;
