@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: context make-context contex skill-db skill-query codex-note skill-test
+.PHONY: context make-context contex skill-db skill-query codex-note skill-test report-check
 
 DOCS_PATTERN := *.md|*.png|*.jpg|*.jpeg|*.svg|*.gif|*.webp|*.pdf
 RTL_PATTERN := *.md|*.vhd
@@ -82,3 +82,20 @@ codex-note:
 
 skill-test:
 	@python3 -m unittest discover -s .codex/skills/fpga-vivado-vitis-structure/scripts/tests -p "test_*.py"
+
+report-check:
+	@mkdir -p docs/report/build
+	@set -euo pipefail; \
+	root_out="$$(typst compile --root . docs/report/report.typ docs/report/build/report.pdf 2>&1)"; \
+	local_out="$$(cd docs/report && typst compile report.typ build/report_from_report_dir.pdf 2>&1)"; \
+	if [ -n "$$root_out" ]; then \
+		echo "ERROR: report root compile produced diagnostics:"; \
+		echo "$$root_out"; \
+		exit 1; \
+	fi; \
+	if [ -n "$$local_out" ]; then \
+		echo "ERROR: report local compile produced diagnostics:"; \
+		echo "$$local_out"; \
+		exit 1; \
+	fi; \
+	echo "OK: report compile is warning-free in both modes."

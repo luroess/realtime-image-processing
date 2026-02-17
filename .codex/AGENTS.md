@@ -149,6 +149,16 @@ uv run tb-sim --target window_generator
 - Default repository stem for report links is:
   - `https://github.com/luroess/realtime-image-processing/blob/master/`
 
+## Report compile quality gate (required)
+
+- Any edit under `docs/report/` must keep report compilation free of both errors and warnings.
+- Before ending a report-related task, run:
+  - `make report-check`
+- `make report-check` compiles in both modes:
+  - repo-root invocation with `--root .`
+  - local invocation from `docs/report/`
+- Any emitted Typst diagnostic output is treated as a failure and must be fixed before completion.
+
 ## GitHub CI docs workflow (required)
 
 - Before creating or changing GitHub Actions workflows, query Context7 docs first.
