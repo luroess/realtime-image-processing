@@ -60,12 +60,12 @@ begin
 
   -- Keep RGB valid behavior unchanged for backpressure visibility on this channel.
   s_rbg888_tvalid <= '0' when (i_aresetn = '0') else
-                       (s_axis_video_tvalid and m_axis_gray8_tready);
+                       s_axis_video_tvalid;
   m_axis_rbg888_tvalid <= s_rbg888_tvalid;
 
   -- Gate gray valid with RGB ready to avoid consuming duplicated beats while RGB is stalled.
   s_gray8_tvalid <= '0' when (i_aresetn = '0') else
-                      (s_axis_video_tvalid and m_axis_rbg888_tready);
+                      s_axis_video_tvalid;
   m_axis_gray8_tvalid <= s_gray8_tvalid;
 
   -- Keep outputs deterministic when idle/reset.
