@@ -20,6 +20,7 @@ class AxiWindowStreamSink:
         i_rst_n,
         prefix: str = "m_axis_video",
         reset_active_level: bool = True,
+        kernel_size: int = 3,
     ) -> None:
         self._sink = AxiStreamSink(
             bus=AxiStreamBus.from_prefix(dut, prefix),
@@ -41,57 +42,118 @@ class AxiWindowStreamSink:
     # @staticmethod
     # def _decode_line(
     #     frame,
-    #     width: int,
+    #     pixel_width: int,
     #     *,
-    #     byte_lanes: int,
-    # ) -> list[tuple[int, int, int]]:
+    #     window_size: int,
+    # ) -> List[np.ndarray]:
     #     data = bytes(frame.tdata)
-    #     if byte_lanes != 3:
-    #         raise AssertionError(
-    #             "AxiVideoStreamSink currently supports packed RGB24 only (3 byte lanes); "
-    #             f"got byte_lanes={byte_lanes}.",
-    #         )
-    #     expected_bytes = width * 3
+    #     expected_bytes = (pixel_width * window_size * window_size) / 8
     #     if len(data) != expected_bytes:
     #         raise AssertionError(
     #             f"Line length mismatch on AXI stream: got {len(data)} bytes, expected {expected_bytes}",
     #         )
-    #     if byte_lanes <= 0:
-    #         raise AssertionError(f"Invalid AXI byte lane count: {byte_lanes}")
 
-    #     pixels: list[tuple[int, int, int]] = []
+    #     return
 
-    #     for x in range(width):
-    #         base = x * 3
-    #         b = int(data[base + 0])
-    #         g = int(data[base + 1])
-    #         r = int(data[base + 2])
-    #         pixels.append((r, g, b))
+    @staticmethod
+    def _decode_line(
+        frame,
+        width: int,
+        *,
+        wndw_size: int,
+        pxl_width: int,
+    ) -> list[np.ndarray]:
+        """
+        Decode one AXI-stream line containing `width` flattened windows.
+        Returns a list of NumPy arrays of shape (wndw_size, wndw_size, 3).
+        """
 
-    #     return pixels
+        wndw_pixels = wndw_size * wndw_size
+        wndw_bits = wndw_pixels * pxl_width
+        if wndw_bits % 8 != 0:
+            raise AssertionError(
+                f"Unsupported window payload width={wndw_bits} bits (must be byte-aligned)",
+            )
+        wndw_bytes = wndw_bits // 8
+        expected_bytes = width * wndw_bytes
 
-    # async def recv_image(
-    #     self,
-    #     width: int,
-    #     height: int,
-    #     timeout_ns: int = 100_000,
-    # ) -> Image:
-    #     lines: list[list[tuple[int, int, int]]] = []
+        data = bytes(frame.tdata)
+        if len(data) != expected_bytes:
+            raise AssertionError(
+                "Line length mismatch on AXI stream: "
+                f"got {len(data)} bytes, expected {expected_bytes}",
+            )
 
-    #     try:
-    #         for y in range(height):
-    #             frame = await with_timeout(self._sink.recv(), timeout_ns, "ns")
-    #             pixels = self._decode_line(
-    #                 frame=frame,
-    #                 width=width,
-    #                 byte_lanes=self._byte_lanes,
-    #             )
+        raw = int.from_bytes(data, byteorder="little")
 
-    #             lines.append(pixels)
-    #     except SimTimeoutError as exc:
-    #         raise AssertionError(
-    #             f"Timed out waiting for output frame ({width}x{height}, {timeout_ns} ns per line)",
-    #         ) from exc
+        windows: list[np.ndarray] = []
 
-    #     frame_array = np.asarray(lines, dtype=np.uint8)
-    #     return Image(frame_array)
+        for w in range(width):
+            wndw_start = w * wndw_bits
+            wndw_val = (raw >> wndw_start) & ((1 << wndw_bits) - 1)
+
+            # Allocate window array
+            wndw = np.zeros((wndw_size, wndw_size, 3), dtype=np.uint8)
+
+            for i in range(wndw_pixels):
+                p_val = (wndw_val >> (i * pxl_width)) & ((1 << pxl_width) - 1)
+
+                if pxl_width == 24:
+                    b = p_val & 0xFF
+                    g = (p_val >> 8) & 0xFF
+                    r = (p_val >> 16) & 0xFF
+                elif pxl_width == 8:
+                    y_gray = p_val & 0xFF
+                    r = y_gray
+                    g = y_gray
+                    b = y_gray
+                else:
+                    raise AssertionError(
+                        f"Unsupported pxl_width={pxl_width}; expected 8 or 24",
+                    )
+
+                y = i // wndw_size
+                x = i % wndw_size
+                wndw[y, x] = (r, g, b)
+
+            #print("Curr wndw:", wndw)
+            windows.append(wndw)
+
+        return windows
+
+    async def recv_windows(
+        self,
+        width: int,
+        height: int,
+        *,
+        wndw_size: int,
+        pxl_width: int,
+        timeout_ns: int = 100_000,
+    ) -> list[np.ndarray]:
+        """
+        Receive an entire window-based image from the AXI stream.
+        Returns a flat list of NumPy arrays, each (wndw_size, wndw_size, 3),
+        in row-major order — identical to _windows_from_image().
+        """
+
+        windows: list[np.ndarray] = []
+
+        try:
+            for _y in range(height):
+                frame = await with_timeout(self._sink.recv(), timeout_ns, "ns")
+
+                line_windows = self._decode_line(
+                    frame=frame,
+                    width=width,
+                    wndw_size=wndw_size,
+                    pxl_width=pxl_width,
+                )
+
+                windows.extend(line_windows)
+
+        except SimTimeoutError as exc:
+            raise AssertionError(
+                f"Timed out waiting for window stream ({width}x{height}, {timeout_ns} ns per line)"
+            ) from exc
+
+        return windows

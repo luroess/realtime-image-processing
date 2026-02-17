@@ -202,7 +202,12 @@ def main() -> None:
     toplevel = str(config["toplevel"])
     test_module = str(config["test_module"])
     waves = bool(config["waves"])
-    parameters = _resolve_parameters(config)
+    parameters_cfg = config.get("parameters", {})
+    if parameters_cfg is None:
+        parameters_cfg = {}
+    if not isinstance(parameters_cfg, dict):
+        raise ValueError("'parameters' must be a table/map in targets.toml when provided.")
+    parameters = dict(parameters_cfg)
 
     sources = _collect_sources(repo_root=repo_root, config=config)
 
@@ -224,6 +229,7 @@ def main() -> None:
         sources=sources,
         hdl_toplevel=toplevel,
         hdl_library=hdl_library,
+        parameters=parameters,
         build_dir=build_dir,
         always=True,
     )
@@ -232,10 +238,10 @@ def main() -> None:
         hdl_toplevel=toplevel,
         hdl_toplevel_library=hdl_library,
         test_module=test_module,
+        parameters=parameters,
         build_dir=build_dir,
         test_dir=test_dir,
-        waves=waves,
-        parameters=parameters,
+        waves=waves
     )
 
     if waves:
