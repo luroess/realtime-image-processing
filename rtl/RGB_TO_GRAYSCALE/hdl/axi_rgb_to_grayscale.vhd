@@ -58,14 +58,15 @@ begin
   s_axis_video_tready <= '0' when (i_aresetn = '0') else
                            (m_axis_rbg888_tready and m_axis_gray8_tready);
 
-  -- Keep RGB valid behavior unchanged for backpressure visibility on this channel.
+  -- Gate each output VALID with the sibling READY to keep dual-output fanout in lockstep.
+  -- This prevents one branch from accepting duplicated beats while the other branch is stalled.
   s_rbg888_tvalid <= '0' when (i_aresetn = '0') else
-                       s_axis_video_tvalid;
+                       (s_axis_video_tvalid and m_axis_gray8_tready);
   m_axis_rbg888_tvalid <= s_rbg888_tvalid;
 
-  -- Gate gray valid with RGB ready to avoid consuming duplicated beats while RGB is stalled.
+  -- Symmetric lockstep gating for gray output.
   s_gray8_tvalid <= '0' when (i_aresetn = '0') else
-                      s_axis_video_tvalid;
+                      (s_axis_video_tvalid and m_axis_rbg888_tready);
   m_axis_gray8_tvalid <= s_gray8_tvalid;
 
   -- Keep outputs deterministic when idle/reset.
