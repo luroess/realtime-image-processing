@@ -10,7 +10,7 @@ entity E_SobelCore is
     -- Sobel computation is fixed to 3x3
     G_KERNEL_SIZE    : positive := 3;
     -- Threshold in range 0..2040 for 8-bit input
-    G_SOBEL_TRESHOLD : natural := 200
+    G_SOBEL_THRESHOLD : natural := 200
   );
   port (
     -- 3x3 grayscale window: 9 bytes packed into 72-bit vector
@@ -80,7 +80,7 @@ begin
     v_mag := v_abs_gx + v_abs_gy;
 
     -- Edge (white)
-    if v_mag >= integer(G_SOBEL_TRESHOLD) then
+    if v_mag >= integer(G_SOBEL_THRESHOLD) then
       o_edge_pixel <= (others => '1');
     -- Background (black)
     else

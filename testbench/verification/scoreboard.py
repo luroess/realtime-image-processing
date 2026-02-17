@@ -68,4 +68,3 @@ class Scoreboard:
             raise AssertionError(
                 f"Window mismatch(es) at {mismatches}"
             )
-        return mismatches

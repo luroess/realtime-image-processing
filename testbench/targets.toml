@@ -77,4 +77,5 @@ sources     = [
   G_PIXEL_WIDTH = 8
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 512
-  G_ROW = 512
+  G_NUM_ROW = 512
+  G_SOBEL_THRESHOLD = 200

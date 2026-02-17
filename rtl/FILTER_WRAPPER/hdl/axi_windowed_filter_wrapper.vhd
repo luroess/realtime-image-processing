@@ -7,13 +7,13 @@ entity AXI_WindowedFilterWrapper is
     G_FILTER_SELECT  : natural := 0;
 
     -- Sobel generic
-    G_SOBEL_TRESHOLD : natural := 200;
+    G_SOBEL_THRESHOLD : natural := 200;
 
     -- Internal window_generator generics
     G_PIXEL_WIDTH                : positive := 8;
     G_KERNEL_SIZE                : positive := 3;
     G_LINE_WIDTH                 : positive := 1920;
-    G_ROW                        : positive := 1080
+    G_NUM_ROW                        : positive := 1080
   );
   port (
     i_aclk    : in  std_logic;
@@ -72,7 +72,7 @@ begin
       G_PIXEL_WIDTH => G_PIXEL_WIDTH,
       G_KERNEL_SIZE => G_KERNEL_SIZE,
       G_LINE_WIDTH  => G_LINE_WIDTH,
-      G_ROW         => G_ROW
+      G_NUM_ROW         => G_NUM_ROW
     )
     port map (
       i_aclk               => i_aclk,
@@ -97,7 +97,7 @@ begin
       generic map (
         G_PIXEL_WIDTH    => G_PIXEL_WIDTH,
         G_KERNEL_SIZE    => G_KERNEL_SIZE,
-        G_SOBEL_TRESHOLD => G_SOBEL_TRESHOLD
+        G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD
       )
       port map (
         i_aclk               => i_aclk,

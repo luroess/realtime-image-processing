@@ -6,12 +6,12 @@ entity window_generator is
   generic (
     -- bits per pixel
     G_PIXEL_WIDTH : positive := 8;
-    -- Size of kernel = ouput window size
+    -- Size of kernel = output window size
     G_KERNEL_SIZE : positive := 3;
     -- Image line width
     G_LINE_WIDTH : natural := 5;
     -- Image row count
-    G_ROW : natural := 5
+    G_NUM_ROW : natural := 5
   );
   port (
     i_aclk            : in  std_logic;
@@ -61,10 +61,10 @@ architecture A_Rtl of window_generator is
 
   -- counters
   signal col_cnt : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter needed for padding
-  signal row_cnt : natural range 0 to G_ROW+1 := 0; -- row counter needed for padding
-  signal pxl_cnt : natural range 0 to G_LINE_WIDTH*G_ROW := 0; -- pixel counter needed for initial fill
+  signal row_cnt : natural range 0 to G_NUM_ROW+1 := 0; -- row counter needed for padding
+  signal pxl_cnt : natural range 0 to G_LINE_WIDTH*G_NUM_ROW := 0; -- pixel counter needed for initial fill
   signal col_cnt_out : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter needed for padding
-  signal row_cnt_out : natural range 0 to G_ROW+1 := 0; -- row counter needed for padding
+  signal row_cnt_out : natural range 0 to G_NUM_ROW+1 := 0; -- row counter needed for padding
 
   -- window data
   signal wndw : t_wndw;
@@ -112,7 +112,7 @@ begin
     variable v_buf_now      : t_buf;
     variable v_wndw_now     : t_wndw;
     variable v_col_out_next : natural range 0 to G_LINE_WIDTH+1;
-    variable v_row_out_next : natural range 0 to G_ROW+1;
+    variable v_row_out_next : natural range 0 to G_NUM_ROW+1;
   begin
     if rising_edge(i_aclk) then
       if i_aresetn = '0' then
@@ -176,7 +176,7 @@ begin
           -- reset column on EOL
           if s_axis_video_tlast = '1' then -- EOL
             col_cnt <= 0;
-            if row_cnt < G_ROW+1 then
+            if row_cnt < G_NUM_ROW+1 then
               row_cnt <= row_cnt + 1;
             end if;
           end if;
@@ -205,7 +205,7 @@ begin
 
           if m_axis_window_tlast_reg = '1' then
             v_col_out_next := 0;
-            if v_row_out_next < G_ROW+1 then
+            if v_row_out_next < G_NUM_ROW+1 then
               v_row_out_next := v_row_out_next + 1;
             end if;
           else
@@ -240,7 +240,7 @@ begin
           v_wndw_now(0) := C_ZERO;
           v_wndw_now(1) := C_ZERO;
           v_wndw_now(2) := C_ZERO;
-        elsif v_row_out_next >= G_ROW-1 then -- last row in frame
+        elsif v_row_out_next >= G_NUM_ROW-1 then -- last row in frame
           v_wndw_now(6) := C_ZERO;
           v_wndw_now(7) := C_ZERO;
           v_wndw_now(8) := C_ZERO;
