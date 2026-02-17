@@ -5,13 +5,13 @@
 
 = FAST Implementation and FAST-on-Zynq (Zybo Z7-10)
 
-#component_owner("Implemented RTL path: `rtl/FAST_FILTER/hdl/*`")
+#component_owner([Implemented RTL path: #repo_link("rtl/FAST_FILTER/hdl/", body: raw("rtl/FAST_FILTER/hdl/*"))])
 
 This section documents the implemented FAST pipeline in this repository and summarizes how it maps to the Zybo Z7-10 streaming architecture. The active RTL modules are:
 
-- `rtl/FAST_FILTER/hdl/fast_core.vhd`
-- `rtl/FAST_FILTER/hdl/fast_nms3x3.vhd`
-- `rtl/FAST_FILTER/hdl/axi_fast_filter.vhd`
+- #repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", line: 5)
+- #repo_link("rtl/FAST_FILTER/hdl/fast_nms3x3.vhd", line: 5)
+- #repo_link("rtl/FAST_FILTER/hdl/axi_fast_filter.vhd", line: 4)
 
 The implementation uses a FAST-9 style contiguous arc test on a `7x7` window, computes a corner score, and applies `3x3` non-maximum suppression before emitting a binary corner mask on AXI.@rosten_drummond_fast2006 @rosten_porter_drummond_fast2010
 
@@ -37,12 +37,12 @@ Where:
 
 The implementation also uses the classic high-speed precheck (4 ring points) before full run evaluation.@rosten_drummond_fast2006
 
-== Typst Pseudocode: `E_FastCore` (Candidate + Score)
+== Typst Pseudocode: #repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", body: raw("E_FastCore"), line: 5) (Candidate + Score)
 
-Pseudocode in @alg-fast-core summarizes the combinational FSM behavior in `rtl/FAST_FILTER/hdl/fast_core.vhd`.
+Pseudocode in @alg-fast-core summarizes the combinational FSM behavior in #repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", line: 5).
 
 #algorithm-figure(
-  [FAST core pseudocode aligned with `E_FastCore`],
+  [FAST core pseudocode aligned with #repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", body: raw("E_FastCore"), line: 5)],
   vstroke: .5pt + luma(220),
   {
     import algorithmic: *
@@ -109,12 +109,12 @@ Pseudocode in @alg-fast-core summarizes the combinational FSM behavior in `rtl/F
   },
 ) <alg-fast-core>
 
-== Typst Pseudocode: `AXI_FastFilter` (Core + NMS + AXI)
+== Typst Pseudocode: #repo_link("rtl/FAST_FILTER/hdl/axi_fast_filter.vhd", body: raw("AXI_FastFilter"), line: 4) (Core + NMS + AXI)
 
-Pseudocode in @alg-axi-fast-filter captures the stream-level composition in `rtl/FAST_FILTER/hdl/axi_fast_filter.vhd`.
+Pseudocode in @alg-axi-fast-filter captures the stream-level composition in #repo_link("rtl/FAST_FILTER/hdl/axi_fast_filter.vhd", line: 4).
 
 #algorithm-figure(
-  [AXI FAST filter pipeline pseudocode aligned with `AXI_FastFilter`],
+  [AXI FAST filter pipeline pseudocode aligned with #repo_link("rtl/FAST_FILTER/hdl/axi_fast_filter.vhd", body: raw("AXI_FastFilter"), line: 4)],
   vstroke: .5pt + luma(220),
   {
     import algorithmic: *
@@ -148,9 +148,9 @@ Pseudocode in @alg-axi-fast-filter captures the stream-level composition in `rtl
 The current design chain for FAST is:
 
 - Gray window input (`7x7`) from `window_generator`
-- FAST candidate/score extraction (`E_FastCore`)
+- FAST candidate/score extraction (#repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", body: raw("E_FastCore"), line: 5))
 - Score-window generation (`3x3`) for NMS
-- NMS corner decision (`E_FastNms3x3`)
+- NMS corner decision (#repo_link("rtl/FAST_FILTER/hdl/fast_nms3x3.vhd", body: raw("E_FastNms3x3"), line: 5))
 - AXI output mask (`0xFF` corner, `0x00` non-corner)
 
 This keeps FAST fully streaming and compatible with the existing AXI framing discipline.
@@ -164,10 +164,10 @@ The Zybo Z7-10 project already uses PS7 + AXI4-Stream video infrastructure and V
   align: (left, left),
   table.header([Module role], [FAST-on-Zybo implementation status]),
   [Input format], [Gray stream windows are consumed as `7x7` flattened AXI payloads.],
-  [Decision core], [`E_FastCore` implements precheck + contiguous-run FAST test and score saturation.],
-  [Post-processing], [`E_FastNms3x3` suppresses non-maxima in local `3x3` score neighborhoods.],
-  [System interface], [`AXI_FastFilter` forwards AXI handshakes and framing with reset-safe gating.],
-  [Verification], [Targets `axi_fast_filter` and `axi_filter_wrapper_fast` are present in `testbench/targets.toml`.],
+  [Decision core], [#repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", body: raw("E_FastCore"), line: 5) implements precheck + contiguous-run FAST test and score saturation.],
+  [Post-processing], [#repo_link("rtl/FAST_FILTER/hdl/fast_nms3x3.vhd", body: raw("E_FastNms3x3"), line: 5) suppresses non-maxima in local `3x3` score neighborhoods.],
+  [System interface], [#repo_link("rtl/FAST_FILTER/hdl/axi_fast_filter.vhd", body: raw("AXI_FastFilter"), line: 4) forwards AXI handshakes and framing with reset-safe gating.],
+  [Verification], [Targets `axi_fast_filter` and `axi_filter_wrapper_fast` are present in #repo_link("testbench/targets.toml").],
 )
 
 == Throughput and Latency Expectations

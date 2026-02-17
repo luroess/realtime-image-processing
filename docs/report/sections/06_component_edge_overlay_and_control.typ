@@ -6,11 +6,11 @@
 
 The overlay stage merges RGB video and binary edge stream in lockstep, while the button/control path handles interactive state transitions through debouncing and click detection.
 
-The shown overlay image evidence is parsed from stored simulation artifacts; the related target is currently treated as artifact-only in reporting because it is not registered in the active `testbench/targets.toml` list.
+The shown overlay image evidence is parsed from stored simulation artifacts; the related target is currently treated as artifact-only in reporting because it is not registered in the active #repo_link("testbench/targets.toml") list.
 
 == Edge Overlay Composition
 
-`AxiEdgeOverlay` receives two synchronized AXI streams:
+#repo_link("rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd", body: raw("AxiEdgeOverlay"), line: 5) receives two synchronized AXI streams:
 
 - RGB base stream (`s_axis_video_rbg888_*`)
 - Edge stream (`s_axis_video_edges_*`)
@@ -38,10 +38,10 @@ This lockstep handshake prevents one stream from advancing without the other and
   columns: (1.8fr, 2.2fr),
   align: (left, left),
   table.header([Module], [Role in control path]),
-  [`debouncing.vhd`], [stabilizes asynchronous button transitions and removes chatter],
-  [`click_detection.vhd`], [classifies click events with state-machine based timing rules],
-  [`debounced_click_detector.vhd`], [integration wrapper combining debouncer and click FSM],
-  [`button_example.vhd`], [hardware-visible status path used in Vivado integration],
+  [#repo_link("rtl/DEBOUNCER/hdl/debouncing.vhd", line: 5)], [stabilizes asynchronous button transitions and removes chatter],
+  [#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5)], [classifies click events with state-machine based timing rules],
+  [#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4)], [integration wrapper combining debouncer and click FSM],
+  [#repo_link("rtl/BUTTON_EXAMPLE/hdl/button_example.vhd", line: 4)], [hardware-visible status path used in Vivado integration],
 )
 
 These modules are not in the image-processing datapath itself, but they affect usability and real-system operability when switching or enabling stream behaviors. The debouncing assumptions follow standard mechanical switch-bounce behavior summarized in @ganssle_debouncing.

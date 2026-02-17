@@ -1,3 +1,5 @@
+#import "../shared/macros.typ": *
+
 = Project Scope and Objectives
 
 The system target is a live camera-to-HDMI pipeline where all active video processing happens in AXI4-Stream form. The currently implemented processing sequence in this repository is:
@@ -9,7 +11,7 @@ $ "RGB" arrow.r "Grayscale" arrow.r "3x3 Window" arrow.r "Sobel" arrow.r "Overla
   caption: [High-level realtime image-processing architecture used throughout this report.],
 ) <fig-scope-arch>
 
-@fig-scope-arch defines the logical data flow boundaries used in RTL and cocotb verification. While the Vivado block design includes additional camera, DDR, and output timing infrastructure, this report focuses on repository-owned modules under `rtl/` and `testbench/`.
+@fig-scope-arch defines the logical data flow boundaries used in RTL and cocotb verification. While the Vivado block design includes additional camera, DDR, and output timing infrastructure, this report focuses on repository-owned modules under #repo_link("rtl/") and #repo_link("testbench/").
 
 == In-Scope Implementations
 
@@ -19,7 +21,7 @@ $ "RGB" arrow.r "Grayscale" arrow.r "3x3 Window" arrow.r "Sobel" arrow.r "Overla
 - Sobel edge extraction and composition wrapper (`SOBEL_FILTER`, `FILTER_WRAPPER`).
 - RGB edge overlay composition (`EDGE_OVERLAY`).
 - Button interaction control path (`DEBOUNCER`, `CLICK_DETECTOR`, `BUTTON_EXAMPLE`).
-- cocotb target-based regressions and artifact generation (`testbench/sim_build`).
+- cocotb target-based regressions and artifact generation (#repo_link("testbench/sim_build")).
 
 == Out-of-Scope in This Report
 

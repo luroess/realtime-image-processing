@@ -4,7 +4,7 @@
 
 #component_owner("Lukas Roess, Jan Duchscherer, Valentin Bumeder, Justin Loeber")
 
-The verification environment is cocotb-based and target-driven through `tb-sim`.@cocotb_writing_testbenches A target in `testbench/targets.toml` declares toplevel HDL, test module, and source set. This keeps DUT selection reproducible and decoupled from command-line complexity.
+The verification environment is cocotb-based and target-driven through #repo_link("testbench/sim/run.py", body: raw("tb-sim"), line: 194).@cocotb_writing_testbenches A target in #repo_link("testbench/targets.toml") declares toplevel HDL, test module, and source set. This keeps DUT selection reproducible and decoupled from command-line complexity.
 
 #figure(
   image("../figures/generated/tb_architecture_typst.png", width: 95%),
@@ -42,6 +42,6 @@ The testbench combines protocol checks and functional checks using cocotb schedu
   [test_debouncer/test_click_detector], [button path], [timing and state transitions],
 )
 
-Artifact-only targets observed in stored `sim_build` evidence (but not currently listed in `targets.toml`) are `axi_edge_overlay` and `axi_windowed_filter_wrapper`.
+Artifact-only targets observed in stored `sim_build` evidence (but not currently listed in #repo_link("testbench/targets.toml", body: raw("targets.toml"))) are `axi_edge_overlay` and `axi_windowed_filter_wrapper`.
 
-The generated evidence used later in Section 8 is parsed directly from `testbench/sim_build/**/results.xml`.
+The generated evidence used later in Section 8 is parsed directly from #repo_link("testbench/sim_build/", body: raw("testbench/sim_build/**/results.xml")).

@@ -40,6 +40,26 @@
 - Enforced filename format is:
   - `YYYYMMDD_<Category>_<Type>_<Label>.md`
 
+## .codex working directories (encouraged)
+
+- Keep task planning and actionable follow-ups in `.codex/TODOS/` as small markdown files.
+- Keep short reasoning snapshots and decision notes in `.codex/THOUGHTS/`.
+- Keep temporary scratch notes/experiments in `.codex/SCRATCHPAD/` (promote only stable outcomes to docs or TODOs).
+- Keep confirmed defects and evidence in `.codex/ISSUES.md` (or linked issue notes under `.codex/`), including repro command and file/line references.
+- When a task produces concrete next actions, add or update at least one entry in `.codex/TODOS/` before ending the session.
+
+## Session debrief workflow (required)
+
+- For each substantial implementation/review task, add a debrief note under `.codex/` before closing the task.
+- Use the note generator to enforce naming:
+  - `python3 .codex/skills/fpga-vivado-vitis-structure/scripts/new_codex_note.py --category <Category> --type Debrief --label <unique_label>`
+- Debrief content must include:
+  - scope/objective,
+  - files changed,
+  - validation commands run and pass/fail outcomes,
+  - open failures with root-cause evidence (file/line + repro command).
+- If a session uncovers missing process guidance, update `.codex/AGENTS.md` in the same session.
+
 ## Local RTL source tree (required)
 
 - The local `rtl/` directory is the primary source of truth for active RTL development.
@@ -119,6 +139,21 @@ uv run tb-sim --target window_generator
 - Before creating or changing Mermaid-based documentation/presentation diagrams, query Context7 docs first.
 - Resolved Context7 library ID for Mermaid docs: `/mermaid-js/mermaid`.
 - Retrieve and align with at least these topics before implementation: `flowchart`, `sequenceDiagram`, `timeline`/`gantt`, `theme/init`, and slide readability constraints (node count, label length, orientation).
+
+## Report source-link policy (required)
+
+- In `docs/report/*.typ`, every repository source file, config file, script, RTL entity/class, or module path mentioned in prose/tables must be clickable to GitHub.
+- Use `#repo_link(...)` from `docs/report/shared/macros.typ` for all such references.
+- Use line anchors for entities/classes whenever possible:
+  - `#repo_link("rtl/FAST_FILTER/hdl/fast_core.vhd", body: raw("E_FastCore"), line: 5)`
+- Default repository stem for report links is:
+  - `https://github.com/luroess/realtime-image-processing/blob/master/`
+
+## GitHub CI docs workflow (required)
+
+- Before creating or changing GitHub Actions workflows, query Context7 docs first.
+- Resolved Context7 library ID for GitHub Actions docs: `/websites/github_en_actions`.
+- Retrieve and align with at least these topics before implementation: workflow file discovery (`.github/workflows`, `.yml`/`.yaml`), event triggers/filters (`push`, `pull_request`, `workflow_dispatch`, `paths`), action version pinning guidance, and Python CI matrix/caching patterns.
 
 ## AXI video protocol reference (required)
 

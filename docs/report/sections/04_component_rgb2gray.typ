@@ -4,7 +4,7 @@
 
 #component_owner("Jan Duchscherer")
 
-The grayscale stage is implemented as a lightweight arithmetic core (`rgb_to_grayscale.vhd`) wrapped by an AXI4-Stream interface module (`axi_rgb_to_grayscale.vhd`). The wrapper preserves handshake and framing while offering both replicated-RGB and gray8 outputs under UG934 framing rules.@amd_ug934
+The grayscale stage is implemented as a lightweight arithmetic core (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5)) wrapped by an AXI4-Stream interface module (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4)). The wrapper preserves handshake and framing while offering both replicated-RGB and gray8 outputs under UG934 framing rules.@amd_ug934
 
 #figure(
   image("../figures/axi_rgb2gray_ip.svg", width: 74%),
