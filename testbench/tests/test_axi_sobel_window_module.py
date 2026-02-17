@@ -1,4 +1,4 @@
-"""AXI window-generator + Sobel wrapper cocotb tests."""
+"""AXI window-generator + Sobel filter cocotb tests."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def _sim_artifact_dir() -> Path:
     results_file = os.getenv("COCOTB_RESULTS_FILE")
     if results_file:
         return Path(results_file).resolve().parent
-    return TESTBENCH_ROOT / "sim_build" / "test_axi_filter_wrapper"
+    return TESTBENCH_ROOT / "sim_build" / "test_axi_sobel_window_module"
 
 
 def _gray_plane_to_image(gray_plane: np.ndarray) -> Image:
@@ -133,13 +133,15 @@ async def run_wrapper_case(
     )
     m_axis_tready.value = 1
 
-    height, width = gray_plane.shape
     expected = gray_plane if pass_through else _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
-    flush_pixels = 0 if pass_through else _warmup_beats(width=width)
+    flush_pixels = 0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
+
     await source.send_image(
         _gray_plane_to_image(gray_plane),
         tail_padding_pixels=flush_pixels,
     )
+
+    height, width = gray_plane.shape
     timeout_ns = max(500_000, width * height * 70)
     received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
     _assert_plane_equal(expected, received)
@@ -150,16 +152,16 @@ async def run_wrapper_case(
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
-async def test_axi_windowed_filter_wrapper_simple_image(dut) -> None:
+async def test_axi_sobel_window_module_simple_image(dut) -> None:
     image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray)
 
 
 @cocotb.test(timeout_time=250, timeout_unit="ms")
-async def test_axi_windowed_filter_wrapper_lenna_end_to_end(dut) -> None:
+async def test_axi_sobel_window_module_lenna_end_to_end(dut) -> None:
     input_path = TESTBENCH_ROOT / "images" / "lenna_512_512.png"
-    output_path = _sim_artifact_dir() / "lenna_512_512_out_wrapper_sobel.png"
+    output_path = _sim_artifact_dir() / "lenna_512_512_out_window_module_sobel.png"
 
     image = Image.from_png(input_path)
     gray = _gray_from_rgb(image)
@@ -167,7 +169,7 @@ async def test_axi_windowed_filter_wrapper_lenna_end_to_end(dut) -> None:
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
-async def test_axi_windowed_filter_wrapper_passthrough_gray(dut) -> None:
+async def test_axi_sobel_window_module_passthrough_gray(dut) -> None:
     image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray, pass_through=True)
