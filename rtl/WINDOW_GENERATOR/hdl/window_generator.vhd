@@ -2,14 +2,10 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
--- own packages
-library work;
-    use work.window_generator_pkg.all;
-
 entity window_generator is
   generic (
     -- bits per pixel
-    G_PIXEL_WIDTH : positive := 24;
+    G_PIXEL_WIDTH : positive := 8;
     -- Size of kernel = ouput window size
     G_KERNEL_SIZE : positive := 3;
     -- Image line width
@@ -18,21 +14,20 @@ entity window_generator is
     G_ROW : natural := 5
   );
   port (
-    i_clk             : in  std_logic;
-    i_rst_n           : in  std_logic;
+    i_aclk            : in  std_logic;
+    i_aresetn         : in  std_logic;
 
     -- AXI4-Stream Video Slave (input)
     s_axis_video_tvalid : in  std_logic;
     s_axis_video_tready : out std_logic;
-    s_axis_video_tdata  : in  t_pxl;
+    s_axis_video_tdata  : in  std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
     s_axis_video_tuser  : in  std_logic; -- SOF
     s_axis_video_tlast  : in  std_logic; -- EOL
 
     -- AXI4-Stream Video Master (output)
     m_axis_window_tvalid : out std_logic;
     m_axis_window_tready : in  std_logic;
-    --m_axis_window_tdata  : out t_wndw;
-    m_axis_window_tdata  : out t_wndw_flat_t;
+    m_axis_window_tdata  : out std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
     m_axis_window_tuser  : out std_logic; -- SOF
     m_axis_window_tlast  : out std_logic  -- EOL
   );
@@ -42,6 +37,10 @@ architecture A_Rtl of window_generator is
   ------------------------------------------------------------------
   -- constants
   ------------------------------------------------------------------
+  subtype t_pxl is std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
+  type t_wndw is array (0 to (G_KERNEL_SIZE * G_KERNEL_SIZE) - 1) of t_pxl;
+  subtype t_wndw_flat_t is std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
+
   constant C_ZERO : t_pxl := (others => '0');
   constant C_BUF_LEN : positive := ((G_KERNEL_SIZE - 1) * G_LINE_WIDTH) + G_KERNEL_SIZE;
   constant C_FILL_MIN : positive := (G_LINE_WIDTH + 1) * ((G_KERNEL_SIZE - 1) / 2);
@@ -76,22 +75,9 @@ architecture A_Rtl of window_generator is
   ------------------------------------------------------------------
   -- functions
   ------------------------------------------------------------------
-  -- 2D window array to flat_window (std_logic_vector)
-  function f_pack_2d_wndw(i_w : t_wndw_t) return t_wndw_flat_t is
-    variable v_flat : t_wndw_flat_t := (others => '0');
-    variable v_idx  : natural;
-  begin
-    for r in 0 to G_KERNEL_SIZE-1 loop
-      for c in 0 to G_KERNEL_SIZE-1 loop
-        v_idx := r*G_KERNEL_SIZE + c;
-        v_flat((v_idx+1)*G_PIXEL_WIDTH-1 downto v_idx*G_PIXEL_WIDTH) := i_w(r,c);
-      end loop;
-    end loop;
-    return v_flat;
-  end function;
-
   -- 1D window array to flat_window (std_logic_vector)
-  function f_pack_1d_wndw(i_w : t_wndw) return t_wndw_flat_t is
+  function f_pack_1d_wndw(i_w : t_wndw)
+    return t_wndw_flat_t is
     variable v_flat : t_wndw_flat_t := (others => '0');
   begin
     for i in 0 to G_KERNEL_SIZE*G_KERNEL_SIZE-1 loop
@@ -105,15 +91,15 @@ begin
   ------------------------------------------------------------------
   -- Line buffering
   ------------------------------------------------------------------
-  process(i_clk)
+  process(i_aclk)
     ------------------------------------------------------------------
     -- variables
     ------------------------------------------------------------------
     variable v_col_cnt_out  : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter
     variable v_row_cnt_out  : natural range 0 to G_ROW+1 := 0; -- row counter
   begin
-    if rising_edge(i_clk) then
-      if i_rst_n = '0' then
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
         -- clear counters
         col_cnt     <= 0;
         row_cnt     <= 0;
@@ -128,7 +114,6 @@ begin
         rdy_reg     <= '0';
         wndw_valid  <= '0';
         wndw        <= (others => C_ZERO);
-        --wndw_2d     <= (others => (others => C_ZERO));
         buf_reg     <= (others => C_ZERO);
         -- reset outputs
         s_axis_video_tready   <= '0';
@@ -171,7 +156,7 @@ begin
           end if;
 
           -- handle output counters
-          if pxl_cnt > C_FILL_MIN+1 then 
+          if pxl_cnt > C_FILL_MIN+1 then
             -- EOL
             if eol_reg(eol_reg'high) = '1' then
               col_cnt_out <= 0;
@@ -206,35 +191,12 @@ begin
         end if; -- end handshake occured
 
         ------------------------------------------------------------------
-        -- Output counters for window generation
-        ------------------------------------------------------------------
-        -- count output lines and rows based on ouput signals
-        -- if wndw_valid = '1' then
-        --   -- EOL
-        --   if eol_reg(eol_reg'high) = '1' then
-        --     col_cnt_out <= 0;
-        --     row_cnt_out <= row_cnt_out + 1;
-        --   else
-        --     col_cnt_out <= col_cnt_out + 1;
-        --   end if;
-        --   -- SOF
-        --   if sof_reg(sof_reg'high) = '1' then
-        --     row_cnt_out <= 0;
-        --   end if;
-        -- end if;
-
-        ------------------------------------------------------------------
         -- 3x3 Window generation with Zero Padding
         -- 1D window:
         -- wndw(0)   wndw(1)   wndw(2)
         -- wndw(3)   wndw(4)   wndw(5)
         -- wndw(6)   wndw(7)   wndw(8)
-        --
-        -- 2D window (row,col):
-        -- (0,0)   (0,1)   (0,2)
-        -- (1,0)   (1,1)   (1,2)
-        -- (2,0)   (2,1)   (2,2)
-        ------------------------------------------------------------------       
+        ------------------------------------------------------------------
 
         --default to normal case (no edge pixel)
         wndw(0) <= buf_reg(0);
@@ -247,62 +209,33 @@ begin
         wndw(7) <= buf_reg(2*G_LINE_WIDTH+1);
         wndw(8) <= buf_reg(2*G_LINE_WIDTH+2);
 
-        -- 2D array not supported by surfer yet
-        -- wndw_2d(0,0) <= buf_reg(0);
-        -- wndw_2d(0,1) <= buf_reg(1);
-        -- wndw_2d(0,2) <= buf_reg(2);
-        -- wndw_2d(1,0) <= buf_reg(G_LINE_WIDTH+0);
-        -- wndw_2d(1,1) <= buf_reg(G_LINE_WIDTH+1);
-        -- wndw_2d(1,2) <= buf_reg(G_LINE_WIDTH+2);
-        -- wndw_2d(2,0) <= buf_reg(2*G_LINE_WIDTH+0);
-        -- wndw_2d(2,1) <= buf_reg(2*G_LINE_WIDTH+1);
-        -- wndw_2d(2,2) <= buf_reg(2*G_LINE_WIDTH+2);
-
         -- edge cases
         -- first and last line
-        --if row_cnt_out < 1 then -- first row in frame
         if v_row_cnt_out < 1 then -- first row in frame
           wndw(0) <= C_ZERO;
           wndw(1) <= C_ZERO;
           wndw(2) <= C_ZERO;
-          -- wndw_2d(0,0) <= C_ZERO;
-          -- wndw_2d(0,1) <= C_ZERO;
-          -- wndw_2d(0,2) <= C_ZERO;
-        --elsif row_cnt_out > G_ROW-1 then -- last row in frame
         elsif v_row_cnt_out >= G_ROW-1 then -- last row in frame
           wndw(6) <= C_ZERO;
           wndw(7) <= C_ZERO;
           wndw(8) <= C_ZERO;
-          -- wndw_2d(2,0) <= C_ZERO;
-          -- wndw_2d(2,1) <= C_ZERO;
-          -- wndw_2d(2,2) <= C_ZERO;
         end if;
 
         -- first and last column
-        --if col_cnt_out < 1 then -- first column in line
         if v_col_cnt_out < 1 then -- first column in line
           wndw(0) <= C_ZERO;
           wndw(3) <= C_ZERO;
           wndw(6) <= C_ZERO;
-          -- wndw_2d(0,0) <= C_ZERO;
-          -- wndw_2d(1,0) <= C_ZERO;
-          -- wndw_2d(2,0) <= C_ZERO;
-        --elsif col_cnt_out > G_LINE_WIDTH-1 then -- last column in line
         elsif v_col_cnt_out >= G_LINE_WIDTH-1 then -- last column in line
           wndw(2) <= C_ZERO;
           wndw(5) <= C_ZERO;
           wndw(8) <= C_ZERO;
-          -- wndw_2d(0,2) <= C_ZERO;
-          -- wndw_2d(1,2) <= C_ZERO;
-          -- wndw_2d(2,2) <= C_ZERO;
         end if;
 
         ------------------------------------------------------------------
         -- AXI Stream Master outputs
         ------------------------------------------------------------------
         m_axis_window_tvalid  <= wndw_valid;
-        -- m_axis_window_tdata  <= wndw;
-        -- m_axis_window_tdata   <= f_pack_2d_wndw(wndw_2d);
         m_axis_window_tdata   <= f_pack_1d_wndw(wndw);
         m_axis_window_tlast   <= eol_reg(eol_reg'high);
         m_axis_window_tuser   <= sof_reg(sof_reg'high);
