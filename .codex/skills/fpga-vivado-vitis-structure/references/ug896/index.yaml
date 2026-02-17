@@ -1,0 +1,425 @@
+source: .codex/skills/fpga-vivado-vitis-structure/references/ug896/ug896.full.md
+generated_by: split_sections.py
+chapters:
+  - id: chapter-1
+    title: "Chapter 1: IP-Centric Design Flow........................................................................ 4"
+    file: sections/ch01-ip-centric-design-flow-4.md
+    start_line: 17
+    end_line: 29
+    start_page: null
+    end_page: null
+  - id: chapter-2
+    title: "Chapter 2: IP Basics....................................................................................................... 9"
+    file: sections/ch02-ip-basics-9.md
+    start_line: 30
+    end_line: 58
+    start_page: null
+    end_page: null
+  - id: chapter-3
+    title: "Chapter 3: Using Manage IP Projects................................................................ 72"
+    file: sections/ch03-using-manage-ip-projects-72.md
+    start_line: 59
+    end_line: 61
+    start_page: null
+    end_page: null
+  - id: chapter-4
+    title: "Chapter 4: Using IP Example Designs................................................................77"
+    file: sections/ch04-using-ip-example-designs-77.md
+    start_line: 62
+    end_line: 73
+    start_page: null
+    end_page: null
+  - id: chapter-5
+    title: "Chapter 5: Using AMD IP with Third-Party Synthesis Tools..................80"
+    file: sections/ch05-using-amd-ip-with-third-party-synthesis-tools-80.md
+    start_line: 74
+    end_line: 78
+    start_page: null
+    end_page: null
+  - id: chapter-6
+    title: "Chapter 6: Tcl Commands for Common IP Operations............................83"
+    file: sections/ch06-tcl-commands-for-common-ip-operations-83.md
+    start_line: 79
+    end_line: 87
+    start_page: null
+    end_page: null
+  - id: appendix-a
+    title: "Appendix A: Determining Why IP is Locked.................................................. 91"
+    file: sections/app-a-determining-why-ip-is-locked-91.md
+    start_line: 88
+    end_line: 90
+    start_page: null
+    end_page: null
+  - id: appendix-b
+    title: "Appendix B: IP Files and Directory Structure............................................... 96"
+    file: sections/app-b-ip-files-and-directory-structure-96.md
+    start_line: 91
+    end_line: 99
+    start_page: null
+    end_page: null
+  - id: appendix-c
+    title: "Appendix C: Using the Platform Board Flow for IP..................................102"
+    file: sections/app-c-using-the-platform-board-flow-for-ip-102.md
+    start_line: 100
+    end_line: 102
+    start_page: null
+    end_page: null
+  - id: appendix-d
+    title: "Appendix D: Editing or Overriding IP Sources............................................108"
+    file: sections/app-d-editing-or-overriding-ip-sources-108.md
+    start_line: 103
+    end_line: 111
+    start_page: null
+    end_page: null
+  - id: appendix-e
+    title: "Appendix E: Additional Resources and Legal Notices............................113"
+    file: sections/app-e-additional-resources-and-legal-notices-113.md
+    start_line: 112
+    end_line: 5913
+    start_page: null
+    end_page: null
+sections:
+  - id: appendix-a-sec-01
+    parent: appendix-a
+    title: "Introduction"
+    file: sections/app-a-determining-why-ip-is-locked-91-sec01-introduction.md
+    start_line: 89
+    end_line: 90
+    start_page: 92
+    end_page: 92
+  - id: appendix-b-sec-01
+    parent: appendix-b
+    title: "Introduction"
+    file: sections/app-b-ip-files-and-directory-structure-96-sec01-introduction.md
+    start_line: 92
+    end_line: 93
+    start_page: 96
+    end_page: 96
+  - id: appendix-b-sec-02
+    parent: appendix-b
+    title: "IP-Generated Directories and Files"
+    file: sections/app-b-ip-files-and-directory-structure-96-sec02-ip-generated-directories-and-files.md
+    start_line: 94
+    end_line: 95
+    start_page: 96
+    end_page: 97
+  - id: appendix-b-sec-03
+    parent: appendix-b
+    title: "Files Associated with IP"
+    file: sections/app-b-ip-files-and-directory-structure-96-sec03-files-associated-with-ip.md
+    start_line: 96
+    end_line: 97
+    start_page: 98
+    end_page: 98
+  - id: appendix-b-sec-04
+    parent: appendix-b
+    title: "Using a COE File"
+    file: sections/app-b-ip-files-and-directory-structure-96-sec04-using-a-coe-file.md
+    start_line: 98
+    end_line: 99
+    start_page: 98
+    end_page: 98
+  - id: appendix-c-sec-01
+    parent: appendix-c
+    title: "Introduction"
+    file: sections/app-c-using-the-platform-board-flow-for-ip-102-sec01-introduction.md
+    start_line: 101
+    end_line: 102
+    start_page: 102
+    end_page: 102
+  - id: appendix-d-sec-01
+    parent: appendix-d
+    title: "Introduction"
+    file: sections/app-d-editing-or-overriding-ip-sources-108-sec01-introduction.md
+    start_line: 104
+    end_line: 105
+    start_page: 108
+    end_page: 108
+  - id: appendix-d-sec-02
+    parent: appendix-d
+    title: "Overriding IP Constraints"
+    file: sections/app-d-editing-or-overriding-ip-sources-108-sec02-overriding-ip-constraints.md
+    start_line: 106
+    end_line: 107
+    start_page: 108
+    end_page: 109
+  - id: appendix-d-sec-03
+    parent: appendix-d
+    title: "Editing IP Sources"
+    file: sections/app-d-editing-or-overriding-ip-sources-108-sec03-editing-ip-sources.md
+    start_line: 108
+    end_line: 109
+    start_page: 110
+    end_page: 111
+  - id: appendix-d-sec-04
+    parent: appendix-d
+    title: "Editing Subsystem IP"
+    file: sections/app-d-editing-or-overriding-ip-sources-108-sec04-editing-subsystem-ip.md
+    start_line: 110
+    end_line: 111
+    start_page: 112
+    end_page: 112
+  - id: appendix-e-sec-01
+    parent: appendix-e
+    title: "Finding Additional Documentation"
+    file: sections/app-e-additional-resources-and-legal-notices-113-sec01-finding-additional-documentation.md
+    start_line: 113
+    end_line: 114
+    start_page: 113
+    end_page: 113
+  - id: appendix-e-sec-02
+    parent: appendix-e
+    title: "Support Resources"
+    file: sections/app-e-additional-resources-and-legal-notices-113-sec02-support-resources.md
+    start_line: 115
+    end_line: 5658
+    start_page: 114
+    end_page: 114
+  - id: appendix-e-sec-03
+    parent: appendix-e
+    title: "References"
+    file: sections/app-e-additional-resources-and-legal-notices-113-sec03-references.md
+    start_line: 5659
+    end_line: 5835
+    start_page: 114
+    end_page: 115
+  - id: appendix-e-sec-04
+    parent: appendix-e
+    title: "Revision History"
+    file: sections/app-e-additional-resources-and-legal-notices-113-sec04-revision-history.md
+    start_line: 5836
+    end_line: 5863
+    start_page: 116
+    end_page: 116
+  - id: appendix-e-sec-05
+    parent: appendix-e
+    title: "Please Read: Important Legal Notices"
+    file: sections/app-e-additional-resources-and-legal-notices-113-sec05-please-read-important-legal-notices.md
+    start_line: 5864
+    end_line: 5913
+    start_page: 117
+    end_page: 117
+  - id: chapter-1-sec-01
+    parent: chapter-1
+    title: "Navigating Content by Design Process"
+    file: sections/ch01-ip-centric-design-flow-4-sec01-navigating-content-by-design-process.md
+    start_line: 18
+    end_line: 19
+    start_page: 6
+    end_page: 6
+  - id: chapter-1-sec-02
+    parent: chapter-1
+    title: "IP Terminology"
+    file: sections/ch01-ip-centric-design-flow-4-sec02-ip-terminology.md
+    start_line: 20
+    end_line: 23
+    start_page: 7
+    end_page: 7
+  - id: chapter-1-sec-03
+    parent: chapter-1
+    title: "IP Integrator"
+    file: sections/ch01-ip-centric-design-flow-4-sec03-ip-integrator.md
+    start_line: 24
+    end_line: 25
+    start_page: 8
+    end_page: 8
+  - id: chapter-1-sec-04
+    parent: chapter-1
+    title: "Using Revision and Source Control"
+    file: sections/ch01-ip-centric-design-flow-4-sec04-using-revision-and-source-control.md
+    start_line: 26
+    end_line: 27
+    start_page: 8
+    end_page: 8
+  - id: chapter-1-sec-05
+    parent: chapter-1
+    title: "Using Encryption"
+    file: sections/ch01-ip-centric-design-flow-4-sec05-using-encryption.md
+    start_line: 28
+    end_line: 29
+    start_page: 8
+    end_page: 8
+  - id: chapter-2-sec-01
+    parent: chapter-2
+    title: "Using IP Project Settings"
+    file: sections/ch02-ip-basics-9-sec01-using-ip-project-settings.md
+    start_line: 31
+    end_line: 32
+    start_page: 9
+    end_page: 16
+  - id: chapter-2-sec-02
+    parent: chapter-2
+    title: "Using the IP Catalog"
+    file: sections/ch02-ip-basics-9-sec02-using-the-ip-catalog.md
+    start_line: 33
+    end_line: 34
+    start_page: 17
+    end_page: 23
+  - id: chapter-2-sec-03
+    parent: chapter-2
+    title: "Creating an IP Customization"
+    file: sections/ch02-ip-basics-9-sec03-creating-an-ip-customization.md
+    start_line: 35
+    end_line: 36
+    start_page: 24
+    end_page: 32
+  - id: chapter-2-sec-04
+    parent: chapter-2
+    title: "Instantiating an IP"
+    file: sections/ch02-ip-basics-9-sec04-instantiating-an-ip.md
+    start_line: 37
+    end_line: 38
+    start_page: 33
+    end_page: 34
+  - id: chapter-2-sec-05
+    parent: chapter-2
+    title: "Designing with System Verilog"
+    file: sections/ch02-ip-basics-9-sec05-designing-with-system-verilog.md
+    start_line: 39
+    end_line: 40
+    start_page: 35
+    end_page: 41
+  - id: chapter-2-sec-06
+    parent: chapter-2
+    title: "Understanding IP States Within a Project"
+    file: sections/ch02-ip-basics-9-sec06-understanding-ip-states-within-a-project.md
+    start_line: 41
+    end_line: 42
+    start_page: 42
+    end_page: 42
+  - id: chapter-2-sec-07
+    parent: chapter-2
+    title: "Managing IP Constraints"
+    file: sections/ch02-ip-basics-9-sec07-managing-ip-constraints.md
+    start_line: 43
+    end_line: 44
+    start_page: 42
+    end_page: 45
+  - id: chapter-2-sec-08
+    parent: chapter-2
+    title: "Setting the Target Clock Period"
+    file: sections/ch02-ip-basics-9-sec08-setting-the-target-clock-period.md
+    start_line: 45
+    end_line: 46
+    start_page: 46
+    end_page: 49
+  - id: chapter-2-sec-09
+    parent: chapter-2
+    title: "Synthesis Options for IP"
+    file: sections/ch02-ip-basics-9-sec09-synthesis-options-for-ip.md
+    start_line: 47
+    end_line: 48
+    start_page: 50
+    end_page: 52
+  - id: chapter-2-sec-10
+    parent: chapter-2
+    title: "Simulating IP"
+    file: sections/ch02-ip-basics-9-sec10-simulating-ip.md
+    start_line: 49
+    end_line: 50
+    start_page: 53
+    end_page: 56
+  - id: chapter-2-sec-11
+    parent: chapter-2
+    title: "Upgrading IP"
+    file: sections/ch02-ip-basics-9-sec11-upgrading-ip.md
+    start_line: 51
+    end_line: 52
+    start_page: 57
+    end_page: 60
+  - id: chapter-2-sec-12
+    parent: chapter-2
+    title: "Understanding Multi-Level IP"
+    file: sections/ch02-ip-basics-9-sec12-understanding-multi-level-ip.md
+    start_line: 53
+    end_line: 54
+    start_page: 61
+    end_page: 62
+  - id: chapter-2-sec-13
+    parent: chapter-2
+    title: "Working with Debug IP"
+    file: sections/ch02-ip-basics-9-sec13-working-with-debug-ip.md
+    start_line: 55
+    end_line: 56
+    start_page: 63
+    end_page: 64
+  - id: chapter-2-sec-14
+    parent: chapter-2
+    title: "Using a Core Container"
+    file: sections/ch02-ip-basics-9-sec14-using-a-core-container.md
+    start_line: 57
+    end_line: 58
+    start_page: 65
+    end_page: 65
+  - id: chapter-3-sec-01
+    parent: chapter-3
+    title: "Using the Manage IP Flow"
+    file: sections/ch03-using-manage-ip-projects-72-sec01-using-the-manage-ip-flow.md
+    start_line: 60
+    end_line: 61
+    start_page: 72
+    end_page: 72
+  - id: chapter-4-sec-01
+    parent: chapter-4
+    title: "Introduction"
+    file: sections/ch04-using-ip-example-designs-77-sec01-introduction.md
+    start_line: 63
+    end_line: 65
+    start_page: 77
+    end_page: 78
+  - id: chapter-4-sec-02
+    parent: chapter-4
+    title: "Examining Standalone IP"
+    file: sections/ch04-using-ip-example-designs-77-sec02-examining-standalone-ip.md
+    start_line: 66
+    end_line: 73
+    start_page: 79
+    end_page: 79
+  - id: chapter-5-sec-01
+    parent: chapter-5
+    title: "Third-Party Synthesis Flow"
+    file: sections/ch05-using-amd-ip-with-third-party-synthesis-tools-80-sec01-third-party-synthesis-flow.md
+    start_line: 75
+    end_line: 76
+    start_page: 80
+    end_page: 81
+  - id: chapter-5-sec-02
+    parent: chapter-5
+    title: "Introduction"
+    file: sections/ch05-using-amd-ip-with-third-party-synthesis-tools-80-sec02-introduction.md
+    start_line: 77
+    end_line: 78
+    start_page: 82
+    end_page: 82
+  - id: chapter-6-sec-01
+    parent: chapter-6
+    title: "Introduction"
+    file: sections/ch06-tcl-commands-for-common-ip-operations-83-sec01-introduction.md
+    start_line: 80
+    end_line: 81
+    start_page: 83
+    end_page: 83
+  - id: chapter-6-sec-02
+    parent: chapter-6
+    title: "Using IP Tcl Commands In Design Flows"
+    file: sections/ch06-tcl-commands-for-common-ip-operations-83-sec02-using-ip-tcl-commands-in-design-flows.md
+    start_line: 82
+    end_line: 83
+    start_page: 83
+    end_page: 84
+  - id: chapter-6-sec-03
+    parent: chapter-6
+    title: "Tcl Commands for Common IP Operations"
+    file: sections/ch06-tcl-commands-for-common-ip-operations-83-sec03-tcl-commands-for-common-ip-operations.md
+    start_line: 84
+    end_line: 85
+    start_page: 85
+    end_page: 86
+  - id: chapter-6-sec-04
+    parent: chapter-6
+    title: "Example IP Flow Commands"
+    file: sections/ch06-tcl-commands-for-common-ip-operations-83-sec04-example-ip-flow-commands.md
+    start_line: 86
+    end_line: 87
+    start_page: 87
+    end_page: 87

@@ -1,0 +1,398 @@
+source: .codex/skills/fpga-vivado-vitis-structure/references/ug892/ug892.full.md
+generated_by: split_sections.py
+chapters:
+  - id: chapter-1
+    title: "Chapter 1: Vivado System-Level Design Flows"
+    file: sections/ch01-vivado-system-level-design-flows.md
+    start_line: 17
+    end_line: 27
+    start_page: 4
+    end_page: 15
+  - id: chapter-2
+    title: "Chapter 2: Understanding Use Models"
+    file: sections/ch02-understanding-use-models.md
+    start_line: 28
+    end_line: 40
+    start_page: 16
+    end_page: 27
+  - id: chapter-3
+    title: "Chapter 3: Using Project Mode"
+    file: sections/ch03-using-project-mode.md
+    start_line: 41
+    end_line: 65
+    start_page: 28
+    end_page: 74
+  - id: chapter-4
+    title: "Chapter 4: Using Non-Project Mode"
+    file: sections/ch04-using-non-project-mode.md
+    start_line: 66
+    end_line: 3868
+    start_page: 75
+    end_page: 84
+  - id: chapter-5
+    title: "Chapter 5: Source Management and Revision Control Recommendations"
+    file: sections/ch05-source-management-and-revision-control-recommendations.md
+    start_line: 3869
+    end_line: 4279
+    start_page: 85
+    end_page: 91
+  - id: appendix-a
+    title: "Appendix A: Additional Resources and Legal Notices"
+    file: sections/app-a-additional-resources-and-legal-notices.md
+    start_line: 4280
+    end_line: 4526
+    start_page: 92
+    end_page: None
+sections:
+  - id: chapter-1-sec-01
+    parent: chapter-1
+    title: "Navigating Content by Design Process"
+    file: sections/ch01-vivado-system-level-design-flows-sec01-navigating-content-by-design-process.md
+    start_line: 18
+    end_line: 19
+    start_page: 5
+    end_page: 4
+  - id: chapter-1-sec-02
+    parent: chapter-1
+    title: "Industry Standards-Based Design"
+    file: sections/ch01-vivado-system-level-design-flows-sec02-industry-standards-based-design.md
+    start_line: 20
+    end_line: 21
+    start_page: 5
+    end_page: 5
+  - id: chapter-1-sec-03
+    parent: chapter-1
+    title: "Design Flows"
+    file: sections/ch01-vivado-system-level-design-flows-sec03-design-flows.md
+    start_line: 22
+    end_line: 23
+    start_page: 6
+    end_page: 8
+  - id: chapter-1-sec-04
+    parent: chapter-1
+    title: "RTL-to-Bitstream Design Flow"
+    file: sections/ch01-vivado-system-level-design-flows-sec04-rtl-to-bitstream-design-flow.md
+    start_line: 24
+    end_line: 25
+    start_page: 9
+    end_page: 12
+  - id: chapter-1-sec-05
+    parent: chapter-1
+    title: "Alternate RTL-to-Bitstream Design Flows"
+    file: sections/ch01-vivado-system-level-design-flows-sec05-alternate-rtl-to-bitstream-design-flows.md
+    start_line: 26
+    end_line: 27
+    start_page: 13
+    end_page: 15
+  - id: chapter-2-sec-01
+    parent: chapter-2
+    title: "Vivado Design Suite Use Models"
+    file: sections/ch02-understanding-use-models-sec01-vivado-design-suite-use-models.md
+    start_line: 29
+    end_line: 30
+    start_page: 16
+    end_page: 16
+  - id: chapter-2-sec-02
+    parent: chapter-2
+    title: "Working with the Vivado Integrated Design Environment (IDE)"
+    file: sections/ch02-understanding-use-models-sec02-working-with-the-vivado-integrated-design-environment-ide.md
+    start_line: 31
+    end_line: 32
+    start_page: 17
+    end_page: 18
+  - id: chapter-2-sec-03
+    parent: chapter-2
+    title: "Working with Tcl"
+    file: sections/ch02-understanding-use-models-sec03-working-with-tcl.md
+    start_line: 33
+    end_line: 34
+    start_page: 19
+    end_page: 20
+  - id: chapter-2-sec-04
+    parent: chapter-2
+    title: "Understanding Project Mode and Non-Project Mode"
+    file: sections/ch02-understanding-use-models-sec04-understanding-project-mode-and-non-project-mode.md
+    start_line: 35
+    end_line: 36
+    start_page: 21
+    end_page: 24
+  - id: chapter-2-sec-05
+    parent: chapter-2
+    title: "Using Third-Party Design Software Tools"
+    file: sections/ch02-understanding-use-models-sec05-using-third-party-design-software-tools.md
+    start_line: 37
+    end_line: 38
+    start_page: 25
+    end_page: 25
+  - id: chapter-2-sec-06
+    parent: chapter-2
+    title: "Interfacing with PCB Designers"
+    file: sections/ch02-understanding-use-models-sec06-interfacing-with-pcb-designers.md
+    start_line: 39
+    end_line: 40
+    start_page: 26
+    end_page: 27
+  - id: chapter-3-sec-01
+    parent: chapter-3
+    title: "Project Mode Advantages"
+    file: sections/ch03-using-project-mode-sec01-project-mode-advantages.md
+    start_line: 42
+    end_line: 43
+    start_page: 29
+    end_page: 29
+  - id: chapter-3-sec-02
+    parent: chapter-3
+    title: "Creating Projects"
+    file: sections/ch03-using-project-mode-sec02-creating-projects.md
+    start_line: 44
+    end_line: 45
+    start_page: 30
+    end_page: 31
+  - id: chapter-3-sec-03
+    parent: chapter-3
+    title: "Understanding the Flow Navigator"
+    file: sections/ch03-using-project-mode-sec03-understanding-the-flow-navigator.md
+    start_line: 46
+    end_line: 47
+    start_page: 32
+    end_page: 34
+  - id: chapter-3-sec-04
+    parent: chapter-3
+    title: "Performing System-Level Design Entry"
+    file: sections/ch03-using-project-mode-sec04-performing-system-level-design-entry.md
+    start_line: 48
+    end_line: 49
+    start_page: 35
+    end_page: 37
+  - id: chapter-3-sec-05
+    parent: chapter-3
+    title: "Working with IP"
+    file: sections/ch03-using-project-mode-sec05-working-with-ip.md
+    start_line: 50
+    end_line: 51
+    start_page: 38
+    end_page: 43
+  - id: chapter-3-sec-06
+    parent: chapter-3
+    title: "Creating IP Subsystems with IP Integrator"
+    file: sections/ch03-using-project-mode-sec06-creating-ip-subsystems-with-ip-integrator.md
+    start_line: 52
+    end_line: 53
+    start_page: 44
+    end_page: 47
+  - id: chapter-3-sec-07
+    parent: chapter-3
+    title: "Logic Simulation"
+    file: sections/ch03-using-project-mode-sec07-logic-simulation.md
+    start_line: 54
+    end_line: 55
+    start_page: 48
+    end_page: 52
+  - id: chapter-3-sec-08
+    parent: chapter-3
+    title: "Running Logic Synthesis and Implementation"
+    file: sections/ch03-using-project-mode-sec08-running-logic-synthesis-and-implementation.md
+    start_line: 56
+    end_line: 57
+    start_page: 53
+    end_page: 57
+  - id: chapter-3-sec-09
+    parent: chapter-3
+    title: "Viewing Log Files, Messages, Reports, and Properties"
+    file: sections/ch03-using-project-mode-sec09-viewing-log-files-messages-reports-and-properties.md
+    start_line: 58
+    end_line: 59
+    start_page: 58
+    end_page: 59
+  - id: chapter-3-sec-10
+    parent: chapter-3
+    title: "Opening Designs to Perform Design Analysis and Constraints Definition"
+    file: sections/ch03-using-project-mode-sec10-opening-designs-to-perform-design-analysis-and-constraints-definition.md
+    start_line: 60
+    end_line: 61
+    start_page: 60
+    end_page: 70
+  - id: chapter-3-sec-11
+    parent: chapter-3
+    title: "Device Programming, Hardware Verification, and Debugging"
+    file: sections/ch03-using-project-mode-sec11-device-programming-hardware-verification-and-debugging.md
+    start_line: 62
+    end_line: 63
+    start_page: 71
+    end_page: 71
+  - id: chapter-3-sec-12
+    parent: chapter-3
+    title: "Using Project Mode Tcl Commands"
+    file: sections/ch03-using-project-mode-sec12-using-project-mode-tcl-commands.md
+    start_line: 64
+    end_line: 65
+    start_page: 72
+    end_page: 74
+  - id: chapter-4-sec-01
+    parent: chapter-4
+    title: "Non-Project Mode Advantages"
+    file: sections/ch04-using-non-project-mode-sec01-non-project-mode-advantages.md
+    start_line: 67
+    end_line: 68
+    start_page: 76
+    end_page: 76
+  - id: chapter-4-sec-02
+    parent: chapter-4
+    title: "Reading Design Sources"
+    file: sections/ch04-using-non-project-mode-sec02-reading-design-sources.md
+    start_line: 69
+    end_line: 76
+    start_page: 77
+    end_page: 77
+  - id: chapter-4-sec-03
+    parent: chapter-4
+    title: "Working with IP and IP Subsystems"
+    file: sections/ch04-using-non-project-mode-sec03-working-with-ip-and-ip-subsystems.md
+    start_line: 77
+    end_line: 78
+    start_page: 78
+    end_page: 77
+  - id: chapter-4-sec-04
+    parent: chapter-4
+    title: "Running Logic Simulation"
+    file: sections/ch04-using-non-project-mode-sec04-running-logic-simulation.md
+    start_line: 79
+    end_line: 80
+    start_page: 78
+    end_page: 78
+  - id: chapter-4-sec-05
+    parent: chapter-4
+    title: "Running Logic Synthesis and Implementation"
+    file: sections/ch04-using-non-project-mode-sec05-running-logic-synthesis-and-implementation.md
+    start_line: 81
+    end_line: 82
+    start_page: 79
+    end_page: 78
+  - id: chapter-4-sec-06
+    parent: chapter-4
+    title: "Generating Reports"
+    file: sections/ch04-using-non-project-mode-sec06-generating-reports.md
+    start_line: 83
+    end_line: 84
+    start_page: 79
+    end_page: 79
+  - id: chapter-4-sec-07
+    parent: chapter-4
+    title: "Using Design Checkpoints"
+    file: sections/ch04-using-non-project-mode-sec07-using-design-checkpoints.md
+    start_line: 85
+    end_line: 86
+    start_page: 80
+    end_page: 79
+  - id: chapter-4-sec-08
+    parent: chapter-4
+    title: "Performing Design Analysis Using the Vivado IDE"
+    file: sections/ch04-using-non-project-mode-sec08-performing-design-analysis-using-the-vivado-ide.md
+    start_line: 87
+    end_line: 88
+    start_page: 80
+    end_page: 81
+  - id: chapter-4-sec-09
+    parent: chapter-4
+    title: "Using Non-Project Mode Tcl Commands"
+    file: sections/ch04-using-non-project-mode-sec09-using-non-project-mode-tcl-commands.md
+    start_line: 89
+    end_line: 3868
+    start_page: 82
+    end_page: 84
+  - id: chapter-5-sec-01
+    parent: chapter-5
+    title: "Interfacing with Revision Control Systems"
+    file: sections/ch05-source-management-and-revision-control-recommendations-sec01-interfacing-with-revision-control-systems.md
+    start_line: 3876
+    end_line: 3890
+    start_page: 85
+    end_page: 84
+  - id: chapter-5-sec-02
+    parent: chapter-5
+    title: "Project vs. Non-Project Build Methodologies"
+    file: sections/ch05-source-management-and-revision-control-recommendations-sec02-project-vs-non-project-build-methodologies.md
+    start_line: 3891
+    end_line: 3910
+    start_page: 85
+    end_page: 85
+  - id: chapter-5-sec-03
+    parent: chapter-5
+    title: "Project Source Types"
+    file: sections/ch05-source-management-and-revision-control-recommendations-sec03-project-source-types.md
+    start_line: 3911
+    end_line: 3990
+    start_page: 86
+    end_page: 86
+  - id: chapter-5-sec-04
+    parent: chapter-5
+    title: "Methods to Revision Control a Project"
+    file: sections/ch05-source-management-and-revision-control-recommendations-sec04-methods-to-revision-control-a-project.md
+    start_line: 3991
+    end_line: 4204
+    start_page: 87
+    end_page: 89
+  - id: chapter-5-sec-05
+    parent: chapter-5
+    title: "Other Files to Revision Control"
+    file: sections/ch05-source-management-and-revision-control-recommendations-sec05-other-files-to-revision-control.md
+    start_line: 4205
+    end_line: 4234
+    start_page: 90
+    end_page: 90
+  - id: chapter-5-sec-06
+    parent: chapter-5
+    title: "Output Files to Optionally Revision Control"
+    file: sections/ch05-source-management-and-revision-control-recommendations-sec06-output-files-to-optionally-revision-control.md
+    start_line: 4235
+    end_line: 4279
+    start_page: 91
+    end_page: 91
+  - id: appendix-a-sec-01
+    parent: appendix-a
+    title: "Finding Additional Documentation"
+    file: sections/app-a-additional-resources-and-legal-notices-sec01-finding-additional-documentation.md
+    start_line: 4287
+    end_line: 4297
+    start_page: 92
+    end_page: 92
+  - id: appendix-a-sec-02
+    parent: appendix-a
+    title: "Support Resources"
+    file: sections/app-a-additional-resources-and-legal-notices-sec02-support-resources.md
+    start_line: 4298
+    end_line: 4330
+    start_page: 93
+    end_page: 92
+  - id: appendix-a-sec-03
+    parent: appendix-a
+    title: "References"
+    file: sections/app-a-additional-resources-and-legal-notices-sec03-references.md
+    start_line: 4331
+    end_line: 4412
+    start_page: 93
+    end_page: 93
+  - id: appendix-a-sec-04
+    parent: appendix-a
+    title: "Training Resources"
+    file: sections/app-a-additional-resources-and-legal-notices-sec04-training-resources.md
+    start_line: 4413
+    end_line: 4453
+    start_page: 94
+    end_page: 94
+  - id: appendix-a-sec-05
+    parent: appendix-a
+    title: "Revision History"
+    file: sections/app-a-additional-resources-and-legal-notices-sec05-revision-history.md
+    start_line: 4454
+    end_line: 4467
+    start_page: 95
+    end_page: 94
+  - id: appendix-a-sec-06
+    parent: appendix-a
+    title: "Please Read: Important Legal Notices"
+    file: sections/app-a-additional-resources-and-legal-notices-sec06-please-read-important-legal-notices.md
+    start_line: 4468
+    end_line: 4526
+    start_page: 95
+    end_page: None

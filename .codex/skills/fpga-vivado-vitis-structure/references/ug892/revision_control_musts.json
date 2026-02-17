@@ -1,0 +1,78 @@
+[
+  {
+    "id": "external-sources-preferred",
+    "rule": "Keep RTL/XDC/DCP sources external to the Vivado project and add them with add_* commands instead of import_*.",
+    "snippets": [
+      "Project Source Types RTL, XDC, and DCP In general, it is recommended that all design sources including RTL, XDC, and DCP files be kept",
+      "RTL, XDC, and DCP In general, it is recommended that all design sources including RTL, XDC, and DCP files be kept external to the project, and revision controlled independently of the Vivado project. The files should be imported into the project using the add_* tcl commands as opposed to added to the",
+      "In general, it is recommended that all design sources including RTL, XDC, and DCP files be kept external to the project, and revision controlled independently of the Vivado project. The files should be imported into the project using the add_* tcl commands as opposed to added to the project using the import_*.",
+      "external to the project, and revision controlled independently of the Vivado project. The files should be imported into the project using the add_* tcl commands as opposed to added to the project using the import_*. XCI"
+    ],
+    "related_sections": [
+      "Project Source Types (sections/ch05-source-management-and-revision-control-recommendations-sec03-project-source-types.md)"
+    ]
+  },
+  {
+    "id": "ip-xci-plus-repo",
+    "rule": "Preserve IP repositories together with XCI files; generated outputs are optional unless intentionally locking IP/version state.",
+    "snippets": [
+      "\u2022 Use IP in either Project or Non-Project modes by importing or reading the created Xilinx core instance (XCI) file. This is the recommended method for large projects with many team members.",
+      "You can double-click any IP to launch the Configuration wizard to instantiate an IP into your design. After configuring the IP, a Xilinx core instance (.xci) file is created. This file contains all the customization options for the IP. From this file the tool can generate all output products for the IP. These output products consist of HDL for synthesis and simulation, constraints, possibly",
+      "The optional Core Container feature helps simplify working with revision control systems by providing a single file representation of an IP. By enabling this option, you can store IP configuration files (XCI) and output products in a single, binary IP core container file (XCIX) rather than a loose directory structure. The XCIX file is similar to the XCI file and works in a similar way in the tool. For more information on using IP core containers, see the Vivado Design Suite User",
+      "by providing a single file representation of an IP. By enabling this option, you can store IP configuration files (XCI) and output products in a single, binary IP core container file (XCIX) rather than a loose directory structure. The XCIX file is similar to the XCI file and works in a similar way in the tool. For more information on using IP core containers, see the Vivado Design Suite User Guide: Designing with IP (UG896)."
+    ],
+    "related_sections": [
+      "Project Source Types (sections/ch05-source-management-and-revision-control-recommendations-sec03-project-source-types.md)"
+    ]
+  },
+  {
+    "id": "bd-file-or-write-bd-tcl",
+    "rule": "For block designs, preserve the BD definition and keep required IP repos available; write_bd_tcl is a supported recreation method.",
+    "snippets": [
+      "files or other global source files that might be in the source directory. All source file types within a specified directory or directory tree can be added with the File \u2192 Add Sources command. The Vivado IDE scans directories and subdirectories and imports any file with an extension matching the set of known sources types.",
+      "Creating IP Subsystems with IP Integrator The Vivado IP integrator enables the creation of Block Designs (.bd), or IP subsystems with multiple IP stitched together using the AXI4 interconnect protocol. The IP integrator lets you quickly connect IP cores to create domain specific subsystems and designs, including embedded",
+      "Using Vivado IP integrator you can drag and drop IP onto the design canvas, connect AXI interfaces with one wire, and place ports and interface ports to connect the IP subsystem to the top-level design. These IP block designs can also be packaged as sources (.bd) and reused in other designs. For more information, see the Vivado Design Suite User Guide: Designing IP Subsystems Using IP Integrator (UG994) or MicroBlaze Processor Embedded Design User Guide",
+      "be set incorrectly. The tool can catch these types of errors by running a more thorough design validation. You can run design validation by selecting Tools \u2192 Validate Design or through the Tcl command validate_bd_design. The Validate Design command applies design rule checks on the block design and reports"
+    ],
+    "related_sections": [
+      "Project Source Types (sections/ch05-source-management-and-revision-control-recommendations-sec03-project-source-types.md)"
+    ]
+  },
+  {
+    "id": "script-based-preferred-for-clean-git",
+    "rule": "Use a script-based project recreation flow for minimal Git state, and keep recreation scripts versioned and tested regularly.",
+    "snippets": [
+      "scripts are up to date and the correct steps are re-run properly as sources are modified. This chapter will primarily focus on how you should revision control Vivado projects, but, non-project customers closely align to the script-based (project) method of revision controlling a Vivado project described in the following sections. Although revision control should not dictate how your designs are compiled, it is very important to understand the relationship between your",
+      "Methods to Revision Control a Project There are two primary methods for revision controlling a project: a script-based method and a source-based method. The script-based method focuses on recreating the project from its sources using a Tcl script. The source-based method revision controls the project sources and the",
+      "There are two primary methods for revision controlling a project: a script-based method and a source-based method. The script-based method focuses on recreating the project from its sources using a Tcl script. The source-based method revision controls the project sources and the project file (.xpr) directly.",
+      "drawback to this method is the large amount of disk space required. Script-based Revision Control Methodology The following steps outline how revision controlling a project using a script-based method can be"
+    ],
+    "related_sections": [
+      "Methods to Revision Control a Project (sections/ch05-source-management-and-revision-control-recommendations-sec04-methods-to-revision-control-a-project.md)"
+    ]
+  },
+  {
+    "id": "optional-output-files",
+    "rule": "Optionally revision-control handoff and debug outputs (XSA, bitstream/PDI, LTX, intermediate DCPs, IP outputs) when needed for delivery workflows.",
+    "snippets": [
+      "separately. Output Files to Optionally Revision Control Following is a list of additional files you might consider revision controlling:",
+      "them at different stages of the design process. \u2022 XSA files. These are hardware hand-off files between Vivado and AMD Vitis\u2122 software platform.",
+      "platform. \u2022 Bitsteams/PDIs. \u2022 LTX files for hardware debug.",
+      "\u2022 Bitsteams/PDIs. \u2022 LTX files for hardware debug. \u2022 Intermediate DCP files created during the flow."
+    ],
+    "related_sections": [
+      "Output Files to Optionally Revision Control (sections/ch05-source-management-and-revision-control-recommendations-sec06-output-files-to-optionally-revision-control.md)"
+    ]
+  },
+  {
+    "id": "archive-project-for-portable-snapshot",
+    "rule": "Use archive_project to produce portable full-project zip snapshots, including optional run results and remote sources.",
+    "snippets": [
+      "\u2022 Experimentation with multiple synthesis and implementation runs \u2022 Run results management and status Non-Project Mode, is more of a compilation methodology where you have complete control over",
+      "strategies and generates standard reports. This enables consolidation of implementation commands, standard reporting, use of run strategies, and run status tracking. However, you can also run custom Tcl commands before or after each step of the design process. Run results are automatically stored and managed within the project. In Non-Project Mode, individual commands must be run, such as opt_design, place_design, and route_design.",
+      "Using Remote, Read-Only Sources The Vivado Design Suite can utilize remote source files when creating projects or when read in Non-Project Mode. Source files can be read-only, which compiles the files in memory but does not allow changes to be saved to the original files. Source files can be saved to a different",
+      "In the Vivado IDE, select File \u2192 Project \u2192 Archive to create a ZIP file for the entire project, including the source files, IP, design configuration, and optionally the run result data. If the project uses remote sources, the files are copied into the project locally to ensure that the archived project includes all files."
+    ],
+    "related_sections": []
+  }
+]

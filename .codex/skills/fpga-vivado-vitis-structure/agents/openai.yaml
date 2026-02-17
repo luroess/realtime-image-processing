@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vivado/Vitis Structure Mapper"
+  short_description: "Map Vivado hw, Vitis IDE, and Sobel reference trees"
+  default_prompt: "Use $fpga-vivado-vitis-structure to map this repos Vivado and Vitis project structure and identify source-vs-generated paths."

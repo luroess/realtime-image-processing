@@ -46,7 +46,10 @@ sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
 description = "Debounced Click Detector checks."
 toplevel    = "debouncedclickdetector"
 test_module = "tests.test_debounced_click_detector"
-sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
+sources     = [
+  "rtl/DEBOUNCER/hdl/*.vhd",
+  "rtl/CLICK_DETECTOR/hdl/*.vhd",
+]
 
   [targets.test_debounced_click_detector.parameters]
   G_DEBOUNCE_NS = 100
@@ -78,4 +81,24 @@ sources     = [
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 512
   G_NUM_ROW = 512
+  G_SOBEL_THRESHOLD = 200
+
+[targets.axi_filter_wrapper_stress]
+description = "AXI4-Stream wrapper stress checks with reduced geometry."
+toplevel    = "axi_filterwrapper"
+test_module = "tests.test_axi_filter_wrapper"
+waves       = false
+sources     = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/SOBEL_FILTER/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/FILTER_WRAPPER/hdl/axi_filter_wrapper.vhd",
+]
+
+  [targets.axi_filter_wrapper_stress.parameters]
+  G_FILTER_SELECT = 0
+  G_PIXEL_WIDTH = 8
+  G_KERNEL_SIZE = 3
+  G_LINE_WIDTH = 128
+  G_NUM_ROW = 128
   G_SOBEL_THRESHOLD = 200
