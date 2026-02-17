@@ -68,11 +68,23 @@ class AxiWindowStreamSink:
         Returns a list of NumPy arrays of shape (wndw_size, wndw_size, 3).
         """
 
-        #print("Line data is:", frame.tdata)
-        raw = int.from_bytes(frame.tdata, byteorder="little")
-
         wndw_pixels = wndw_size * wndw_size
         wndw_bits = wndw_pixels * pxl_width
+        if wndw_bits % 8 != 0:
+            raise AssertionError(
+                f"Unsupported window payload width={wndw_bits} bits (must be byte-aligned)",
+            )
+        wndw_bytes = wndw_bits // 8
+        expected_bytes = width * wndw_bytes
+
+        data = bytes(frame.tdata)
+        if len(data) != expected_bytes:
+            raise AssertionError(
+                "Line length mismatch on AXI stream: "
+                f"got {len(data)} bytes, expected {expected_bytes}",
+            )
+
+        raw = int.from_bytes(data, byteorder="little")
 
         windows: list[np.ndarray] = []
 
@@ -86,16 +98,25 @@ class AxiWindowStreamSink:
             for i in range(wndw_pixels):
                 p_val = (wndw_val >> (i * pxl_width)) & ((1 << pxl_width) - 1)
 
-                # RGB24 assumed
-                b = p_val & 0xFF
-                g = (p_val >> 8) & 0xFF
-                r = (p_val >> 16) & 0xFF
+                if pxl_width == 24:
+                    b = p_val & 0xFF
+                    g = (p_val >> 8) & 0xFF
+                    r = (p_val >> 16) & 0xFF
+                elif pxl_width == 8:
+                    y_gray = p_val & 0xFF
+                    r = y_gray
+                    g = y_gray
+                    b = y_gray
+                else:
+                    raise AssertionError(
+                        f"Unsupported pxl_width={pxl_width}; expected 8 or 24",
+                    )
 
                 y = i // wndw_size
                 x = i % wndw_size
                 wndw[y, x] = (r, g, b)
 
-            print("Curr wndw:", wndw)
+            #print("Curr wndw:", wndw)
             windows.append(wndw)
 
         return windows

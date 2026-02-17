@@ -66,7 +66,7 @@ class AxiWindowGraySource:
             if y == 0 and tuser:
                 tuser[0:9] = [1] * min(9, len(tuser))
 
-            await self._source.send(AxiStreamFrame(tdata=line_bytes, tuser=tuser))
+            await self._source.send(AxiStreamFrame(tdata=bytes(line_bytes), tuser=tuser))
 
         await self._source.wait()
         self._drive_idle_known()
