@@ -15,9 +15,9 @@ from monitors.axis_lowpass_monitor import AxisLowpassMonitor
 from PIL import Image as PILImage
 from verification.lowpass_scoreboard import LowpassScoreboard
 
-CLK_SIGNAL = "clk"
-RST_N_SIGNAL = "rst_n"
-S_AXIS_PREFIX = "s_axis_lowpass"
+CLK_SIGNAL = "i_aclk"
+RST_N_SIGNAL = "i_aresetn"
+S_AXIS_PREFIX = "s_axis_window"
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 RESET_ACTIVE_LEVEL = False
@@ -72,7 +72,7 @@ async def test_lowpass_filter_from_folder_image(dut) -> None:
         dut=dut,
         i_clk=i_clk,
         i_rst_n=i_rst_n,
-        prefix="m_axis_lowpass",
+        prefix="m_axis_video",
         reset_active_level=int(RESET_ACTIVE_LEVEL),
     )
 

@@ -7,22 +7,24 @@ entity LowpassFilter is
     G_PIXEL_WIDTH : integer := 8
   );
   port (
-    clk   : in std_logic;
-    rst_n : in std_logic;
+    i_aclk   : in std_logic;
+    i_aresetn : in std_logic;
+
+    i_pass_through : in std_logic;
 
     -- AXI SLAVE
-    s_axis_lowpass_tvalid : in std_logic;
-    s_axis_lowpass_tready : out std_logic;
-    s_axis_lowpass_tdata  : in std_logic_vector (9 * G_PIXEL_WIDTH - 1 downto 0);
-    s_axis_lowpass_tlast  : in std_logic;
-    s_axis_lowpass_tuser  : in std_logic;
+    s_axis_window_tvalid : in std_logic;
+    s_axis_window_tready : out std_logic;
+    s_axis_window_tdata  : in std_logic_vector (9 * G_PIXEL_WIDTH - 1 downto 0);
+    s_axis_window_tlast  : in std_logic; --EOF
+    s_axis_window_tuser  : in std_logic; -- SOF
 
     -- AXI MASTER
-    m_axis_lowpass_tready : in std_logic;
-    m_axis_lowpass_tvalid : out std_logic;
-    m_axis_lowpass_tdata  : out std_logic_vector (G_PIXEL_WIDTH - 1 downto 0);
-    m_axis_lowpass_tlast  : out std_logic;
-    m_axis_lowpass_tuser  : out std_logic
+    m_axis_video_tready : in std_logic; -- TODO: Align naming!
+    m_axis_video_tvalid : out std_logic;
+    m_axis_video_tdata  : out std_logic_vector (G_PIXEL_WIDTH - 1 downto 0);
+    m_axis_video_tlast  : out std_logic;
+    m_axis_video_tuser  : out std_logic
   );
 end entity;
 
@@ -54,44 +56,19 @@ architecture A_Rtl of LowpassFilter is
   end function;
 
 begin
-  s_axis_lowpass_tready <= '1' when (rst_n = '1') and (r_state = IDLE) else
-    '0';
+  -- Single-cycle combinational path: accept upstream data only when
+  -- downstream is ready, and assert master valid directly from slave valid.
+  s_axis_window_tready <= m_axis_video_tready and i_aresetn;
+  m_axis_video_tvalid  <= s_axis_window_tvalid and i_aresetn;
 
-  m_axis_lowpass_tvalid <= r_m_tvalid;
-  m_axis_lowpass_tdata  <= r_m_tdata;
-  m_axis_lowpass_tlast  <= r_m_tlast;
-  m_axis_lowpass_tuser  <= r_m_tuser;
+  m_axis_video_tdata <= f_lowpass_avg_3x3(s_axis_window_tdata)
+                        when s_axis_window_tvalid = '1'
+                        else (others => '0');
+  m_axis_video_tlast <= s_axis_window_tlast
+                        when s_axis_window_tvalid = '1'
+                        else '0';
+  m_axis_video_tuser <= s_axis_window_tuser
+                        when s_axis_window_tvalid = '1'
+                        else '0';
 
-  p_fsm : process (clk)
-  begin
-    if rising_edge(clk) then
-      if rst_n = '0' then
-        r_state    <= IDLE;
-        r_m_tvalid <= '0';
-        r_m_tdata  <= (others => '0');
-        r_m_tlast  <= '0';
-        r_m_tuser  <= '0';
-      else
-        case r_state is
-          when IDLE =>
-            r_m_tvalid <= '0';
-
-            if s_axis_lowpass_tvalid = '1' then
-              r_m_tdata  <= f_lowpass_avg_3x3(s_axis_lowpass_tdata);
-              r_m_tlast  <= s_axis_lowpass_tlast;
-              r_m_tuser  <= s_axis_lowpass_tuser;
-              r_m_tvalid <= '1';
-              r_state    <= FILTER_OUTPUT;
-            end if;
-
-          when FILTER_OUTPUT =>
-            if (r_m_tvalid = '1') and (m_axis_lowpass_tready = '1') then
-              r_m_tvalid <= '0';
-              r_state    <= IDLE;
-            end if;
-
-        end case;
-      end if;
-    end if;
-  end process;
 end architecture A_Rtl;
