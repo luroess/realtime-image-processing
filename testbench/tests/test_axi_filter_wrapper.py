@@ -33,7 +33,7 @@ def _sim_artifact_dir() -> Path:
     results_file = os.getenv("COCOTB_RESULTS_FILE")
     if results_file:
         return Path(results_file).resolve().parent
-    return TESTBENCH_ROOT / "sim_build" / "test_axi_windowed_filter_wrapper"
+    return TESTBENCH_ROOT / "sim_build" / "test_axi_filter_wrapper"
 
 
 def _gray_plane_to_image(gray_plane: np.ndarray) -> Image:

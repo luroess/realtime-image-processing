@@ -1,7 +1,7 @@
 library ieee;
   use ieee.std_logic_1164.all;
 
-entity AXI_WindowedFilterWrapper is
+entity AXI_FilterWrapper is
   generic (
     -- 0: Sobel, 1: Blur placeholder
     G_FILTER_SELECT  : natural := 0;
@@ -35,7 +35,7 @@ entity AXI_WindowedFilterWrapper is
   );
 end entity;
 
-architecture A_Rtl of AXI_WindowedFilterWrapper is
+architecture A_Rtl of AXI_FilterWrapper is
   constant C_FILTER_SOBEL : natural := 0;
   constant C_FILTER_BLUR  : natural := 1;
   constant C_WINDOW_DATA_WIDTH : positive := G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH;
@@ -58,10 +58,10 @@ architecture A_Rtl of AXI_WindowedFilterWrapper is
 begin
   -- AXI_SobelFilter currently requires 3x3 windows with 8-bit grayscale pixels
   assert G_KERNEL_SIZE = 3
-    report "AXI_WindowedFilterWrapper with AXI_SobelFilter requires G_KERNEL_SIZE=3."
+    report "AXI_FilterWrapper with AXI_SobelFilter requires G_KERNEL_SIZE=3."
     severity failure;
   assert G_PIXEL_WIDTH = 8
-    report "AXI_WindowedFilterWrapper with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
+    report "AXI_FilterWrapper with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
     severity failure;
 
   ---------------------------------------------------------------------------
@@ -102,16 +102,16 @@ begin
       port map (
         i_aclk               => i_aclk,
         i_aresetn            => i_aresetn,
-        s_axis_filter8_tvalid  => s_wndw_tvalid,
-        s_axis_filter8_tready  => s_wndw_tready,
-        s_axis_filter8_tdata   => s_wndw_tdata,
-        s_axis_filter8_tuser   => s_wndw_tuser,
-        s_axis_filter8_tlast   => s_wndw_tlast,
-        m_axis_window_tvalid => s_sobel_tvalid,
-        m_axis_window_tready => m_axis_filter8_tready,
-        m_axis_window_tdata  => s_sobel_tdata,
-        m_axis_window_tuser  => s_sobel_tuser,
-        m_axis_window_tlast  => s_sobel_tlast
+        s_axis_window_tvalid  => s_wndw_tvalid,
+        s_axis_window_tready  => s_wndw_tready,
+        s_axis_window_tdata   => s_wndw_tdata,
+        s_axis_window_tuser   => s_wndw_tuser,
+        s_axis_window_tlast   => s_wndw_tlast,
+        m_axis_filter8_tvalid => s_sobel_tvalid,
+        m_axis_filter8_tready => m_axis_filter8_tready,
+        m_axis_filter8_tdata  => s_sobel_tdata,
+        m_axis_filter8_tuser  => s_sobel_tuser,
+        m_axis_filter8_tlast  => s_sobel_tlast
       );
 
     m_axis_filter8_tvalid <= s_sobel_tvalid;
