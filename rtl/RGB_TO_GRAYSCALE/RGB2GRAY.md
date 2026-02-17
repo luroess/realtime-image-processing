@@ -4,7 +4,7 @@
 
 ## Pipeline context
 
-![AXI Bayer2RGB -> GammaCorrection -> RGBToGrayscale pipeline](../../docs/figures/axi_Bayer2RGB_Gamma_Corr2Gray.png)
+![AXI Bayer2RGB -> GammaCorrection -> RGBToGrayscale pipeline](../../docs/figures/AXI_Bayer2RGB_Gamma_Corr2Gray.png)
 
 Visible IPs in the image and related sources:
 
