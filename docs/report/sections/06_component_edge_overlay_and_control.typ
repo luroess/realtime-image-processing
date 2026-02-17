@@ -44,4 +44,4 @@ This lockstep handshake prevents one stream from advancing without the other and
   [#repo_link("rtl/BUTTON_EXAMPLE/hdl/button_example.vhd", line: 4)], [hardware-visible status path used in Vivado integration],
 )
 
-These modules are not in the image-processing datapath itself, but they affect usability and real-system operability when switching or enabling stream behaviors. The debouncing assumptions follow standard mechanical switch-bounce behavior summarized in @ganssle_debouncing.
+These modules are not in the image-processing datapath itself, but they affect usability and real-system operability when switching or enabling stream behaviors. The debouncing assumptions follow standard mechanical switch-bounce behavior summarized in #cite(<ganssle_debouncing>).

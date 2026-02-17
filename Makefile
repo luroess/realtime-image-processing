@@ -85,9 +85,10 @@ skill-test:
 
 report-check:
 	@mkdir -p docs/report/build
+	@python3 docs/report/analysis/check_citations.py
 	@set -euo pipefail; \
-	root_out="$$(typst compile --root . docs/report/report.typ docs/report/build/report.pdf 2>&1)"; \
-	local_out="$$(cd docs/report && typst compile report.typ build/report_from_report_dir.pdf 2>&1)"; \
+		root_out="$$(typst compile --root . docs/report/report.typ docs/report/build/report.pdf 2>&1)"; \
+		local_out="$$(cd docs/report && typst compile report.typ build/report_from_report_dir.pdf 2>&1)"; \
 	if [ -n "$$root_out" ]; then \
 		echo "ERROR: report root compile produced diagnostics:"; \
 		echo "$$root_out"; \
