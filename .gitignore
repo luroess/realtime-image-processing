@@ -80,3 +80,6 @@ xst/
 isim/
 .vscode/
 .external
+
+# Codex generated knowledge-db cache
+.codex/skills/fpga-vivado-vitis-structure/references/.cache/
