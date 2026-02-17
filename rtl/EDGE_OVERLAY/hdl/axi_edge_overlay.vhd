@@ -49,6 +49,9 @@ architecture A_Rtl of AXI_EdgeOverlay is
   signal s_overlay_pixel : std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
   -- Output gating flag for reset/idle deterministic outputs.
   signal s_output_idle : boolean := false;
+  -- synthesis translate_off
+  signal s_lockstep_wait_ctr : natural range 0 to 1023 := 0;
+  -- synthesis translate_on
 begin
   s_lockstep_valid <= s_axis_video_rbg888_tvalid and s_axis_video_edges_tvalid;
   s_edge_detected  <= '1' when s_axis_video_edges_tdata = '1' else '0';
@@ -83,7 +86,7 @@ begin
   m_axis_video_rbg888_tlast <= '0' when s_output_idle else
                                s_axis_video_rbg888_tlast;
 
-  -- sythesis translate_off
+  -- synthesis translate_off
   P_SIM_ASSERT_STREAM_ALIGNMENT: process (i_aclk)
   begin
     if rising_edge(i_aclk) then
@@ -94,6 +97,28 @@ begin
         assert s_axis_video_rbg888_tlast = s_axis_video_edges_tlast
           report "AxiEdgeOverlay: EOL mismatch between RGB and edge streams."
           severity failure;
+      end if;
+    end if;
+  end process;
+  -- synthesis translate_on
+
+  -- synthesis translate_off
+  P_SIM_ASSERT_LOCKSTEP_PROGRESS: process (i_aclk)
+  begin
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
+        s_lockstep_wait_ctr <= 0;
+      elsif m_axis_video_rbg888_tready = '1'
+        and ((s_axis_video_rbg888_tvalid = '1' and s_axis_video_edges_tvalid = '0')
+          or (s_axis_video_rbg888_tvalid = '0' and s_axis_video_edges_tvalid = '1')) then
+        if s_lockstep_wait_ctr < 1023 then
+          s_lockstep_wait_ctr <= s_lockstep_wait_ctr + 1;
+        end if;
+        assert s_lockstep_wait_ctr < 256
+          report "AxiEdgeOverlay: prolonged one-sided valid observed; possible lockstep deadlock."
+          severity failure;
+      else
+        s_lockstep_wait_ctr <= 0;
       end if;
     end if;
   end process;
