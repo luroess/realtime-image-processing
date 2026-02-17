@@ -55,6 +55,25 @@ description = "AXI4-Stream Sobel edge detection checks."
 toplevel    = "axi_sobelfilter"
 test_module = "tests.test_axi_sobel_filter"
 sources     = [
-  "rtl/SOBEL_FILTER/sobel_core_3x3.vhd",
+  "rtl/SOBEL_FILTER/sobel_core.vhd",
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
 ]
+
+[targets.axi_windowed_filter_wrapper]
+description = "AXI4-Stream internal window-generator + Sobel wrapper checks."
+toplevel    = "axi_windowedfilterwrapper"
+test_module = "tests.test_axi_windowed_filter_wrapper"
+waves       = false
+sources     = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/SOBEL_FILTER/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/FILTER_WRAPPER/hdl/axi_windowed_filter_wrapper.vhd",
+]
+
+[targets.axi_windowed_filter_wrapper.parameters]
+G_FILTER_SELECT = 0
+G_PIXEL_WIDTH = 8
+G_KERNEL_SIZE = 3
+G_LINE_WIDTH = 512
+G_ROW = 512
