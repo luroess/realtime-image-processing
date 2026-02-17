@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import List
 from models.image_model import Image
 
 
@@ -34,3 +35,36 @@ class Scoreboard:
             f"First pixel mismatch at index={idx} (x={int(x)}, y={int(y)}, ch={ch}): "
             f"expected={exp_px}, received={got_px}",
         )
+
+    def compare_windows(
+        self,
+        expected: List[np.ndarray],
+        received: List[np.ndarray],
+    ) -> List[int]:
+        """
+        Compare two lists of windows and return a list of indices where
+        the windows differ.
+
+        Returns:
+            A list of indices i such that w1[i] != w2[i].
+        """
+
+        len1 = len(expected)
+        len2 = len(received)
+        if len1 != len2:
+            raise AssertionError(
+                "Window list length mismatch: "
+                f"expected={len1}, received={len2}",
+            )
+
+        limit = len1
+        mismatches = []
+
+        for i in range(limit):
+            if not np.array_equal(expected[i], received[i]):
+                mismatches.append(i)
+
+        if len(mismatches) > 0:
+            raise AssertionError(
+                f"Window mismatch(es) at {mismatches}"
+            )
