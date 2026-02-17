@@ -89,6 +89,9 @@ architecture A_Rtl of window_generator is
   end function;
 
 begin
+  assert G_KERNEL_SIZE = 3
+    report "window_generator currently supports only G_KERNEL_SIZE=3."
+    severity failure;
 
   m_axis_window_tvalid <= m_axis_window_tvalid_reg;
   m_axis_window_tuser  <= m_axis_window_tuser_reg;
