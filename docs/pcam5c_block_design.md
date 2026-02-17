@@ -399,6 +399,3 @@ Operationally, `vtg` generates periodic output timing and hands that timing to `
   - [system.vhd](../vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/hw.gen/sources_1/bd/system/sim/system.vhd)
 - Top wrapper:
   - [system_wrapper.vhd](../vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/hw.srcs/sources_1/imports/hdl/system_wrapper.vhd)
-- UG934 Chapter 2 extracted sections:
-  - [ch02-system-design-guide-sec01-video-timing-information.md](../.codex/skills/fpga-vivado-vitis-structure/references/ug934/sections/ch02-system-design-guide-sec01-video-timing-information.md)
-  - [ch02-system-design-guide-sec02-propagating-video-timing-information.md](../.codex/skills/fpga-vivado-vitis-structure/references/ug934/sections/ch02-system-design-guide-sec02-propagating-video-timing-information.md)
