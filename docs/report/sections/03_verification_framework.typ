@@ -4,14 +4,14 @@
 
 #component_owner("Lukas Roess, Jan Duchscherer, Valentin Bumeder, Justin Loeber")
 
-The verification environment is cocotb-based and target-driven through `tb-sim`. A target in `testbench/targets.toml` declares toplevel HDL, test module, and source set. This keeps DUT selection reproducible and decoupled from command-line complexity.
+The verification environment is cocotb-based and target-driven through `tb-sim`.@cocotb_writing_testbenches A target in `testbench/targets.toml` declares toplevel HDL, test module, and source set. This keeps DUT selection reproducible and decoupled from command-line complexity.
 
 #figure(
   image("../figures/generated/tb_architecture_typst.png", width: 95%),
   caption: [cocotb verification architecture with drivers, monitors, and scoreboard checks.],
 ) <fig-tb-architecture>
 
-The testbench combines protocol checks and functional checks:
+The testbench combines protocol checks and functional checks using cocotb scheduling/timing semantics and AXI endpoint models.@cocotb_timing_model @cocotbext_axi
 
 - Protocol checks: accepted beat counting, stall stability, `SOF`/`EOL` semantics.
 - Functional checks: expected-vs-observed payload comparisons (pixel stream or window stream).
@@ -30,8 +30,9 @@ The testbench combines protocol checks and functional checks:
 
 == Verification Targets Used in this Report
 
-#table(
+#academic_table(
   columns: (2fr, 2fr, 1.7fr),
+  align: (left, left, left),
   table.header([Target], [DUT focus], [Verification intent]),
   [example_passthrough], [AXI stream pass-through], [baseline protocol and roundtrip],
   [axi_rgb_to_grayscale], [RGB to gray conversion], [functional transform + sideband checks],
