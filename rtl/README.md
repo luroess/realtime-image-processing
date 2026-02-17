@@ -74,6 +74,17 @@ catch {close_bd_design [current_bd_design]}
 update_ip_catalog -rebuild -scan_changes
 ```
 
+## Normalize Edit-IP `.xpr` paths for Git
+
+If an Edit-IP project was created on one machine, its `.xpr` contain absolute
+user paths. Run the normalization script before committing.
+
+- From repository root:
+
+```bash
+tclsh rtl/normalize_local_ip_xpr_paths.tcl
+```
+
 ### GUI
 
 1. Open `Settings -> IP -> Repository`.
