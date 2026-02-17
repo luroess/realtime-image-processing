@@ -3,11 +3,11 @@
 
 SIM ?= ghdl
 TOPLEVEL_LANG ?= vhdl
-TOPLEVEL ?= example_passthrough
-MODULE ?= tests.test_example
+TOPLEVEL ?= debouncedclickdetector
+MODULE ?= tests.test_debounced_click_detector
 
 # Add DUT sources here. Keep both lists available for future VHDL/Verilog DUT swaps.
-VHDL_SOURCES += $(abspath ../rtl/EXAMPLE_PASSTHROUGH/hdl/example_passthrough.vhd)
+VHDL_SOURCES += $(abspath ../rtl/**/**/**.vhd)
 VERILOG_SOURCES +=
 
 # Let cocotb discover local testbench modules (drivers/monitors/models).

@@ -12,3 +12,14 @@
 *.jpg binary
 *.jpeg binary
 *.gif binary
+
+# Vivado
+# Vivado source files
+*.vhd  text eol=lf
+*.v    text eol=lf
+*.sv   text eol=lf
+*.tcl  text eol=lf
+*.xdc  text eol=lf
+*.qsys text eol=lf
+*.xci  text eol=lf
+*.xml  text eol=lf

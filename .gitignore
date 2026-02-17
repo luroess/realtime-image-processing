@@ -1,43 +1,45 @@
-# -----------------------------------------------------------------------------
-# VHDL / cocotb / Python test artifacts
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Python / cocotb / pytest
+# =============================================================================
 __pycache__/
 *.py[cod]
 .pytest_cache/
 *.egg-info/
 *.eff-info/
+*.pyc
 
-# cocotb build dirs and junit outputs
+# cocotb build + results
 sim_build/
 **/sim_build/
 results.xml
 *.result.xml
 
-# -----------------------------------------------------------------------------
-# HDL simulator artifacts (GHDL / NVC / common)
-# -----------------------------------------------------------------------------
-# GHDL library/index files
+# =============================================================================
+# HDL Simulator Artifacts (GHDL / NVC / Questa / Verilator / XSIM)
+# =============================================================================
+# Libraries / objects
+work/
 work-obj*.cf
 *obj*.cf
-
-# Compiled/elaborated objects from cocotb + simulator backends
 *.o
 e~*.o
 
-# Default work libraries (NVC and many other simulators)
-work/
-
-# Waveform dumps
+# Waveforms
 *.ghw
 *.fst
 *.vcd
 *.vcd.gz
 *.gtkw
+*.wlf
 
-# -----------------------------------------------------------------------------
-# Xilinx Vivado generated files
-# Based on https://raw.githubusercontent.com/github/gitignore/main/community/Xilinx.gitignore, trimmed to be safe.
-# -----------------------------------------------------------------------------
+# Simulation outputs
+sim/work/
+sim/*.log
+
+# =============================================================================
+# Vivado / Xilinx Generated Files
+# =============================================================================
+# Global Vivado
 .Xil/
 *.jou
 *.log
@@ -48,34 +50,91 @@ work/
 *.rst
 *.debug
 
-# Vivado per-project generated directories
-*.cache/
-*.runs/
-*.sim/
-*.ip_user_files/
-*.hw/
-*.sdk/
-*.gen/
+# Vivado project internals (all locations)
+**/*.cache/
+**/*.runs/
+**/*.sim/
+**/*.gen/
+**/*.hw/
+**/*.sdk/
+**/*.ip_user_files/
 
-# IP integrator / handoff generated folders
-ipshared/
-hw_handoff/
-
-# Vivado telemetry and usage logs
+# Vivado telemetry
 webtalk*.jou
 webtalk*.log
 usage_statistics_webtalk.html
 par_usage_statistics.html
 
-# User-specific project metadata
+# User-specific metadata
 *.xpr.user
 
-# -----------------------------------------------------------------------------
-# Legacy Xilinx ISE/ISim artifacts (present in this repo)
-# -----------------------------------------------------------------------------
+# IP integrator / handoff
+ipshared/
+hw_handoff/
+
+# =============================================================================
+# Vivado Project Tree (strict)
+# =============================================================================
+vivado/**/*.cache/
+vivado/**/*.runs/
+vivado/**/*.sim/
+vivado/**/*.gen/
+vivado/**/*.hw/
+vivado/**/*.ip_user_files/
+vivado/**/*.jou
+vivado/**/*.log
+vivado/**/.Xil/
+
+# Block Design & IP output (generated)
+vivado/**/*.srcs/**/ip/
+vivado/**/*.srcs/**/bd/
+vivado/**/*.srcs/**/hdl/
+vivado/**/*.srcs/**/sim/
+
+# IP repositories / vendor IP
+vivado/**/ipdefs/
+vivado/**/repo/
+
+# =============================================================================
+# IP Build Outputs
+# =============================================================================
+ip/**/generated/
+ip/**/synth/
+ip/**/impl/
+ip/**/sim/
+ip/**/*.log
+
+# =============================================================================
+# FPGA Build Artifacts
+# =============================================================================
+*.bit
+*.bin
+*.ltx
+*.dcp
+*.rpt
+*.mcs
+*.prm
+
+# =============================================================================
+# Legacy Xilinx ISE / ISim (if present)
+# =============================================================================
 _xmsgs/
 iseconfig/
 xlnx_auto_0_xdb/
 xst/
 isim/
+
+# =============================================================================
+# OS / Editor
+# =============================================================================
+.DS_Store
+Thumbs.db
+*.swp
 .vscode/
+
+# =============================================================================
+# CI / Temp
+# =============================================================================
+*.tmp
+*.bak
+*.old
