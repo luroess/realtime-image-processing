@@ -95,6 +95,22 @@ vivado/**/*.srcs/**/sim/
 vivado/**/ipdefs/
 vivado/**/repo/
 
+# Aber nimm diese spezifische IP aus (check sie ein)
+!vivado/hw.ipdefs/repo/local/ip/AXI_BayerToRGB/
+!vivado/hw.ipdefs/repo/local/ip/AXI_BayerToRGB/**
+
+# Beispiel für mehrere IPs
+!vivado/hw.ipdefs/repo/local/ip/AXI_GammaCorrection/
+!vivado/hw.ipdefs/repo/local/ip/AXI_GammaCorrection/**
+
+# Beispiel für mehrere IPs
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_D_PHY_RX
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_D_PHY_RX/**
+
+# Beispiel für mehrere IPs
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_CSI_2_RX
+!vivado/hw.ipdefs/repo/vivado-library/ip/MIPI_CSI_2_RX/**
+
 # =============================================================================
 # IP Build Outputs
 # =============================================================================
