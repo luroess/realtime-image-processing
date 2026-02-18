@@ -110,7 +110,7 @@ sources     = [
   G_SOBEL_THRESHOLD = 200
 
 [targets.axi_edge_overlay_pipeline]
-description = "End-to-end AXI4-Stream RGB->Gray->Window->Sobel->EdgeOverlay checks."
+description = "End-to-end AXI4-Stream RGB->Gray->Sobel/FAST->FrameCompositor checks."
 toplevel    = "axi_edgeoverlaypipeline"
 test_module = "tests.test_axi_edge_overlay_pipeline"
 waves       = false
@@ -124,19 +124,52 @@ sources     = [
   "rtl/SOBEL_FILTER/sobel_core.vhd",
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
   "rtl/FILTER_WRAPPER/hdl/axi_filter_wrapper.vhd",
-  "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
-  "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
   "rtl/EDGE_OVERLAY_PIPELINE/hdl/axi_edge_overlay_pipeline.vhd",
 ]
 
-  [targets.axi_edge_overlay_pipeline.parameters]
+[targets.axi_edge_overlay_pipeline.parameters]
   G_COMPONENT_WIDTH = 8
   G_PIXEL_WIDTH = 8
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 64
   G_NUM_ROW = 48
+  G_FILTER_SELECT = 0
   G_SOBEL_THRESHOLD = 200
   G_RGB_FIFO_DEPTH = 512
+
+[targets.axi_edge_overlay_pipeline_fast]
+description = "End-to-end AXI4-Stream RGB->Gray->Sobel/FAST->FrameCompositor checks (FAST profile)."
+toplevel    = "axi_edgeoverlaypipeline"
+test_module = "tests.test_axi_edge_overlay_pipeline"
+waves       = true
+sources     = [
+  "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
+  "rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd",
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/fast_nms3x3.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/SOBEL_FILTER/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/FILTER_WRAPPER/hdl/axi_filter_wrapper.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+  "rtl/EDGE_OVERLAY_PIPELINE/hdl/axi_edge_overlay_pipeline.vhd",
+]
+
+  [targets.axi_edge_overlay_pipeline_fast.parameters]
+  G_COMPONENT_WIDTH = 8
+  G_PIXEL_WIDTH = 8
+  G_KERNEL_SIZE = 7
+  G_LINE_WIDTH = 128
+  G_NUM_ROW = 128
+  G_FILTER_SELECT = 2
+  G_FAST_THRESHOLD = 20
+  G_FAST_N = 9
+  G_SOBEL_THRESHOLD = 200
+  G_RGB_FIFO_DEPTH = 4096
 
 [targets.axi_fast_filter]
 description = "AXI4-Stream FAST-9 + NMS filter checks."
@@ -156,6 +189,27 @@ sources     = [
   G_NUM_ROW = 128
   G_FAST_THRESHOLD = 20
   G_FAST_N = 9
+  G_FAST_IMPL = 1
+
+[targets.axi_fast_filter_seq]
+description = "AXI4-Stream FAST sequential-core checks (small geometry)."
+toplevel    = "axi_fastfilter"
+test_module = "tests.test_axi_fast_filter"
+sources     = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/fast_nms3x3.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+]
+
+  [targets.axi_fast_filter_seq.parameters]
+  G_PIXEL_WIDTH = 8
+  G_KERNEL_SIZE = 7
+  G_LINE_WIDTH = 8
+  G_NUM_ROW = 8
+  G_FAST_THRESHOLD = 20
+  G_FAST_N = 9
+  G_FAST_IMPL = 2
 
 [targets.axi_filter_wrapper_fast]
 description = "AXI4-Stream internal window-generator + FAST-9 + NMS wrapper checks."
@@ -180,3 +234,29 @@ sources     = [
   G_NUM_ROW = 128
   G_FAST_THRESHOLD = 20
   G_FAST_N = 9
+  G_FAST_IMPL = 1
+
+[targets.axi_filter_wrapper_fast_seq]
+description = "AXI4-Stream wrapper + FAST sequential-core checks (small geometry)."
+toplevel    = "axi_filterwrapper"
+test_module = "tests.test_axi_filter_wrapper_fast"
+waves       = true
+sources     = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/fast_nms3x3.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/SOBEL_FILTER/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/FILTER_WRAPPER/hdl/axi_filter_wrapper.vhd",
+]
+
+  [targets.axi_filter_wrapper_fast_seq.parameters]
+  G_FILTER_SELECT = 2
+  G_PIXEL_WIDTH = 8
+  G_KERNEL_SIZE = 7
+  G_LINE_WIDTH = 8
+  G_NUM_ROW = 8
+  G_FAST_THRESHOLD = 20
+  G_FAST_N = 9
+  G_FAST_IMPL = 2

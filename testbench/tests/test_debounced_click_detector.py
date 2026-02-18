@@ -1,78 +1,69 @@
-"""Test layer: Execute combined test for debouncer and click detection."""
+"""Combined debouncer + mode-cycle tests for DebouncedClickDetector."""
 
 from __future__ import annotations
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import FallingEdge, RisingEdge, Timer
-from cocotb.utils import get_sim_time
-from drivers.click_detection_driver import ClickDetectionDriver
-from drivers.debouncing_driver import DebouncingDriver
+from cocotb.triggers import RisingEdge, Timer
 
-# CONSTANTS
-CLK_PERIOD_NS = 10  # 100 MHz
-CLK_TIMER_NS = 100  # 100 ns (10 cycles) for simulation
+CLK_PERIOD_NS = 10
+DEBOUNCE_WAIT_NS = 140
+
+BASE_RGB = 0b00
+BASE_GRAY = 0b01
+BASE_ZERO = 0b10
+
+OVERLAY_NONE = 0b00
+OVERLAY_FAST = 0b01
+OVERLAY_SOBEL = 0b10
+
+
+async def _press_button(dut, *, btn_mask: int) -> None:
+    dut.i_btn.value = btn_mask
+    await Timer(DEBOUNCE_WAIT_NS, unit="ns")
+    dut.i_btn.value = 0
+    await Timer(DEBOUNCE_WAIT_NS, unit="ns")
+
 
 @cocotb.test()
 async def test_debounced_click_detection(dut) -> None:
-    """Test debounced Click Detection."""
-    i_clk = getattr(dut, "i_clk")
-    i_rst = getattr(dut, 'i_rst_n')
-    debouncing_driver = DebouncingDriver(dut)
-    click_detection_driver = ClickDetectionDriver(dut)
-
-
-    # --------------------------------------------------
-    # Reset
-    # --------------------------------------------------
-
+    """Cycle base and overlay modes via debounced button presses."""
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
-    await debouncing_driver.apply_reset()
 
-    # --------------------------------------------------
-    # Transition to ST_GRAYSCALE
-    # --------------------------------------------------
-    print(f"Transition to state ST_GRAYSCALE")
-    await debouncing_driver.simulate_bouncing(0)
-    await click_detection_driver.check_output(1, 1, 1, 0)
-    await debouncing_driver.set_i_btn_value_and_wait(1, CLK_TIMER_NS)
-    await click_detection_driver.check_output(0, 1, 1, 20)
-    await debouncing_driver.simulate_bouncing(1)
-    await debouncing_driver.set_i_btn_value_and_wait(0, CLK_TIMER_NS)
-    await click_detection_driver.check_output(0, 1, 1, 20)
+    dut.i_rst_n.value = 0
+    dut.i_btn.value = 0
+    for _ in range(5):
+        await RisingEdge(dut.i_clk)
 
-    # # --------------------------------------------------
-    # # Transition to ST_LOWPASS
-    # # --------------------------------------------------
-    print(f"Transition to state ST_LOWPASS")
-    await debouncing_driver.simulate_bouncing(0)
-    await click_detection_driver.check_output(0, 1, 1, 0)
-    await debouncing_driver.set_i_btn_value_and_wait(1, CLK_TIMER_NS)
-    await click_detection_driver.check_output(0, 0, 1, 20)
-    await debouncing_driver.simulate_bouncing(1)
-    await debouncing_driver.set_i_btn_value_and_wait(0, CLK_TIMER_NS)
-    await click_detection_driver.check_output(0, 0, 1, 20)
+    dut.i_rst_n.value = 1
+    for _ in range(3):
+        await RisingEdge(dut.i_clk)
 
-    # # --------------------------------------------------
-    # # Transition to ST_SOBEL
-    # # --------------------------------------------------
-    print(f"Transition to state ST_SOBEL")
-    await debouncing_driver.simulate_bouncing(0)
-    await click_detection_driver.check_output(0, 0, 1, 0)
-    await debouncing_driver.set_i_btn_value_and_wait(1, CLK_TIMER_NS)
-    await click_detection_driver.check_output(0, 0, 0, 20)
-    await debouncing_driver.simulate_bouncing(1)
-    await debouncing_driver.set_i_btn_value_and_wait(0, CLK_TIMER_NS)
-    await click_detection_driver.check_output(0, 0, 0, 20)
+    assert int(dut.o_base_mode.value) == BASE_RGB
+    assert int(dut.o_overlay_mode.value) == OVERLAY_NONE
 
-    # # --------------------------------------------------
-    # # Transition to ST_PASSTHROUGH
-    # # --------------------------------------------------
-    print(f"Transition to state ST_PASSTHROUGH")
-    await debouncing_driver.simulate_bouncing(0)
-    await click_detection_driver.check_output(0, 0, 0, 0)
-    await debouncing_driver.set_i_btn_value_and_wait(1, CLK_TIMER_NS)
-    await click_detection_driver.check_output(1, 1, 1, 20)
-    await debouncing_driver.simulate_bouncing(1)
-    await debouncing_driver.set_i_btn_value_and_wait(0, CLK_TIMER_NS)
-    await click_detection_driver.check_output(1, 1, 1, 20)
+    await _press_button(dut, btn_mask=0b0001)
+    assert int(dut.o_base_mode.value) == BASE_GRAY
+    assert int(dut.o_pass_grayscale.value) == 0
+
+    await _press_button(dut, btn_mask=0b0001)
+    assert int(dut.o_base_mode.value) == BASE_ZERO
+    assert int(dut.o_pass_grayscale.value) == 1
+
+    await _press_button(dut, btn_mask=0b0001)
+    assert int(dut.o_base_mode.value) == BASE_RGB
+
+    await _press_button(dut, btn_mask=0b0010)
+    assert int(dut.o_overlay_mode.value) == OVERLAY_FAST
+    assert int(dut.o_pass_sobel.value) == 1
+
+    await _press_button(dut, btn_mask=0b0010)
+    assert int(dut.o_overlay_mode.value) == OVERLAY_SOBEL
+    assert int(dut.o_pass_sobel.value) == 0
+
+    await _press_button(dut, btn_mask=0b0010)
+    assert int(dut.o_overlay_mode.value) == OVERLAY_NONE
+
+    await _press_button(dut, btn_mask=0b0001)
+    await _press_button(dut, btn_mask=0b0010)
+    assert int(dut.o_btn_debounced.value) == 0

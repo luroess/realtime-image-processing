@@ -2,23 +2,54 @@ library ieee;
   use ieee.std_logic_1164.all;
   use ieee.numeric_std.all;
 
+--============================================================================
+-- E_FastNms3x3
+-- ----------------------------------------------------------------------------
+-- 3x3 non-maximum suppression stage for FAST score maps.
+--
+-- Functional summary:
+-- - Input is a flattened 3x3 window of FAST scores (center + 8 neighbors).
+-- - Output o_corner is asserted only when:
+--   1) center score is non-zero, and
+--   2) center score is strictly greater than every neighbor.
+--
+-- This strict '>' policy suppresses ties intentionally.
+--============================================================================
 entity E_FastNms3x3 is
-  -- TODO(entity-contract): Document strict local-maximum policy (center must be greater than all neighbors) in the module interface notes for scoreboard parity.
   generic (
+    -- Bit width of each score element in i_score_window.
     G_SCORE_WIDTH : positive := 13
   );
   port (
+    -- Flattened 3x3 score window in row-major order.
+    -- Index mapping: 0..8 with center at index 4.
     i_score_window : in  std_logic_vector((3 * 3 * G_SCORE_WIDTH) - 1 downto 0);
+    -- Binary corner mask output: '1' for strict local maxima, else '0'.
     o_corner       : out std_logic
   );
 end entity;
 
 architecture A_Rtl of E_FastNms3x3 is
+
+  --==========================================================================
+  -- f_score_at
+  -- -------------------------------------------------------------------------
+  -- Extract one score value from flattened 3x3 score window.
+  --
+  -- Inputs:
+  -- - i_window_flat: flattened score vector (row-major).
+  -- - i_score_index: score index in range 0..8.
+  --
+  -- Return:
+  -- - score slice as unsigned(G_SCORE_WIDTH-1 downto 0).
+  --
+  -- Behavior:
+  -- - Asserts when i_score_index is out of range.
+  --==========================================================================
   function f_score_at(
-    i_window_flat : std_logic_vector;
-    i_score_index : natural
-  ) return unsigned is
-    -- FIXME(bounds-safety): Add index range guarding before slicing so accidental caller misalignment cannot produce silent invalid reads.
+      i_window_flat : std_logic_vector;
+      i_score_index : natural
+    ) return unsigned is
     variable v_lsb : natural;
     variable v_msb : natural;
   begin
@@ -29,17 +60,25 @@ architecture A_Rtl of E_FastNms3x3 is
     v_msb := v_lsb + G_SCORE_WIDTH - 1;
     return unsigned(i_window_flat(v_msb downto v_lsb));
   end function;
+
 begin
-  P_COMB_NMS: process(i_score_window)
-    -- TODO(nms-config): Promote tie-handling behavior to a generic if future variants need >= or deterministic winner selection.
+
+  --==========================================================================
+  -- P_COMB_NMS
+  -- -------------------------------------------------------------------------
+  -- Combinational strict-NMS decision for one 3x3 neighborhood.
+  --==========================================================================
+  P_COMB_NMS: process (i_score_window)
+    -- Center score at index 4 and staged output flag.
     variable v_center : unsigned(G_SCORE_WIDTH - 1 downto 0);
     variable v_corner : std_logic;
   begin
-    -- FIXME(center-index): Keep center index hard-coded to window position 4 only while kernel size remains 3x3; update alongside any kernel change.
+    -- Row-major center index for 3x3 window.
     v_center := f_score_at(i_score_window, 4);
     v_corner := '0';
 
     if v_center /= 0 then
+      -- Tentatively accept center, then invalidate on any >= neighbor.
       v_corner := '1';
       for i in 0 to 8 loop
         if i /= 4 then
@@ -50,7 +89,8 @@ begin
       end loop;
     end if;
 
-    -- TODO(output-map): Preserve the final output assignment at process end so waveform inspection has a single handoff point.
+    -- Single-point output assignment for deterministic debug traces.
     o_corner <= v_corner;
   end process;
+
 end architecture;

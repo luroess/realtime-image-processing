@@ -3,11 +3,16 @@ library ieee;
 
 entity AXI_FilterWrapper is
   generic (
-    -- 0: Sobel, 1: Blur placeholder
+    -- 0: Sobel, 1: Blur placeholder, 2: FAST-9 + NMS
     G_FILTER_SELECT  : natural := 0;
 
     -- Sobel generic
     G_SOBEL_THRESHOLD : natural := 200;
+    -- FAST generics
+    G_FAST_THRESHOLD : natural := 20;
+    G_FAST_N         : positive := 9;
+    -- FAST core implementation: 1=parallel comb, 2=sequential FSM.
+    G_FAST_IMPL      : positive := 1;
 
     -- Internal window_generator generics
     G_PIXEL_WIDTH                : positive := 8;
@@ -38,6 +43,7 @@ end entity;
 architecture A_Rtl of AXI_FilterWrapper is
   constant C_FILTER_SOBEL : natural := 0;
   constant C_FILTER_BLUR  : natural := 1;
+  constant C_FILTER_FAST  : natural := 2;
   constant C_WINDOW_DATA_WIDTH : positive := G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH;
   constant C_CENTER_INDEX      : natural  := (G_KERNEL_SIZE * G_KERNEL_SIZE) / 2;
   constant C_CENTER_LSB        : natural  := C_CENTER_INDEX * G_PIXEL_WIDTH;
@@ -55,15 +61,13 @@ architecture A_Rtl of AXI_FilterWrapper is
   signal s_sobel_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
   signal s_sobel_tuser  : std_logic := '0';
   signal s_sobel_tlast  : std_logic := '0';
-begin
-  -- AXI_SobelFilter currently requires 3x3 windows with 8-bit grayscale pixels
-  assert G_KERNEL_SIZE = 3
-    report "AXI_FilterWrapper with AXI_SobelFilter requires G_KERNEL_SIZE=3."
-    severity failure;
-  assert G_PIXEL_WIDTH = 8
-    report "AXI_FilterWrapper with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
-    severity failure;
 
+  -- FAST output stream
+  signal s_fast_tvalid : std_logic := '0';
+  signal s_fast_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
+  signal s_fast_tuser  : std_logic := '0';
+  signal s_fast_tlast  : std_logic := '0';
+begin
   ---------------------------------------------------------------------------
   -- Internal window generator
   ---------------------------------------------------------------------------
@@ -93,6 +97,13 @@ begin
   -- Filter selection
   ---------------------------------------------------------------------------
   G_SobelFilter: if G_FILTER_SELECT = C_FILTER_SOBEL generate
+    assert G_KERNEL_SIZE = 3
+      report "AXI_FilterWrapper Sobel mode requires G_KERNEL_SIZE=3."
+      severity failure;
+    assert G_PIXEL_WIDTH = 8
+      report "AXI_FilterWrapper Sobel mode requires G_PIXEL_WIDTH=8."
+      severity failure;
+
     U_AxiSobelFilter: entity work.AXI_SobelFilter
       generic map (
         G_PIXEL_WIDTH    => G_PIXEL_WIDTH,
@@ -120,6 +131,45 @@ begin
     m_axis_filter8_tlast  <= s_sobel_tlast;
   end generate;
 
+  G_FastFilter: if G_FILTER_SELECT = C_FILTER_FAST generate
+    assert G_KERNEL_SIZE = 7
+      report "AXI_FilterWrapper FAST mode requires G_KERNEL_SIZE=7."
+      severity failure;
+    assert G_PIXEL_WIDTH = 8
+      report "AXI_FilterWrapper FAST mode requires G_PIXEL_WIDTH=8."
+      severity failure;
+
+    U_AxiFastFilter: entity work.AXI_FastFilter
+      generic map (
+        G_PIXEL_WIDTH    => G_PIXEL_WIDTH,
+        G_KERNEL_SIZE    => G_KERNEL_SIZE,
+        G_LINE_WIDTH     => G_LINE_WIDTH,
+        G_NUM_ROW        => G_NUM_ROW,
+        G_FAST_THRESHOLD => G_FAST_THRESHOLD,
+        G_FAST_N         => G_FAST_N,
+        G_FAST_IMPL      => G_FAST_IMPL
+      )
+      port map (
+        i_aclk               => i_aclk,
+        i_aresetn            => i_aresetn,
+        s_axis_window_tvalid  => s_wndw_tvalid,
+        s_axis_window_tready  => s_wndw_tready,
+        s_axis_window_tdata   => s_wndw_tdata,
+        s_axis_window_tuser   => s_wndw_tuser,
+        s_axis_window_tlast   => s_wndw_tlast,
+        m_axis_filter8_tvalid => s_fast_tvalid,
+        m_axis_filter8_tready => m_axis_filter8_tready,
+        m_axis_filter8_tdata  => s_fast_tdata,
+        m_axis_filter8_tuser  => s_fast_tuser,
+        m_axis_filter8_tlast  => s_fast_tlast
+      );
+
+    m_axis_filter8_tvalid <= s_fast_tvalid;
+    m_axis_filter8_tdata  <= s_fast_tdata;
+    m_axis_filter8_tuser  <= s_fast_tuser;
+    m_axis_filter8_tlast  <= s_fast_tlast;
+  end generate;
+
   G_BlurPlaceholderFilter: if G_FILTER_SELECT = C_FILTER_BLUR generate
     -- Placeholder path until blur filter module exists
     -- Uses center pixel of the window as pass-through gray output
@@ -131,7 +181,9 @@ begin
     m_axis_filter8_tlast  <= '0' when (i_aresetn = '0') else s_wndw_tlast;
   end generate;
 
-  G_FilterDefault: if (G_FILTER_SELECT /= C_FILTER_SOBEL) and (G_FILTER_SELECT /= C_FILTER_BLUR) generate
+  G_FilterDefault: if (G_FILTER_SELECT /= C_FILTER_SOBEL) and
+                      (G_FILTER_SELECT /= C_FILTER_BLUR) and
+                      (G_FILTER_SELECT /= C_FILTER_FAST) generate
     -- Safe default for unsupported filter selections
     s_wndw_tready <= '0';
     m_axis_filter8_tvalid <= '0';

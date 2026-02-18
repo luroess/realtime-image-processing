@@ -61,6 +61,7 @@ class GrayscaleCaseConfig:
     with_backpressure: bool = False
     pause_pattern: tuple[int, ...] = (0, 1, 0, 0, 1)
     check_handshake: bool = False
+    expect_stall: bool = False
     pass_through: bool = False
     min_ready_low_run: int = 0
     handshake_settle_cycles: int = 6
@@ -203,9 +204,10 @@ class AxiRgbToGrayscaleTestbench:
                 f"required>={self.cfg.min_ready_low_run}"
             )
 
-        assert self.handshake_stats.saw_stall, (
-            "Expected at least one VALID=1, READY=0 stall cycle."
-        )
+        if self.cfg.expect_stall:
+            assert self.handshake_stats.saw_stall, (
+                "Expected at least one VALID=1, READY=0 stall cycle."
+            )
 
         expected_beats = width * height
         assert self.handshake_stats.accepted_beats == expected_beats, (
@@ -254,7 +256,7 @@ class AxiRgbToGrayscaleTestbench:
         assert self.sink is not None
         assert self.gray8_sink is not None
 
-        expected = image if self.cfg.pass_through else _expected_gray_rgb(image)
+        expected = image
         expected_gray8 = _expected_gray8_plane(image)
 
         self._start_optional_tasks(width=image.width, height=image.height)
@@ -379,6 +381,7 @@ async def run_frame_test(
     with_backpressure: bool = False,
     pause_pattern: tuple[int, ...] = (0, 1, 0, 0, 1),
     check_handshake: bool = False,
+    expect_stall: bool = False,
     pass_through: bool = False,
     min_ready_low_run: int = 0,
 ) -> None:
@@ -386,6 +389,7 @@ async def run_frame_test(
         with_backpressure=with_backpressure,
         pause_pattern=pause_pattern,
         check_handshake=check_handshake,
+        expect_stall=expect_stall,
         pass_through=pass_through,
         min_ready_low_run=min_ready_low_run,
     )

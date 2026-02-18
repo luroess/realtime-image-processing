@@ -6,7 +6,6 @@ import ast
 import os
 import re
 import subprocess
-import tomllib
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from functools import lru_cache
@@ -14,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import tomllib
 
 # TODO(config-surface): Keep heavy-tier defaults aligned with long-run CI budget and tb-sim registry definitions.
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
@@ -24,8 +24,10 @@ HEAVY_TARGETS: tuple[str, ...] = (
     "window_generator",
     "axi_sobel_filter",
     "axi_fast_filter",
+    "axi_fast_filter_seq",
     "axi_filter_wrapper_stress",
     "axi_filter_wrapper_fast",
+    "axi_filter_wrapper_fast_seq",
 )
 # FIXME(filter-drift): Keep heavy filters synchronized with cocotb test renames so randomized stress cases are not silently skipped.
 HEAVY_TEST_FILTERS: dict[str, str] = {
@@ -34,8 +36,10 @@ HEAVY_TEST_FILTERS: dict[str, str] = {
     "window_generator": "test_axi_rgb_to_window_stress_matrix",
     "axi_sobel_filter": "test_axi_sobel_filter_stress_heavy_randomized",
     "axi_fast_filter": "test_axi_fast_filter_stress_heavy_randomized",
+    "axi_fast_filter_seq": "test_axi_fast_filter_stress_heavy_randomized",
     "axi_filter_wrapper_stress": "test_axi_windowed_filter_wrapper_stress_heavy_randomized",
     "axi_filter_wrapper_fast": "test_axi_filter_wrapper_fast_stress_heavy_randomized",
+    "axi_filter_wrapper_fast_seq": "test_axi_filter_wrapper_fast_stress_heavy_randomized",
 }
 
 
@@ -66,47 +70,70 @@ def _load_target_registry() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
 
 
 @lru_cache(maxsize=1)
-def _collect_declared_test_names() -> frozenset[str]:
-    declared: set[str] = set()
+def _collect_declared_test_names_by_module() -> dict[str, frozenset[str]]:
+    declared_by_module: dict[str, frozenset[str]] = {}
     for test_file in sorted((TESTBENCH_ROOT / "tests").glob("test_*.py")):
+        declared: set[str] = set()
         source = test_file.read_text()
         try:
             module = ast.parse(source, filename=str(test_file))
         except SyntaxError:
             # Keep filter validation usable even if a local test file is mid-edit.
-            declared.update(re.findall(r"^\s*async\s+def\s+(test_[A-Za-z0-9_]+)\s*\(", source, re.M))
-            declared.update(re.findall(r"^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(", source, re.M))
-            continue
+            declared.update(
+                re.findall(
+                    r"^\s*async\s+def\s+(test_[A-Za-z0-9_]+)\s*\(", source, re.MULTILINE
+                )
+            )
+            declared.update(
+                re.findall(r"^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(", source, re.MULTILINE)
+            )
+        else:
+            for node in module.body:
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                    if node.name.startswith("test_"):
+                        declared.add(node.name)
 
-        for node in module.body:
-            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-                if node.name.startswith("test_"):
-                    declared.add(node.name)
-    return frozenset(declared)
+        module_name = f"tests.{test_file.stem}"
+        declared_by_module[module_name] = frozenset(declared)
+
+    return declared_by_module
 
 
 def _validate_filter_tokens(filters: dict[str, str]) -> None:
-    declared = _collect_declared_test_names()
-    missing_by_target: dict[str, list[str]] = {}
+    _, targets = _load_target_registry()
+    declared_by_module = _collect_declared_test_names_by_module()
+    missing_by_target: dict[str, tuple[str, list[str]]] = {}
     for target, filter_expr in filters.items():
+        target_cfg = targets.get(target)
+        if not isinstance(target_cfg, dict):
+            missing_by_target[target] = (
+                "<unknown-test-module>",
+                [f"<unknown target '{target}'>"],
+            )
+            continue
+
+        test_module = (
+            str(target_cfg.get("test_module", "")).split(",", maxsplit=1)[0].strip()
+        )
+        declared = declared_by_module.get(test_module, frozenset())
         missing = [
             token
             for token in (part.strip() for part in filter_expr.split("|"))
             if token and token not in declared
         ]
         if missing:
-            missing_by_target[target] = missing
+            missing_by_target[target] = (test_module or "<unset-test-module>", missing)
 
     if not missing_by_target:
         return
 
     details = "\n".join(
-        f"- {target}: {', '.join(tokens)}"
-        for target, tokens in sorted(missing_by_target.items())
+        f"- {target} ({test_module}): {', '.join(tokens)}"
+        for target, (test_module, tokens) in sorted(missing_by_target.items())
     )
     raise AssertionError(
-        "Invalid COCOTB_TEST_FILTER token(s) not found in testbench/tests:\n"
-        f"{details}"
+        "Invalid COCOTB_TEST_FILTER token(s) not found in target test_module:\n"
+        f"{details}",
     )
 
 
@@ -138,7 +165,9 @@ def _merged_target_config(target: str) -> dict[str, Any]:
     missing = [key for key in required if not config.get(key)]
     if missing:
         missing_csv = ", ".join(missing)
-        raise AssertionError(f"Target '{target}' missing required fields: {missing_csv}")
+        raise AssertionError(
+            f"Target '{target}' missing required fields: {missing_csv}"
+        )
 
     return config
 
@@ -190,7 +219,9 @@ def _read_positive_int_env(name: str, default: int) -> int:
     try:
         value = int(raw)
     except ValueError as exc:
-        raise AssertionError(f"{name} must be a positive integer, got '{raw}'.") from exc
+        raise AssertionError(
+            f"{name} must be a positive integer, got '{raw}'."
+        ) from exc
     if value < 1:
         raise AssertionError(f"{name} must be >= 1, got {value}.")
     return value
@@ -215,9 +246,13 @@ def _resolve_targets(default_targets: tuple[str, ...]) -> tuple[str, ...]:
     if not raw_targets:
         return default_targets
 
-    candidates = tuple(token.strip() for token in raw_targets.split(",") if token.strip())
+    candidates = tuple(
+        token.strip() for token in raw_targets.split(",") if token.strip()
+    )
     if not candidates:
-        raise AssertionError("TB_STRESS_TARGETS was set but no non-empty targets were parsed.")
+        raise AssertionError(
+            "TB_STRESS_TARGETS was set but no non-empty targets were parsed."
+        )
 
     resolved: list[str] = []
     for target in candidates:
@@ -227,7 +262,9 @@ def _resolve_targets(default_targets: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(resolved)
 
 
-def _format_command_output(process: subprocess.CompletedProcess[str], *, max_lines: int = 60) -> str:
+def _format_command_output(
+    process: subprocess.CompletedProcess[str], *, max_lines: int = 60
+) -> str:
     # TODO(log-truncation): Keep output truncation bounded to maintain readable pytest failure summaries.
     lines: list[str] = []
     if process.stdout:
@@ -249,7 +286,9 @@ def _parse_results_xml(results_xml: Path) -> JunitSummary:
     try:
         root = ET.parse(results_xml).getroot()
     except ET.ParseError as exc:
-        raise AssertionError(f"Unable to parse junit XML at {results_xml}: {exc}") from exc
+        raise AssertionError(
+            f"Unable to parse junit XML at {results_xml}: {exc}"
+        ) from exc
 
     testcases = root.findall(".//testcase")
     failures = root.findall(".//failure")
@@ -325,14 +364,14 @@ def _run_tb_target(
         problems.append(
             "Missing junit results file "
             f"for target '{target}' (iteration {iteration}) under {build_dir} "
-            "(expected *.result.xml or results.xml)."
+            "(expected *.result.xml or results.xml).",
         )
         summary = None
     else:
         summary = _parse_results_xml(results_xml)
         if summary.tests == 0:
             problems.append(
-                f"No testcase entries found in junit results for target '{target}': {results_xml}"
+                f"No testcase entries found in junit results for target '{target}': {results_xml}",
             )
         if summary.failures > 0 or summary.errors > 0:
             failed_list = "\n".join(summary.failed_cases[:10])
@@ -341,13 +380,13 @@ def _run_tb_target(
             problems.append(
                 f"JUnit reports failures for target '{target}' (iteration {iteration}): "
                 f"tests={summary.tests}, failures={summary.failures}, errors={summary.errors}, "
-                f"skipped={summary.skipped}\n{failed_list}"
+                f"skipped={summary.skipped}\n{failed_list}",
             )
 
     if process.returncode != 0:
         problems.append(
             f"tb-sim exited with non-zero status for target '{target}' "
-            f"(iteration {iteration}): rc={process.returncode}"
+            f"(iteration {iteration}): rc={process.returncode}",
         )
 
     if problems:

@@ -5,8 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from cocotbext.axi import AxiStreamBus  # type: ignore[missing-imports]
-from cocotbext.axi import AxiStreamFrame, AxiStreamSource
+from cocotbext.axi import (
+    AxiStreamBus,  # type: ignore[missing-imports]
+    AxiStreamFrame,
+    AxiStreamSource,
+)
 from models.image_model import Image
 
 

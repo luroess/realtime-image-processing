@@ -42,13 +42,13 @@ architecture A_Rtl of window_generator is
   subtype t_wndw_flat_t is std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
 
   constant C_ZERO : t_pxl := (others => '0');
+  constant C_PAD : natural := (G_KERNEL_SIZE - 1) / 2;
   constant C_BUF_LEN : positive := ((G_KERNEL_SIZE - 1) * G_LINE_WIDTH) + G_KERNEL_SIZE + 1;
   constant C_FILL_MIN : positive := (G_LINE_WIDTH + 1) * ((G_KERNEL_SIZE - 1) / 2);
 
   ------------------------------------------------------------------
   -- types
   ------------------------------------------------------------------
-  type t_line is array (0 to G_LINE_WIDTH-1) of t_pxl;
   type t_buf is array (0 to C_BUF_LEN-1) of t_pxl;
 
   ------------------------------------------------------------------
@@ -89,8 +89,14 @@ architecture A_Rtl of window_generator is
   end function;
 
 begin
-  assert G_KERNEL_SIZE = 3
-    report "window_generator currently supports only G_KERNEL_SIZE=3."
+  assert (G_KERNEL_SIZE >= 3) and ((G_KERNEL_SIZE mod 2) = 1)
+    report "window_generator requires odd G_KERNEL_SIZE >= 3."
+    severity failure;
+  assert G_LINE_WIDTH >= G_KERNEL_SIZE
+    report "window_generator requires G_LINE_WIDTH >= G_KERNEL_SIZE."
+    severity failure;
+  assert G_NUM_ROW >= G_KERNEL_SIZE
+    report "window_generator requires G_NUM_ROW >= G_KERNEL_SIZE."
     severity failure;
 
   m_axis_window_tvalid <= m_axis_window_tvalid_reg;
@@ -116,6 +122,10 @@ begin
     variable v_wndw_now     : t_wndw;
     variable v_col_out_next : natural range 0 to G_LINE_WIDTH+1;
     variable v_row_out_next : natural range 0 to G_NUM_ROW+1;
+    variable v_tap_x        : integer;
+    variable v_tap_y        : integer;
+    variable v_buf_idx      : natural range 0 to C_BUF_LEN - 1;
+    variable v_wndw_idx     : natural range 0 to (G_KERNEL_SIZE * G_KERNEL_SIZE) - 1;
   begin
     if rising_edge(i_aclk) then
       if i_aresetn = '0' then
@@ -219,46 +229,22 @@ begin
         end if;
 
         ------------------------------------------------------------------
-        -- 3x3 Window generation with Zero Padding
-        -- 1D window:
-        -- wndw(0)   wndw(1)   wndw(2)
-        -- wndw(3)   wndw(4)   wndw(5)
-        -- wndw(6)   wndw(7)   wndw(8)
+        -- KxK window generation with zero padding.
         ------------------------------------------------------------------
+        for v_row_tap in 0 to G_KERNEL_SIZE - 1 loop
+          for v_col_tap in 0 to G_KERNEL_SIZE - 1 loop
+            v_wndw_idx := (v_row_tap * G_KERNEL_SIZE) + v_col_tap;
+            v_buf_idx := (v_row_tap * G_LINE_WIDTH) + v_col_tap + 1;
+            v_wndw_now(v_wndw_idx) := buf_reg(v_buf_idx);
 
-        -- default to normal case (no edge pixel)
-        v_wndw_now(0) := buf_reg(1);
-        v_wndw_now(1) := buf_reg(2);
-        v_wndw_now(2) := buf_reg(3);
-        v_wndw_now(3) := buf_reg(G_LINE_WIDTH+1);
-        v_wndw_now(4) := buf_reg(G_LINE_WIDTH+2); -- pixel that convolution produces result for
-        v_wndw_now(5) := buf_reg(G_LINE_WIDTH+3);
-        v_wndw_now(6) := buf_reg(2*G_LINE_WIDTH+1);
-        v_wndw_now(7) := buf_reg(2*G_LINE_WIDTH+2);
-        v_wndw_now(8) := buf_reg(2*G_LINE_WIDTH+3);
-
-        -- edge cases
-        -- first and last line
-        if v_row_out_next < 1 then -- first row in frame
-          v_wndw_now(0) := C_ZERO;
-          v_wndw_now(1) := C_ZERO;
-          v_wndw_now(2) := C_ZERO;
-        elsif v_row_out_next >= G_NUM_ROW-1 then -- last row in frame
-          v_wndw_now(6) := C_ZERO;
-          v_wndw_now(7) := C_ZERO;
-          v_wndw_now(8) := C_ZERO;
-        end if;
-
-        -- first and last column
-        if v_col_out_next < 1 then -- first column in line
-          v_wndw_now(0) := C_ZERO;
-          v_wndw_now(3) := C_ZERO;
-          v_wndw_now(6) := C_ZERO;
-        elsif v_col_out_next >= G_LINE_WIDTH-1 then -- last column in line
-          v_wndw_now(2) := C_ZERO;
-          v_wndw_now(5) := C_ZERO;
-          v_wndw_now(8) := C_ZERO;
-        end if;
+            v_tap_x := integer(v_col_out_next) + v_col_tap - C_PAD;
+            v_tap_y := integer(v_row_out_next) + v_row_tap - C_PAD;
+            if (v_tap_x < 0) or (v_tap_x >= integer(G_LINE_WIDTH)) or
+               (v_tap_y < 0) or (v_tap_y >= integer(G_NUM_ROW)) then
+              v_wndw_now(v_wndw_idx) := C_ZERO;
+            end if;
+          end loop;
+        end loop;
 
         ------------------------------------------------------------------
         -- AXI Stream Master outputs

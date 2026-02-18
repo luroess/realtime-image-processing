@@ -6,7 +6,6 @@ import ast
 import os
 import re
 import subprocess
-import tomllib
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from functools import lru_cache
@@ -14,33 +13,45 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import tomllib
 
 # TODO(config-surface): Keep pytest wrapper defaults aligned with tb-sim target registry and CI expectations.
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 TARGETS_FILE = TESTBENCH_ROOT / "targets.toml"
 FAST_TARGETS: tuple[str, ...] = (
     "example_passthrough",
+    "test_example",
     "axi_rgb_to_grayscale",
     "window_generator",
+    "test_debouncer",
+    "test_click_detector",
+    "test_debounced_click_detector",
     "axi_sobel_filter",
     "axi_fast_filter",
+    "axi_fast_filter_seq",
     "axi_filter_wrapper",
     "axi_filter_wrapper_stress",
     "axi_edge_overlay_pipeline",
     "axi_filter_wrapper_fast",
+    "axi_filter_wrapper_fast_seq",
 )
 # FIXME(filter-drift): Keep these filter expressions synchronized with actual cocotb test names to avoid silently skipping intended coverage.
 FAST_TEST_FILTERS: dict[str, str] = {
     "example_passthrough": (
-        "test_passthrough_single_frame|"
+        "test_passthrough_image_file_roundtrip|"
         "test_passthrough_with_backpressure_three_cycle_breaks|"
         "test_passthrough_stress_matrix"
+    ),
+    "test_example": (
+        "test_passthrough_single_frame|test_passthrough_image_file_roundtrip"
     ),
     "axi_rgb_to_grayscale": (
         "test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks|"
         "test_axi_rgb_to_grayscale_passthrough_mode|"
         "test_axi_rgb_to_grayscale_stress_matrix"
     ),
+    "test_click_detector": "test_click_state_machine",
+    "test_debounced_click_detector": "test_debounced_click_detection",
     "window_generator": (
         "test_axi_rgb_to_window_without_pressure|"
         "test_axi_rgb_to_window_with_pressure|"
@@ -48,8 +59,7 @@ FAST_TEST_FILTERS: dict[str, str] = {
         "test_axi_rgb_to_window_stress_matrix"
     ),
     "axi_sobel_filter": (
-        "test_axi_sobel_filter_gradient_gray_windows|"
-        "test_axi_sobel_filter_stress_fast"
+        "test_axi_sobel_filter_gradient_gray_windows|test_axi_sobel_filter_stress_fast"
     ),
     "axi_fast_filter": (
         "test_axi_fast_filter_gradient_gray_windows|"
@@ -59,6 +69,12 @@ FAST_TEST_FILTERS: dict[str, str] = {
         "test_axi_fast_filter_mountains_center_crop_end_to_end|"
         "test_axi_fast_filter_stress_fast"
     ),
+    "axi_fast_filter_seq": (
+        "test_axi_fast_filter_gradient_gray_windows|"
+        "test_axi_fast_filter_checkerboard_backpressure_handshake|"
+        "test_axi_fast_filter_lenna_end_to_end|"
+        "test_axi_fast_filter_mountains_center_crop_end_to_end"
+    ),
     "axi_filter_wrapper": (
         "test_axi_windowed_filter_wrapper_simple_image|"
         "test_axi_windowed_filter_wrapper_lenna_end_to_end|"
@@ -67,8 +83,10 @@ FAST_TEST_FILTERS: dict[str, str] = {
     "axi_filter_wrapper_stress": "test_axi_windowed_filter_wrapper_stress_fast",
     "axi_edge_overlay_pipeline": (
         "test_axi_edge_overlay_pipeline_gradient_overlay|"
+        "test_axi_edge_overlay_pipeline_plotly_ours_vs_opencv|"
         "test_axi_edge_overlay_pipeline_overlay_disabled_passthrough|"
-        "test_axi_edge_overlay_pipeline_backpressure_protocol"
+        "test_axi_edge_overlay_pipeline_backpressure_protocol|"
+        "test_axi_edge_overlay_pipeline_profile_cycles"
     ),
     "axi_filter_wrapper_fast": (
         "test_axi_filter_wrapper_fast_simple_image|"
@@ -76,6 +94,10 @@ FAST_TEST_FILTERS: dict[str, str] = {
         "test_axi_filter_wrapper_fast_mountains_center_crop_end_to_end|"
         "test_axi_filter_wrapper_fast_backpressure_handshake_only|"
         "test_axi_filter_wrapper_fast_stress_fast"
+    ),
+    "axi_filter_wrapper_fast_seq": (
+        "test_axi_filter_wrapper_fast_simple_image|"
+        "test_axi_filter_wrapper_fast_backpressure_handshake_only"
     ),
 }
 
@@ -107,47 +129,76 @@ def _load_target_registry() -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
 
 
 @lru_cache(maxsize=1)
-def _collect_declared_test_names() -> frozenset[str]:
-    declared: set[str] = set()
+def _collect_declared_test_names_by_module() -> dict[str, frozenset[str]]:
+    declared_by_module: dict[str, frozenset[str]] = {}
     for test_file in sorted((TESTBENCH_ROOT / "tests").glob("test_*.py")):
+        declared: set[str] = set()
         source = test_file.read_text()
         try:
             module = ast.parse(source, filename=str(test_file))
         except SyntaxError:
             # Keep filter validation usable even if a local test file is mid-edit.
-            declared.update(re.findall(r"^\s*async\s+def\s+(test_[A-Za-z0-9_]+)\s*\(", source, re.M))
-            declared.update(re.findall(r"^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(", source, re.M))
-            continue
+            declared.update(
+                re.findall(
+                    r"^\s*async\s+def\s+(test_[A-Za-z0-9_]+)\s*\(",
+                    source,
+                    re.MULTILINE,
+                ),
+            )
+            declared.update(
+                re.findall(
+                    r"^\s*def\s+(test_[A-Za-z0-9_]+)\s*\(",
+                    source,
+                    re.MULTILINE,
+                ),
+            )
+        else:
+            for node in module.body:
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                    if node.name.startswith("test_"):
+                        declared.add(node.name)
 
-        for node in module.body:
-            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-                if node.name.startswith("test_"):
-                    declared.add(node.name)
-    return frozenset(declared)
+        module_name = f"tests.{test_file.stem}"
+        declared_by_module[module_name] = frozenset(declared)
+
+    return declared_by_module
 
 
 def _validate_filter_tokens(filters: dict[str, str]) -> None:
-    declared = _collect_declared_test_names()
-    missing_by_target: dict[str, list[str]] = {}
+    _, targets = _load_target_registry()
+    declared_by_module = _collect_declared_test_names_by_module()
+    missing_by_target: dict[str, tuple[str, list[str]]] = {}
     for target, filter_expr in filters.items():
+        target_cfg = targets.get(target)
+        if not isinstance(target_cfg, dict):
+            missing_by_target[target] = (
+                "<unknown-test-module>",
+                [f"<unknown target '{target}'>"],
+            )
+            continue
+
+        test_module = (
+            str(target_cfg.get("test_module", "")).split(",", maxsplit=1)[0].strip()
+        )
+        declared = declared_by_module.get(test_module, frozenset())
         missing = [
             token
             for token in (part.strip() for part in filter_expr.split("|"))
             if token and token not in declared
         ]
         if missing:
-            missing_by_target[target] = missing
+            missing_by_target[target] = (test_module or "<unset-test-module>", missing)
 
     if not missing_by_target:
         return
 
     details = "\n".join(
-        f"- {target}: {', '.join(tokens)}"
-        for target, tokens in sorted(missing_by_target.items())
+        f"- {target} ({test_module}): {', '.join(tokens)}"
+        for target, (test_module, tokens) in sorted(missing_by_target.items())
     )
     raise AssertionError(
-        "Invalid COCOTB_TEST_FILTER token(s) not found in testbench/tests:\n"
-        f"{details}"
+        "Invalid COCOTB_TEST_FILTER token(s) not found in target test_module:\n"
+        f"{details}",
     )
 
 
@@ -179,7 +230,9 @@ def _merged_target_config(target: str) -> dict[str, Any]:
     missing = [key for key in required if not config.get(key)]
     if missing:
         missing_csv = ", ".join(missing)
-        raise AssertionError(f"Target '{target}' missing required fields: {missing_csv}")
+        raise AssertionError(
+            f"Target '{target}' missing required fields: {missing_csv}",
+        )
 
     return config
 
@@ -231,7 +284,9 @@ def _read_positive_int_env(name: str, default: int) -> int:
     try:
         value = int(raw)
     except ValueError as exc:
-        raise AssertionError(f"{name} must be a positive integer, got '{raw}'.") from exc
+        raise AssertionError(
+            f"{name} must be a positive integer, got '{raw}'.",
+        ) from exc
     if value < 1:
         raise AssertionError(f"{name} must be >= 1, got {value}.")
     return value
@@ -256,9 +311,13 @@ def _resolve_targets(default_targets: tuple[str, ...]) -> tuple[str, ...]:
     if not raw_targets:
         return default_targets
 
-    candidates = tuple(token.strip() for token in raw_targets.split(",") if token.strip())
+    candidates = tuple(
+        token.strip() for token in raw_targets.split(",") if token.strip()
+    )
     if not candidates:
-        raise AssertionError("TB_STRESS_TARGETS was set but no non-empty targets were parsed.")
+        raise AssertionError(
+            "TB_STRESS_TARGETS was set but no non-empty targets were parsed.",
+        )
 
     resolved: list[str] = []
     for target in candidates:
@@ -268,7 +327,11 @@ def _resolve_targets(default_targets: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(resolved)
 
 
-def _format_command_output(process: subprocess.CompletedProcess[str], *, max_lines: int = 60) -> str:
+def _format_command_output(
+    process: subprocess.CompletedProcess[str],
+    *,
+    max_lines: int = 60,
+) -> str:
     # TODO(log-truncation): Keep bounded output formatting to prevent oversized pytest failure payloads.
     lines: list[str] = []
     if process.stdout:
@@ -290,7 +353,9 @@ def _parse_results_xml(results_xml: Path) -> JunitSummary:
     try:
         root = ET.parse(results_xml).getroot()
     except ET.ParseError as exc:
-        raise AssertionError(f"Unable to parse junit XML at {results_xml}: {exc}") from exc
+        raise AssertionError(
+            f"Unable to parse junit XML at {results_xml}: {exc}",
+        ) from exc
 
     testcases = root.findall(".//testcase")
     failures = root.findall(".//failure")
@@ -367,14 +432,14 @@ def _run_tb_target(
         problems.append(
             "Missing junit results file "
             f"for target '{target}' (iteration {iteration}) under {build_dir} "
-            "(expected *.result.xml or results.xml)."
+            "(expected *.result.xml or results.xml).",
         )
         summary = None
     else:
         summary = _parse_results_xml(results_xml)
         if summary.tests == 0:
             problems.append(
-                f"No testcase entries found in junit results for target '{target}': {results_xml}"
+                f"No testcase entries found in junit results for target '{target}': {results_xml}",
             )
         if summary.failures > 0 or summary.errors > 0:
             failed_list = "\n".join(summary.failed_cases[:10])
@@ -383,13 +448,13 @@ def _run_tb_target(
             problems.append(
                 f"JUnit reports failures for target '{target}' (iteration {iteration}): "
                 f"tests={summary.tests}, failures={summary.failures}, errors={summary.errors}, "
-                f"skipped={summary.skipped}\n{failed_list}"
+                f"skipped={summary.skipped}\n{failed_list}",
             )
 
     if process.returncode != 0:
         problems.append(
             f"tb-sim exited with non-zero status for target '{target}' "
-            f"(iteration {iteration}): rc={process.returncode}"
+            f"(iteration {iteration}): rc={process.returncode}",
         )
 
     if problems:
