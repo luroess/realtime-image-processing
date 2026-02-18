@@ -6,8 +6,8 @@ Current setup verifies RGB24 stream pixels with AXI wire format `TDATA[23:0] = R
 ## Structure
 
 - `common/`: reset and pause helpers used by multiple tests.
-- `drivers/`: reusable AXI traffic generators (`axis_video_source`, `axis_kxk_source`, `axi_stream_driver`).
-- `monitors/`: protocol-aware capture modules (`axis_video_sink`, `axis_window_sink`, `axis_kxk_sink`, `axi_stream_monitor`).
+- `drivers/`: reusable AXI traffic generators (`axis_video_source`, `axis_gray_source`, `axis_window_gray_source`, `axi_stream_driver`).
+- `monitors/`: protocol-aware capture modules (`axis_video_sink`, `axis_gray_sink`, `axis_window_sink`, `axi_stream_monitor`).
 - `models/`: image model and image file conversion.
 - `verification/`: scoreboards and comparison logic.
 - `tests/`: cocotb test cases mapped per DUT target.
@@ -19,7 +19,15 @@ Current setup verifies RGB24 stream pixels with AXI wire format `TDATA[23:0] = R
 
 RTL is organized by component for Vivado IP packaging:
 
-- `../rtl/AXI_RGB_TO_GRAY/hdl/*.vhd`
+Components:
+- `../rtl/RGB_TO_GRAYSCALE/hdl/*.vhd`
+- `../rtl/WINDOW_GENERATOR/hdl/*.vhd`
+- `../rtl/BLURR_FILTER/*.vhd`
+- `../rtl/BLURR_WINDOW_MODULE/hdl/*.vhd`
+- `../rtl/SOBEL_FILTER/*.vhd`
+- `../rtl/SOBEL_WINDOW_MODULE/hdl/*.vhd`
+Testing:
+- `../rtl/PIPELINE/hdl/*.vhd`
 - `../rtl/EXAMPLE_PASSTHROUGH/hdl/*.vhd`
 
 Each component should keep synthesizable HDL in its own `hdl/` subdirectory.
@@ -52,6 +60,10 @@ uv run tb-sim --target example_passthrough
 uv run tb-sim --target test_example
 uv run tb-sim --target axi_rgb_to_grayscale
 uv run tb-sim --target window_generator
+uv run tb-sim --target axi_sobel_filter
+uv run tb-sim --target axi_blurr_window_module
+uv run tb-sim --target axi_sobel_window_module
+uv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline
 uv run tb-sim --target test_debouncer
 uv run tb-sim --target test_click_detector
 uv run tb-sim --target test_debounced_click_detector
