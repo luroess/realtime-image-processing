@@ -144,6 +144,15 @@ def _resolve_parameters(config: dict[str, Any]) -> dict[str, object]:
     return resolved
 
 
+def _resolve_cli_args(config: dict[str, Any], field_name: str) -> list[str]:
+    raw_args = config.get(field_name, [])
+    if raw_args is None:
+        return []
+    if not isinstance(raw_args, list) or not all(isinstance(v, str) for v in raw_args):
+        raise ValueError(f"'{field_name}' must be a list of strings when provided.")
+    return list(raw_args)
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run cocotb simulation target.")
     parser.add_argument(
@@ -208,6 +217,16 @@ def main() -> None:
     if not isinstance(parameters_cfg, dict):
         raise ValueError("'parameters' must be a table/map in targets.toml when provided.")
     parameters = dict(parameters_cfg)
+    build_args = _resolve_cli_args(config=config, field_name="build_args")
+    test_args = _resolve_cli_args(config=config, field_name="test_args")
+
+    # Many entities in this repo use dependent generic expressions that require
+    # VHDL-2008 semantics with GHDL.
+    if sim == "ghdl":
+        if not any(arg.startswith("--std=") for arg in build_args):
+            build_args = ["--std=08", *build_args]
+        if not any(arg.startswith("--std=") for arg in test_args):
+            test_args = ["--std=08", *test_args]
 
     sources = _collect_sources(repo_root=repo_root, config=config)
 
@@ -230,6 +249,7 @@ def main() -> None:
         hdl_toplevel=toplevel,
         hdl_library=hdl_library,
         parameters=parameters,
+        build_args=build_args,
         build_dir=build_dir,
         always=True,
     )
@@ -239,6 +259,7 @@ def main() -> None:
         hdl_toplevel_library=hdl_library,
         test_module=test_module,
         parameters=parameters,
+        test_args=test_args,
         build_dir=build_dir,
         test_dir=test_dir,
         waves=waves

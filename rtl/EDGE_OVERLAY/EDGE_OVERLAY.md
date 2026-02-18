@@ -3,13 +3,13 @@
 `AxiEdgeOverlay` merges two AXI4-Stream video inputs in lockstep:
 
 - RGB input from [`AXI_RgbToGrayscale`](../RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd) via `s_axis_video_rbg888_*`
-- edge input from the Sobel/filter path via `s_axis_video_edges_*`
+- edge input from the Sobel/filter path via `s_axis_rbg888_*`
 
 It outputs one RGB AXI4-Stream (`m_axis_video_rbg888_*`) for VDMA writeback.
 
 ## Functional behavior
 
-- Edge payload interpretation: `s_axis_video_edges_tdata` (binary) equals `1` means edge pixel.
+- Edge payload interpretation: `s_axis_rbg888_tdata` (binary) equals `1` means edge pixel.
 - Composition mode: hard replace.
 - If `i_overlay_enable='1'` and edge is detected, output `G_EDGE_COLOR`.
 - Otherwise, pass input RGB pixel unchanged.
@@ -31,9 +31,9 @@ For active reset low `i_aresetn='0'`, all `tvalid/tready` outputs deassert and o
 
 Normal operation:
 
-- `m_axis_video_rbg888_tvalid = s_axis_video_rbg888_tvalid and s_axis_video_edges_tvalid`
-- `s_axis_video_rbg888_tready = m_axis_video_rbg888_tready and s_axis_video_edges_tvalid`
-- `s_axis_video_edges_tready  = m_axis_video_rbg888_tready and s_axis_video_rbg888_tvalid`
+- `m_axis_video_rbg888_tvalid = s_axis_video_rbg888_tvalid and s_axis_rbg888_tvalid`
+- `s_axis_video_rbg888_tready = m_axis_video_rbg888_tready and s_axis_rbg888_tvalid`
+- `s_axis_rbg888_tready  = m_axis_video_rbg888_tready and s_axis_video_rbg888_tvalid`
 
 Framing:
 

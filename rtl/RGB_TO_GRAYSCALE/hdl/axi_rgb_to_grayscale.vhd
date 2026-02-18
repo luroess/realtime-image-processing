@@ -3,7 +3,7 @@ library ieee;
 
 entity AXI_RgbToGrayscale is
   generic (
-    -- Bit-width per color component in the input RGB stream (R, G, B), as well as the output grayscale stream.
+    -- Bit-width per color component in the input RBG stream (R, B, G), as well as the output grayscale stream.
     G_COMPONENT_WIDTH : positive := 8
   );
   port (
