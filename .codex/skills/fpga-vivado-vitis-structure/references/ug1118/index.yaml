@@ -1,0 +1,508 @@
+source: .codex/skills/fpga-vivado-vitis-structure/references/ug1118/ug1118.full.md
+generated_by: split_sections.py
+chapters:
+  - id: chapter-1
+    title: "Chapter 1: Creating and Packaging Custom IP..............................................5"
+    file: sections/ch01-creating-and-packaging-custom-ip-5.md
+    start_line: 17
+    end_line: 27
+    start_page: null
+    end_page: null
+  - id: chapter-2
+    title: "Chapter 2: IP Packaging Basics............................................................................. 10"
+    file: sections/ch02-ip-packaging-basics-10.md
+    start_line: 28
+    end_line: 52
+    start_page: null
+    end_page: null
+  - id: chapter-3
+    title: "Chapter 3: The Create and Package New IP Wizard..................................29"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29.md
+    start_line: 53
+    end_line: 67
+    start_page: null
+    end_page: null
+  - id: chapter-4
+    title: "Chapter 4: Packaging IP............................................................................................ 44"
+    file: sections/ch04-packaging-ip-44.md
+    start_line: 68
+    end_line: 94
+    start_page: null
+    end_page: null
+  - id: chapter-5
+    title: "Chapter 5: Creating New Interface Definitions...........................................86"
+    file: sections/ch05-creating-new-interface-definitions-86.md
+    start_line: 95
+    end_line: 105
+    start_page: null
+    end_page: null
+  - id: chapter-6
+    title: "Chapter 6: Encrypting IP in Vivado..................................................................... 92"
+    file: sections/ch06-encrypting-ip-in-vivado-92.md
+    start_line: 106
+    end_line: 128
+    start_page: null
+    end_page: null
+  - id: appendix-a
+    title: "Appendix A: Standard and Advanced File Groups.................................... 109"
+    file: sections/app-a-standard-and-advanced-file-groups-109.md
+    start_line: 129
+    end_line: 135
+    start_page: null
+    end_page: null
+  - id: appendix-b
+    title: "Appendix B: Additional Resources and Legal Notices........................... 112"
+    file: sections/app-b-additional-resources-and-legal-notices-112.md
+    start_line: 136
+    end_line: 5926
+    start_page: null
+    end_page: null
+sections:
+  - id: appendix-a-sec-01
+    parent: appendix-a
+    title: "Introduction"
+    file: sections/app-a-standard-and-advanced-file-groups-109-sec01-introduction.md
+    start_line: 130
+    end_line: 131
+    start_page: 109
+    end_page: 109
+  - id: appendix-a-sec-02
+    parent: appendix-a
+    title: "Standard File Groups"
+    file: sections/app-a-standard-and-advanced-file-groups-109-sec02-standard-file-groups.md
+    start_line: 132
+    end_line: 133
+    start_page: 109
+    end_page: 109
+  - id: appendix-a-sec-03
+    parent: appendix-a
+    title: "Advanced File Groups"
+    file: sections/app-a-standard-and-advanced-file-groups-109-sec03-advanced-file-groups.md
+    start_line: 134
+    end_line: 135
+    start_page: 110
+    end_page: 110
+  - id: appendix-b-sec-01
+    parent: appendix-b
+    title: "Finding Additional Documentation"
+    file: sections/app-b-additional-resources-and-legal-notices-112-sec01-finding-additional-documentation.md
+    start_line: 137
+    end_line: 138
+    start_page: 112
+    end_page: 112
+  - id: appendix-b-sec-02
+    parent: appendix-b
+    title: "Support Resources"
+    file: sections/app-b-additional-resources-and-legal-notices-112-sec02-support-resources.md
+    start_line: 139
+    end_line: 5718
+    start_page: 113
+    end_page: 113
+  - id: appendix-b-sec-03
+    parent: appendix-b
+    title: "References"
+    file: sections/app-b-additional-resources-and-legal-notices-112-sec03-references.md
+    start_line: 5719
+    end_line: 5849
+    start_page: 113
+    end_page: 114
+  - id: appendix-b-sec-04
+    parent: appendix-b
+    title: "Revision History"
+    file: sections/app-b-additional-resources-and-legal-notices-112-sec04-revision-history.md
+    start_line: 5850
+    end_line: 5869
+    start_page: 115
+    end_page: 115
+  - id: appendix-b-sec-05
+    parent: appendix-b
+    title: "Please Read: Important Legal Notices"
+    file: sections/app-b-additional-resources-and-legal-notices-112-sec05-please-read-important-legal-notices.md
+    start_line: 5870
+    end_line: 5926
+    start_page: 115
+    end_page: 115
+  - id: chapter-1-sec-01
+    parent: chapter-1
+    title: "Introduction"
+    file: sections/ch01-creating-and-packaging-custom-ip-5-sec01-introduction.md
+    start_line: 18
+    end_line: 19
+    start_page: 5
+    end_page: 5
+  - id: chapter-1-sec-02
+    parent: chapter-1
+    title: "Navigating Content by Design Process"
+    file: sections/ch01-creating-and-packaging-custom-ip-5-sec02-navigating-content-by-design-process.md
+    start_line: 20
+    end_line: 21
+    start_page: 6
+    end_page: 6
+  - id: chapter-1-sec-03
+    parent: chapter-1
+    title: "Supported IP Packager Inputs"
+    file: sections/ch01-creating-and-packaging-custom-ip-5-sec03-supported-ip-packager-inputs.md
+    start_line: 22
+    end_line: 23
+    start_page: 7
+    end_page: 7
+  - id: chapter-1-sec-04
+    parent: chapter-1
+    title: "Outputs from IP Packager"
+    file: sections/ch01-creating-and-packaging-custom-ip-5-sec04-outputs-from-ip-packager.md
+    start_line: 24
+    end_line: 25
+    start_page: 7
+    end_page: 7
+  - id: chapter-1-sec-05
+    parent: chapter-1
+    title: "Using the Packager Settings"
+    file: sections/ch01-creating-and-packaging-custom-ip-5-sec05-using-the-packager-settings.md
+    start_line: 26
+    end_line: 27
+    start_page: 8
+    end_page: 8
+  - id: chapter-2-sec-01
+    parent: chapter-2
+    title: "Introduction"
+    file: sections/ch02-ip-packaging-basics-10-sec01-introduction.md
+    start_line: 29
+    end_line: 30
+    start_page: 10
+    end_page: 10
+  - id: chapter-2-sec-02
+    parent: chapter-2
+    title: "IP Packager Wizard Options"
+    file: sections/ch02-ip-packaging-basics-10-sec02-ip-packager-wizard-options.md
+    start_line: 31
+    end_line: 32
+    start_page: 10
+    end_page: 11
+  - id: chapter-2-sec-03
+    parent: chapter-2
+    title: "Top-Level HDL Requirements"
+    file: sections/ch02-ip-packaging-basics-10-sec03-top-level-hdl-requirements.md
+    start_line: 33
+    end_line: 34
+    start_page: 12
+    end_page: 13
+  - id: chapter-2-sec-04
+    parent: chapter-2
+    title: "Inferring Signals"
+    file: sections/ch02-ip-packaging-basics-10-sec04-inferring-signals.md
+    start_line: 35
+    end_line: 36
+    start_page: 14
+    end_page: 15
+  - id: chapter-2-sec-05
+    parent: chapter-2
+    title: "Packaging a Design with Global Include Files"
+    file: sections/ch02-ip-packaging-basics-10-sec05-packaging-a-design-with-global-include-files.md
+    start_line: 37
+    end_line: 38
+    start_page: 16
+    end_page: 16
+  - id: chapter-2-sec-06
+    parent: chapter-2
+    title: "Constraints Requirements"
+    file: sections/ch02-ip-packaging-basics-10-sec06-constraints-requirements.md
+    start_line: 39
+    end_line: 40
+    start_page: 17
+    end_page: 18
+  - id: chapter-2-sec-07
+    parent: chapter-2
+    title: "Upgrading Custom IP"
+    file: sections/ch02-ip-packaging-basics-10-sec07-upgrading-custom-ip.md
+    start_line: 41
+    end_line: 42
+    start_page: 19
+    end_page: 19
+  - id: chapter-2-sec-08
+    parent: chapter-2
+    title: "Editing an Existing Custom IP"
+    file: sections/ch02-ip-packaging-basics-10-sec08-editing-an-existing-custom-ip.md
+    start_line: 43
+    end_line: 44
+    start_page: 20
+    end_page: 23
+  - id: chapter-2-sec-09
+    parent: chapter-2
+    title: "Adding an Example Design to the Packager"
+    file: sections/ch02-ip-packaging-basics-10-sec09-adding-an-example-design-to-the-packager.md
+    start_line: 45
+    end_line: 46
+    start_page: 24
+    end_page: 25
+  - id: chapter-2-sec-10
+    parent: chapter-2
+    title: "Setting a Dependency Expression"
+    file: sections/ch02-ip-packaging-basics-10-sec10-setting-a-dependency-expression.md
+    start_line: 47
+    end_line: 48
+    start_page: 26
+    end_page: 26
+  - id: chapter-2-sec-11
+    parent: chapter-2
+    title: "Versioning and Revision Control"
+    file: sections/ch02-ip-packaging-basics-10-sec11-versioning-and-revision-control.md
+    start_line: 49
+    end_line: 50
+    start_page: 27
+    end_page: 27
+  - id: chapter-2-sec-12
+    parent: chapter-2
+    title: "Archiving your Current Project"
+    file: sections/ch02-ip-packaging-basics-10-sec12-archiving-your-current-project.md
+    start_line: 51
+    end_line: 52
+    start_page: 28
+    end_page: 28
+  - id: chapter-3-sec-01
+    parent: chapter-3
+    title: "Introduction"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29-sec01-introduction.md
+    start_line: 54
+    end_line: 55
+    start_page: 29
+    end_page: 29
+  - id: chapter-3-sec-02
+    parent: chapter-3
+    title: "Using the Create and Package New IP Wizard"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29-sec02-using-the-create-and-package-new-ip-wizard.md
+    start_line: 56
+    end_line: 57
+    start_page: 30
+    end_page: 31
+  - id: chapter-3-sec-03
+    parent: chapter-3
+    title: "Packaging Your Current Project"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29-sec03-packaging-your-current-project.md
+    start_line: 58
+    end_line: 59
+    start_page: 32
+    end_page: 33
+  - id: chapter-3-sec-04
+    parent: chapter-3
+    title: "Packaging a Block Design"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29-sec04-packaging-a-block-design.md
+    start_line: 60
+    end_line: 61
+    start_page: 34
+    end_page: 38
+  - id: chapter-3-sec-05
+    parent: chapter-3
+    title: "Packaging a Specified Directory"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29-sec05-packaging-a-specified-directory.md
+    start_line: 62
+    end_line: 63
+    start_page: 39
+    end_page: 40
+  - id: chapter-3-sec-06
+    parent: chapter-3
+    title: "Creating a New AXI4 Peripheral"
+    file: sections/ch03-the-create-and-package-new-ip-wizard-29-sec06-creating-a-new-axi4-peripheral.md
+    start_line: 64
+    end_line: 67
+    start_page: 41
+    end_page: 41
+  - id: chapter-4-sec-01
+    parent: chapter-4
+    title: "Introduction"
+    file: sections/ch04-packaging-ip-44-sec01-introduction.md
+    start_line: 69
+    end_line: 76
+    start_page: 44
+    end_page: 44
+  - id: chapter-4-sec-02
+    parent: chapter-4
+    title: "Identification"
+    file: sections/ch04-packaging-ip-44-sec02-identification.md
+    start_line: 77
+    end_line: 78
+    start_page: 45
+    end_page: 47
+  - id: chapter-4-sec-03
+    parent: chapter-4
+    title: "Compatibility"
+    file: sections/ch04-packaging-ip-44-sec03-compatibility.md
+    start_line: 79
+    end_line: 82
+    start_page: 48
+    end_page: 59
+  - id: chapter-4-sec-04
+    parent: chapter-4
+    title: "Common File Types and Groups"
+    file: sections/ch04-packaging-ip-44-sec04-common-file-types-and-groups.md
+    start_line: 83
+    end_line: 84
+    start_page: 60
+    end_page: 60
+  - id: chapter-4-sec-05
+    parent: chapter-4
+    title: "Customization Parameters"
+    file: sections/ch04-packaging-ip-44-sec05-customization-parameters.md
+    start_line: 85
+    end_line: 86
+    start_page: 61
+    end_page: 66
+  - id: chapter-4-sec-06
+    parent: chapter-4
+    title: "Ports and Interfaces"
+    file: sections/ch04-packaging-ip-44-sec06-ports-and-interfaces.md
+    start_line: 87
+    end_line: 88
+    start_page: 67
+    end_page: 75
+  - id: chapter-4-sec-07
+    parent: chapter-4
+    title: "Addressing and Memory"
+    file: sections/ch04-packaging-ip-44-sec07-addressing-and-memory.md
+    start_line: 89
+    end_line: 90
+    start_page: 76
+    end_page: 79
+  - id: chapter-4-sec-08
+    parent: chapter-4
+    title: "Customization GUI"
+    file: sections/ch04-packaging-ip-44-sec08-customization-gui.md
+    start_line: 91
+    end_line: 92
+    start_page: 80
+    end_page: 82
+  - id: chapter-4-sec-09
+    parent: chapter-4
+    title: "Review and Package"
+    file: sections/ch04-packaging-ip-44-sec09-review-and-package.md
+    start_line: 93
+    end_line: 94
+    start_page: 83
+    end_page: 83
+  - id: chapter-5-sec-01
+    parent: chapter-5
+    title: "Introduction"
+    file: sections/ch05-creating-new-interface-definitions-86-sec01-introduction.md
+    start_line: 96
+    end_line: 97
+    start_page: 86
+    end_page: 86
+  - id: chapter-5-sec-02
+    parent: chapter-5
+    title: "Creating a New Interface Definition"
+    file: sections/ch05-creating-new-interface-definitions-86-sec02-creating-a-new-interface-definition.md
+    start_line: 98
+    end_line: 99
+    start_page: 86
+    end_page: 87
+  - id: chapter-5-sec-03
+    parent: chapter-5
+    title: "Using the Interface Definition Editor"
+    file: sections/ch05-creating-new-interface-definitions-86-sec03-using-the-interface-definition-editor.md
+    start_line: 100
+    end_line: 101
+    start_page: 88
+    end_page: 90
+  - id: chapter-5-sec-04
+    parent: chapter-5
+    title: "Re-Editing Interface Definitions"
+    file: sections/ch05-creating-new-interface-definitions-86-sec04-re-editing-interface-definitions.md
+    start_line: 102
+    end_line: 103
+    start_page: 91
+    end_page: 91
+  - id: chapter-5-sec-05
+    parent: chapter-5
+    title: "Using a New Interface Definition"
+    file: sections/ch05-creating-new-interface-definitions-86-sec05-using-a-new-interface-definition.md
+    start_line: 104
+    end_line: 105
+    start_page: 91
+    end_page: 91
+  - id: chapter-6-sec-01
+    parent: chapter-6
+    title: "Introduction"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec01-introduction.md
+    start_line: 107
+    end_line: 108
+    start_page: 92
+    end_page: 92
+  - id: chapter-6-sec-02
+    parent: chapter-6
+    title: "IEEE-1735 Trust Model"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec02-ieee-1735-trust-model.md
+    start_line: 109
+    end_line: 110
+    start_page: 93
+    end_page: 93
+  - id: chapter-6-sec-03
+    parent: chapter-6
+    title: "Access Rights Management"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec03-access-rights-management.md
+    start_line: 111
+    end_line: 112
+    start_page: 93
+    end_page: 93
+  - id: chapter-6-sec-04
+    parent: chapter-6
+    title: "Understanding IEEE 1735 Structural Elements"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec04-understanding-ieee-1735-structural-elements.md
+    start_line: 113
+    end_line: 114
+    start_page: 94
+    end_page: 99
+  - id: chapter-6-sec-05
+    parent: chapter-6
+    title: "Understanding How Rights Affect Vivado Tools"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec05-understanding-how-rights-affect-vivado-tools.md
+    start_line: 115
+    end_line: 116
+    start_page: 100
+    end_page: 101
+  - id: chapter-6-sec-06
+    parent: chapter-6
+    title: "RTL Encryption Examples"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec06-rtl-encryption-examples.md
+    start_line: 117
+    end_line: 118
+    start_page: 102
+    end_page: 102
+  - id: chapter-6-sec-07
+    parent: chapter-6
+    title: "Encrypting IP with Vivado"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec07-encrypting-ip-with-vivado.md
+    start_line: 119
+    end_line: 120
+    start_page: 103
+    end_page: 105
+  - id: chapter-6-sec-08
+    parent: chapter-6
+    title: "Encrypting a Checkpoint with Vivado"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec08-encrypting-a-checkpoint-with-vivado.md
+    start_line: 121
+    end_line: 122
+    start_page: 106
+    end_page: 106
+  - id: chapter-6-sec-09
+    parent: chapter-6
+    title: "Impact on QoR"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec09-impact-on-qor.md
+    start_line: 123
+    end_line: 124
+    start_page: 107
+    end_page: 107
+  - id: chapter-6-sec-10
+    parent: chapter-6
+    title: "Best Practices"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec10-best-practices.md
+    start_line: 125
+    end_line: 126
+    start_page: 108
+    end_page: 108
+  - id: chapter-6-sec-11
+    parent: chapter-6
+    title: "Known Limitations"
+    file: sections/ch06-encrypting-ip-in-vivado-92-sec11-known-limitations.md
+    start_line: 127
+    end_line: 128
+    start_page: 108
+    end_page: 108

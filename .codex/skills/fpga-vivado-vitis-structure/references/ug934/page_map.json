@@ -1,0 +1,488 @@
+[
+  {
+    "page": 1,
+    "start_line": 7,
+    "end_line": 29,
+    "chars": 655
+  },
+  {
+    "page": 2,
+    "start_line": 30,
+    "end_line": 70,
+    "chars": 3808
+  },
+  {
+    "page": 3,
+    "start_line": 71,
+    "end_line": 83,
+    "chars": 714
+  },
+  {
+    "page": 4,
+    "start_line": 84,
+    "end_line": 141,
+    "chars": 1768
+  },
+  {
+    "page": 5,
+    "start_line": 142,
+    "end_line": 186,
+    "chars": 1716
+  },
+  {
+    "page": 6,
+    "start_line": 187,
+    "end_line": 224,
+    "chars": 1399
+  },
+  {
+    "page": 7,
+    "start_line": 225,
+    "end_line": 273,
+    "chars": 2260
+  },
+  {
+    "page": 8,
+    "start_line": 274,
+    "end_line": 327,
+    "chars": 2277
+  },
+  {
+    "page": 9,
+    "start_line": 328,
+    "end_line": 389,
+    "chars": 2088
+  },
+  {
+    "page": 10,
+    "start_line": 390,
+    "end_line": 456,
+    "chars": 1932
+  },
+  {
+    "page": 11,
+    "start_line": 457,
+    "end_line": 536,
+    "chars": 3022
+  },
+  {
+    "page": 12,
+    "start_line": 537,
+    "end_line": 612,
+    "chars": 2329
+  },
+  {
+    "page": 13,
+    "start_line": 613,
+    "end_line": 668,
+    "chars": 1525
+  },
+  {
+    "page": 14,
+    "start_line": 669,
+    "end_line": 716,
+    "chars": 1730
+  },
+  {
+    "page": 15,
+    "start_line": 717,
+    "end_line": 738,
+    "chars": 916
+  },
+  {
+    "page": 16,
+    "start_line": 739,
+    "end_line": 790,
+    "chars": 1835
+  },
+  {
+    "page": 17,
+    "start_line": 791,
+    "end_line": 843,
+    "chars": 3139
+  },
+  {
+    "page": 18,
+    "start_line": 844,
+    "end_line": 895,
+    "chars": 2926
+  },
+  {
+    "page": 19,
+    "start_line": 896,
+    "end_line": 946,
+    "chars": 2270
+  },
+  {
+    "page": 20,
+    "start_line": 947,
+    "end_line": 1004,
+    "chars": 1738
+  },
+  {
+    "page": 21,
+    "start_line": 1005,
+    "end_line": 1067,
+    "chars": 1840
+  },
+  {
+    "page": 22,
+    "start_line": 1068,
+    "end_line": 1134,
+    "chars": 2230
+  },
+  {
+    "page": 23,
+    "start_line": 1135,
+    "end_line": 1191,
+    "chars": 2835
+  },
+  {
+    "page": 24,
+    "start_line": 1192,
+    "end_line": 1251,
+    "chars": 1804
+  },
+  {
+    "page": 25,
+    "start_line": 1252,
+    "end_line": 1290,
+    "chars": 1572
+  },
+  {
+    "page": 26,
+    "start_line": 1291,
+    "end_line": 1356,
+    "chars": 1946
+  },
+  {
+    "page": 27,
+    "start_line": 1357,
+    "end_line": 1409,
+    "chars": 2533
+  },
+  {
+    "page": 28,
+    "start_line": 1410,
+    "end_line": 1465,
+    "chars": 1598
+  },
+  {
+    "page": 29,
+    "start_line": 1466,
+    "end_line": 1501,
+    "chars": 1784
+  },
+  {
+    "page": 30,
+    "start_line": 1502,
+    "end_line": 1610,
+    "chars": 1723
+  },
+  {
+    "page": 31,
+    "start_line": 1611,
+    "end_line": 1649,
+    "chars": 1792
+  },
+  {
+    "page": 32,
+    "start_line": 1650,
+    "end_line": 1725,
+    "chars": 2390
+  },
+  {
+    "page": 33,
+    "start_line": 1726,
+    "end_line": 1767,
+    "chars": 1305
+  },
+  {
+    "page": 34,
+    "start_line": 1768,
+    "end_line": 1830,
+    "chars": 1325
+  },
+  {
+    "page": 35,
+    "start_line": 1831,
+    "end_line": 1894,
+    "chars": 1541
+  },
+  {
+    "page": 36,
+    "start_line": 1895,
+    "end_line": 1952,
+    "chars": 1714
+  },
+  {
+    "page": 37,
+    "start_line": 1953,
+    "end_line": 2011,
+    "chars": 1165
+  },
+  {
+    "page": 38,
+    "start_line": 2012,
+    "end_line": 2067,
+    "chars": 1608
+  },
+  {
+    "page": 39,
+    "start_line": 2068,
+    "end_line": 2136,
+    "chars": 1932
+  },
+  {
+    "page": 40,
+    "start_line": 2137,
+    "end_line": 2206,
+    "chars": 1655
+  },
+  {
+    "page": 41,
+    "start_line": 2207,
+    "end_line": 2276,
+    "chars": 1451
+  },
+  {
+    "page": 42,
+    "start_line": 2277,
+    "end_line": 2345,
+    "chars": 1764
+  },
+  {
+    "page": 43,
+    "start_line": 2346,
+    "end_line": 2415,
+    "chars": 1578
+  },
+  {
+    "page": 44,
+    "start_line": 2416,
+    "end_line": 2484,
+    "chars": 1747
+  },
+  {
+    "page": 45,
+    "start_line": 2485,
+    "end_line": 2554,
+    "chars": 1541
+  },
+  {
+    "page": 46,
+    "start_line": 2555,
+    "end_line": 2614,
+    "chars": 2383
+  },
+  {
+    "page": 47,
+    "start_line": 2615,
+    "end_line": 2650,
+    "chars": 794
+  },
+  {
+    "page": 48,
+    "start_line": 2651,
+    "end_line": 2694,
+    "chars": 1151
+  },
+  {
+    "page": 49,
+    "start_line": 2695,
+    "end_line": 2734,
+    "chars": 981
+  },
+  {
+    "page": 50,
+    "start_line": 2735,
+    "end_line": 2783,
+    "chars": 812
+  },
+  {
+    "page": 51,
+    "start_line": 2784,
+    "end_line": 2833,
+    "chars": 1374
+  },
+  {
+    "page": 52,
+    "start_line": 2834,
+    "end_line": 2886,
+    "chars": 1434
+  },
+  {
+    "page": 53,
+    "start_line": 2887,
+    "end_line": 2932,
+    "chars": 978
+  },
+  {
+    "page": 54,
+    "start_line": 2933,
+    "end_line": 2985,
+    "chars": 1533
+  },
+  {
+    "page": 55,
+    "start_line": 2986,
+    "end_line": 3037,
+    "chars": 1395
+  },
+  {
+    "page": 56,
+    "start_line": 3038,
+    "end_line": 3078,
+    "chars": 965
+  },
+  {
+    "page": 57,
+    "start_line": 3079,
+    "end_line": 3130,
+    "chars": 1563
+  },
+  {
+    "page": 58,
+    "start_line": 3131,
+    "end_line": 3186,
+    "chars": 1885
+  },
+  {
+    "page": 59,
+    "start_line": 3187,
+    "end_line": 3233,
+    "chars": 2137
+  },
+  {
+    "page": 60,
+    "start_line": 3234,
+    "end_line": 3298,
+    "chars": 1761
+  },
+  {
+    "page": 61,
+    "start_line": 3299,
+    "end_line": 3354,
+    "chars": 1924
+  },
+  {
+    "page": 62,
+    "start_line": 3355,
+    "end_line": 3408,
+    "chars": 2307
+  },
+  {
+    "page": 63,
+    "start_line": 3409,
+    "end_line": 3464,
+    "chars": 2647
+  },
+  {
+    "page": 64,
+    "start_line": 3465,
+    "end_line": 3515,
+    "chars": 2145
+  },
+  {
+    "page": 65,
+    "start_line": 3516,
+    "end_line": 3593,
+    "chars": 2019
+  },
+  {
+    "page": 66,
+    "start_line": 3594,
+    "end_line": 3649,
+    "chars": 2655
+  },
+  {
+    "page": 67,
+    "start_line": 3650,
+    "end_line": 3696,
+    "chars": 2136
+  },
+  {
+    "page": 68,
+    "start_line": 3697,
+    "end_line": 3749,
+    "chars": 2383
+  },
+  {
+    "page": 69,
+    "start_line": 3750,
+    "end_line": 3799,
+    "chars": 1921
+  },
+  {
+    "page": 70,
+    "start_line": 3800,
+    "end_line": 3853,
+    "chars": 2935
+  },
+  {
+    "page": 71,
+    "start_line": 3854,
+    "end_line": 3906,
+    "chars": 2232
+  },
+  {
+    "page": 72,
+    "start_line": 3907,
+    "end_line": 3965,
+    "chars": 2569
+  },
+  {
+    "page": 73,
+    "start_line": 3966,
+    "end_line": 4013,
+    "chars": 2632
+  },
+  {
+    "page": 74,
+    "start_line": 4014,
+    "end_line": 4055,
+    "chars": 1303
+  },
+  {
+    "page": 75,
+    "start_line": 4056,
+    "end_line": 4106,
+    "chars": 2384
+  },
+  {
+    "page": 76,
+    "start_line": 4107,
+    "end_line": 4154,
+    "chars": 1820
+  },
+  {
+    "page": 77,
+    "start_line": 4155,
+    "end_line": 4188,
+    "chars": 1457
+  },
+  {
+    "page": 78,
+    "start_line": 4189,
+    "end_line": 4221,
+    "chars": 1114
+  },
+  {
+    "page": 79,
+    "start_line": 4222,
+    "end_line": 4262,
+    "chars": 1363
+  },
+  {
+    "page": 80,
+    "start_line": 4263,
+    "end_line": 4322,
+    "chars": 3671
+  },
+  {
+    "page": 81,
+    "start_line": 4323,
+    "end_line": 4336,
+    "chars": 482
+  }
+]

@@ -5,15 +5,24 @@ from __future__ import annotations
 import numpy as np
 from cocotb.queue import Queue
 from cocotb.triggers import RisingEdge, SimTimeoutError, with_timeout
-
 from models.image_model import Image
 
 
 class AxiStreamMonitor:
-    def __init__(self, dut, i_clk, i_rst_n, width: int, height: int, prefix: str = "m_axis") -> None:
+    def __init__(
+        self,
+        dut,
+        i_clk,
+        i_rst_n,
+        width: int,
+        height: int,
+        prefix: str = "m_axis",
+        reset_active_level: bool = True,
+    ) -> None:
         self.dut = dut
         self.i_clk = i_clk
         self.i_rst_n = i_rst_n
+        self.reset_active_level = reset_active_level
         self.width = width
         self.height = height
 
@@ -28,8 +37,8 @@ class AxiStreamMonitor:
     @staticmethod
     def _unpack_rgb(word: int) -> tuple[int, int, int]:
         r = (word >> 16) & 0xFF
-        g = (word >> 8) & 0xFF
-        b = word & 0xFF
+        b = (word >> 8) & 0xFF
+        g = word & 0xFF
         return (r, g, b)
 
     async def run(self) -> None:
@@ -40,7 +49,7 @@ class AxiStreamMonitor:
         while True:
             await RisingEdge(self.i_clk)
 
-            if int(self.i_rst_n.value) == 1:
+            if int(self.i_rst_n.value) == int(self.reset_active_level):
                 in_frame = False
                 pixels = []
                 line_pixels = 0

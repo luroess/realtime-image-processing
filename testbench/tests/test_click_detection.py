@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import cocotb
 from cocotb.clock import Clock
-
 from drivers.click_detection_driver import ClickDetectionDriver
 
 # CONSTANTS

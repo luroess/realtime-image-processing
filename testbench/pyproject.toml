@@ -12,8 +12,9 @@ dependencies = [
     "cocotb>=2.0.1",
     "cocotbext-axi>=0.1.26",
     "numpy>=2.2.2",
-
+    "opencv-python-headless>=4.13.0.0",
     "pillow>=11.1.0",
+    "plotly>=6.3.0",
     "pytest>=9.0.2",
 ]
 
@@ -38,4 +39,10 @@ exclude = ["sim_build*", "images*"]
 
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["pytest"]
+python_files = ["test_pipeline_*.py"]
+addopts = ["--strict-markers"]
+markers = [
+    "fast: quick cocotb wrapper tier for core pipeline targets",
+    "heavy: stress-oriented cocotb wrapper tier",
+]

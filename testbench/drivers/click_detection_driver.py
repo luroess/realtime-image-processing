@@ -1,6 +1,6 @@
 """Transport layer: self for sending button inputs."""
 
-from cocotb.triggers import Timer, RisingEdge, FallingEdge
+from cocotb.triggers import FallingEdge, RisingEdge, Timer
 from cocotb.utils import get_sim_time
 
 

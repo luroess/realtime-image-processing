@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
 from cocotb.triggers import SimTimeoutError, with_timeout
 from cocotbext.axi import AxiStreamBus, AxiStreamSink
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class AxiGrayStreamSink:
@@ -34,12 +38,29 @@ class AxiGrayStreamSink:
                 f"Expected 1 byte lane for gray8 output, got {self._byte_lanes}",
             )
 
-    async def recv_plane(self, width: int, height: int, timeout_ns: int = 100_000) -> np.ndarray:
+    def set_pause_generator(self, generator: Iterable[bool] | None = None) -> None:
+        """Apply optional TREADY backpressure pattern."""
+        self._sink.set_pause_generator(generator)
+
+    def set_pause(self, paused: bool) -> None:
+        """Directly control sink pause (`True` stalls by deasserting TREADY)."""
+        self._sink.pause = bool(paused)
+
+    async def recv_plane(
+        self,
+        width: int,
+        height: int,
+        timeout_ns: int = 100_000,
+    ) -> np.ndarray:
         lines: list[list[int]] = []
 
         try:
             for _ in range(height):
-                frame = await with_timeout(self._sink.recv(compact=False), timeout_ns, "ns")
+                frame = await with_timeout(
+                    self._sink.recv(compact=False),
+                    timeout_ns,
+                    "ns",
+                )
                 line = list(bytes(frame.tdata))
 
                 if len(line) != width:

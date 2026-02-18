@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: context make-context contex
+.PHONY: context make-context contex skill-db skill-query codex-note skill-test report-check
 
 DOCS_PATTERN := *.md|*.png|*.jpg|*.jpeg|*.svg|*.gif|*.webp|*.pdf
 RTL_PATTERN := *.md|*.vhd
@@ -8,6 +8,8 @@ RTL_PATTERN := *.md|*.vhd
 VIVADO_HW_ROOT := vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw
 VIVADO_BD_IP_ROOT := $(VIVADO_HW_ROOT)/hw.srcs/sources_1/bd/system/ip
 VITIS_ROOT := vivado/Zybo-Z7-10-Pcam-5C-sw.ide
+SKILL_SCRIPTS_DIR := .codex/skills/fpga-vivado-vitis-structure/scripts
+SKILL_DB_PATH := .codex/skills/fpga-vivado-vitis-structure/references/.cache/skill_knowledge.sqlite
 
 context:
 	@command -v tree >/dev/null 2>&1 || { echo "ERROR: 'tree' is required."; exit 1; }
@@ -51,3 +53,50 @@ context:
 make-context: context
 
 contex: context
+
+skill-db:
+	@python3 $(SKILL_SCRIPTS_DIR)/build_skill_db.py \
+		--db "$${DB:-$(SKILL_DB_PATH)}" \
+		--docs "$${DOCS:-all}" \
+		--rtl-root "$${RTL_ROOT:-rtl}" \
+		--backend "$${BACKEND:-regex}" \
+		$${RECREATE:+--recreate}
+
+skill-query:
+	@if [ -z "$$CMD" ]; then \
+		echo "Usage: make skill-query CMD='amd --query \"SOF\" --docs ug934' [DB=path]"; \
+		exit 1; \
+	fi
+	@python3 $(SKILL_SCRIPTS_DIR)/query_skill_db.py --db "$${DB:-$(SKILL_DB_PATH)}" $$CMD
+
+codex-note:
+	@if [ -z "$$CATEGORY" ] || [ -z "$$TYPE" ] || [ -z "$$LABEL" ]; then \
+		echo "Usage: make codex-note CATEGORY=Research TYPE=Report LABEL=my_note [DATE=YYYYMMDD]"; \
+		exit 1; \
+	fi
+	@python3 $(SKILL_SCRIPTS_DIR)/new_codex_note.py \
+		--category "$$CATEGORY" \
+		--type "$$TYPE" \
+		--label "$$LABEL" \
+		$${DATE:+--date "$$DATE"}
+
+skill-test:
+	@python3 -m unittest discover -s .codex/skills/fpga-vivado-vitis-structure/scripts/tests -p "test_*.py"
+
+report-check:
+	@mkdir -p docs/report/build
+	@python3 docs/report/analysis/check_citations.py
+	@set -euo pipefail; \
+		root_out="$$(typst compile --root . docs/report/report.typ docs/report/build/report.pdf 2>&1)"; \
+		local_out="$$(cd docs/report && typst compile report.typ build/report_from_report_dir.pdf 2>&1)"; \
+	if [ -n "$$root_out" ]; then \
+		echo "ERROR: report root compile produced diagnostics:"; \
+		echo "$$root_out"; \
+		exit 1; \
+	fi; \
+	if [ -n "$$local_out" ]; then \
+		echo "ERROR: report local compile produced diagnostics:"; \
+		echo "$$local_out"; \
+		exit 1; \
+	fi; \
+	echo "OK: report compile is warning-free in both modes."

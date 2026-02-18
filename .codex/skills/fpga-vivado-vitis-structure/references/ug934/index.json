@@ -1,0 +1,529 @@
+{
+  "source": ".codex/skills/fpga-vivado-vitis-structure/references/ug934/ug934.full.md",
+  "generated_by": "split_sections.py",
+  "toc_entries": [
+    {
+      "title": "AXI4-Stream Signaling Interface",
+      "page": 4
+    },
+    {
+      "title": "Data Format",
+      "page": 6
+    },
+    {
+      "title": "Video Timing Information",
+      "page": 16
+    },
+    {
+      "title": "Propagating Video Timing Information",
+      "page": 17
+    },
+    {
+      "title": "Reset Requirements",
+      "page": 18
+    },
+    {
+      "title": "Input/Output Interfaces - Automatic Delay Matching",
+      "page": 19
+    },
+    {
+      "title": "External Frame Buffers",
+      "page": 26
+    },
+    {
+      "title": "Multipoint Interfaces",
+      "page": 27
+    },
+    {
+      "title": "Ancillary Data",
+      "page": 28
+    },
+    {
+      "title": "Interlaced Video Support",
+      "page": 29
+    },
+    {
+      "title": "Video Subsystem Software Guidelines",
+      "page": 35
+    },
+    {
+      "title": "Video Subsystem Bandwidth Requirements",
+      "page": 46
+    },
+    {
+      "title": "IP Parameterization",
+      "page": 59
+    },
+    {
+      "title": "General IP Structure",
+      "page": 60
+    },
+    {
+      "title": "Timing Representation",
+      "page": 64
+    },
+    {
+      "title": "Input/Output Timing",
+      "page": 69
+    },
+    {
+      "title": "Buffering Requirements",
+      "page": 70
+    },
+    {
+      "title": "READY \u2013 VALID Propagation",
+      "page": 72
+    },
+    {
+      "title": "Flushing Pipelined Cores",
+      "page": 73
+    },
+    {
+      "title": "Propagating SOF and EOL Signals",
+      "page": 75
+    },
+    {
+      "title": "Interframe Reinitialization",
+      "page": 75
+    },
+    {
+      "title": "Interrupt Subsystem",
+      "page": 75
+    },
+    {
+      "title": "Debugging Features",
+      "page": 76
+    },
+    {
+      "title": "Core Generator and Vivado Compatibility",
+      "page": 78
+    },
+    {
+      "title": "EDK Compatibility",
+      "page": 78
+    },
+    {
+      "title": "Xilinx Resources",
+      "page": 79
+    },
+    {
+      "title": "Solution Centers",
+      "page": 79
+    },
+    {
+      "title": "Documentation Navigator and Design Hubs",
+      "page": 79
+    },
+    {
+      "title": "Please Read: Important Legal Notices",
+      "page": 80
+    }
+  ],
+  "chapters": [
+    {
+      "id": "chapter-1",
+      "title": "Chapter 1: Introduction",
+      "slug": "ch01-introduction",
+      "file": "sections/ch01-introduction.md",
+      "start_line": 88,
+      "end_line": 2102,
+      "start_page": null,
+      "end_page": null,
+      "kind": "chapter"
+    },
+    {
+      "id": "chapter-2",
+      "title": "Chapter 2: System Design Guide",
+      "slug": "ch02-system-design-guide",
+      "file": "sections/ch02-system-design-guide.md",
+      "start_line": 2103,
+      "end_line": 6262,
+      "start_page": null,
+      "end_page": null,
+      "kind": "chapter"
+    },
+    {
+      "id": "chapter-3",
+      "title": "Chapter 3: IP Development Guide",
+      "slug": "ch03-ip-development-guide",
+      "file": "sections/ch03-ip-development-guide.md",
+      "start_line": 6263,
+      "end_line": 7907,
+      "start_page": null,
+      "end_page": null,
+      "kind": "chapter"
+    },
+    {
+      "id": "chapter-4",
+      "title": "Chapter 4: Tool Support",
+      "slug": "ch04-tool-support",
+      "file": "sections/ch04-tool-support.md",
+      "start_line": 7908,
+      "end_line": 7941,
+      "start_page": null,
+      "end_page": null,
+      "kind": "chapter"
+    },
+    {
+      "id": "appendix-a",
+      "title": "Appendix A: Additional Resources and Legal Notices",
+      "slug": "app-a-additional-resources-and-legal-notices",
+      "file": "sections/app-a-additional-resources-and-legal-notices.md",
+      "start_line": 7942,
+      "end_line": 8114,
+      "start_page": null,
+      "end_page": null,
+      "kind": "appendix"
+    }
+  ],
+  "sections": [
+    {
+      "id": "chapter-1-sec-01",
+      "parent": "chapter-1",
+      "title": "AXI4-Stream Signaling Interface",
+      "slug": "ch01-introduction-sec01-axi4-stream-signaling-interface",
+      "file": "sections/ch01-introduction-sec01-axi4-stream-signaling-interface.md",
+      "start_line": 95,
+      "end_line": 366,
+      "start_page": 4,
+      "end_page": 5,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-1-sec-02",
+      "parent": "chapter-1",
+      "title": "Data Format",
+      "slug": "ch01-introduction-sec02-data-format",
+      "file": "sections/ch01-introduction-sec02-data-format.md",
+      "start_line": 367,
+      "end_line": 2102,
+      "start_page": 6,
+      "end_page": 15,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-01",
+      "parent": "chapter-2",
+      "title": "Video Timing Information",
+      "slug": "ch02-system-design-guide-sec01-video-timing-information",
+      "file": "sections/ch02-system-design-guide-sec01-video-timing-information.md",
+      "start_line": 2107,
+      "end_line": 2178,
+      "start_page": 16,
+      "end_page": 16,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-02",
+      "parent": "chapter-2",
+      "title": "Propagating Video Timing Information",
+      "slug": "ch02-system-design-guide-sec02-propagating-video-timing-information",
+      "file": "sections/ch02-system-design-guide-sec02-propagating-video-timing-information.md",
+      "start_line": 2179,
+      "end_line": 2231,
+      "start_page": 17,
+      "end_page": 17,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-03",
+      "parent": "chapter-2",
+      "title": "Reset Requirements",
+      "slug": "ch02-system-design-guide-sec03-reset-requirements",
+      "file": "sections/ch02-system-design-guide-sec03-reset-requirements.md",
+      "start_line": 2232,
+      "end_line": 2285,
+      "start_page": 18,
+      "end_page": 18,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-04",
+      "parent": "chapter-2",
+      "title": "Input/Output Interfaces - Automatic Delay Matching",
+      "slug": "ch02-system-design-guide-sec04-input-output-interfaces-automatic-delay-matching",
+      "file": "sections/ch02-system-design-guide-sec04-input-output-interfaces-automatic-delay-matching.md",
+      "start_line": 2286,
+      "end_line": 2872,
+      "start_page": 19,
+      "end_page": 25,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-05",
+      "parent": "chapter-2",
+      "title": "External Frame Buffers",
+      "slug": "ch02-system-design-guide-sec05-external-frame-buffers",
+      "file": "sections/ch02-system-design-guide-sec05-external-frame-buffers.md",
+      "start_line": 2873,
+      "end_line": 3002,
+      "start_page": 26,
+      "end_page": 26,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-06",
+      "parent": "chapter-2",
+      "title": "Multipoint Interfaces",
+      "slug": "ch02-system-design-guide-sec06-multipoint-interfaces",
+      "file": "sections/ch02-system-design-guide-sec06-multipoint-interfaces.md",
+      "start_line": 3003,
+      "end_line": 3061,
+      "start_page": 27,
+      "end_page": 27,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-07",
+      "parent": "chapter-2",
+      "title": "Ancillary Data",
+      "slug": "ch02-system-design-guide-sec07-ancillary-data",
+      "file": "sections/ch02-system-design-guide-sec07-ancillary-data.md",
+      "start_line": 3062,
+      "end_line": 3142,
+      "start_page": 28,
+      "end_page": 28,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-08",
+      "parent": "chapter-2",
+      "title": "Interlaced Video Support",
+      "slug": "ch02-system-design-guide-sec08-interlaced-video-support",
+      "file": "sections/ch02-system-design-guide-sec08-interlaced-video-support.md",
+      "start_line": 3143,
+      "end_line": 3822,
+      "start_page": 29,
+      "end_page": 34,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-09",
+      "parent": "chapter-2",
+      "title": "Video Subsystem Software Guidelines",
+      "slug": "ch02-system-design-guide-sec09-video-subsystem-software-guidelines",
+      "file": "sections/ch02-system-design-guide-sec09-video-subsystem-software-guidelines.md",
+      "start_line": 3823,
+      "end_line": 4702,
+      "start_page": 35,
+      "end_page": 45,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-2-sec-10",
+      "parent": "chapter-2",
+      "title": "Video Subsystem Bandwidth Requirements",
+      "slug": "ch02-system-design-guide-sec10-video-subsystem-bandwidth-requirements",
+      "file": "sections/ch02-system-design-guide-sec10-video-subsystem-bandwidth-requirements.md",
+      "start_line": 4703,
+      "end_line": 6262,
+      "start_page": 46,
+      "end_page": 58,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-01",
+      "parent": "chapter-3",
+      "title": "IP Parameterization",
+      "slug": "ch03-ip-development-guide-sec01-ip-parameterization",
+      "file": "sections/ch03-ip-development-guide-sec01-ip-parameterization.md",
+      "start_line": 6267,
+      "end_line": 6320,
+      "start_page": 59,
+      "end_page": 59,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-02",
+      "parent": "chapter-3",
+      "title": "General IP Structure",
+      "slug": "ch03-ip-development-guide-sec02-general-ip-structure",
+      "file": "sections/ch03-ip-development-guide-sec02-general-ip-structure.md",
+      "start_line": 6321,
+      "end_line": 6701,
+      "start_page": 60,
+      "end_page": 63,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-03",
+      "parent": "chapter-3",
+      "title": "Timing Representation",
+      "slug": "ch03-ip-development-guide-sec03-timing-representation",
+      "file": "sections/ch03-ip-development-guide-sec03-timing-representation.md",
+      "start_line": 6702,
+      "end_line": 7240,
+      "start_page": 64,
+      "end_page": 68,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-04",
+      "parent": "chapter-3",
+      "title": "Input/Output Timing",
+      "slug": "ch03-ip-development-guide-sec04-input-output-timing",
+      "file": "sections/ch03-ip-development-guide-sec04-input-output-timing.md",
+      "start_line": 7241,
+      "end_line": 7355,
+      "start_page": 69,
+      "end_page": 69,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-05",
+      "parent": "chapter-3",
+      "title": "Buffering Requirements",
+      "slug": "ch03-ip-development-guide-sec05-buffering-requirements",
+      "file": "sections/ch03-ip-development-guide-sec05-buffering-requirements.md",
+      "start_line": 7356,
+      "end_line": 7535,
+      "start_page": 70,
+      "end_page": 71,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-06",
+      "parent": "chapter-3",
+      "title": "READY \u2013 VALID Propagation",
+      "slug": "ch03-ip-development-guide-sec06-ready-valid-propagation",
+      "file": "sections/ch03-ip-development-guide-sec06-ready-valid-propagation.md",
+      "start_line": 7536,
+      "end_line": 7647,
+      "start_page": 72,
+      "end_page": 72,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-07",
+      "parent": "chapter-3",
+      "title": "Flushing Pipelined Cores",
+      "slug": "ch03-ip-development-guide-sec07-flushing-pipelined-cores",
+      "file": "sections/ch03-ip-development-guide-sec07-flushing-pipelined-cores.md",
+      "start_line": 7648,
+      "end_line": 7758,
+      "start_page": 73,
+      "end_page": 74,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-08",
+      "parent": "chapter-3",
+      "title": "Propagating SOF and EOL Signals",
+      "slug": "ch03-ip-development-guide-sec08-propagating-sof-and-eol-signals",
+      "file": "sections/ch03-ip-development-guide-sec08-propagating-sof-and-eol-signals.md",
+      "start_line": 7759,
+      "end_line": 7786,
+      "start_page": 75,
+      "end_page": 75,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-09",
+      "parent": "chapter-3",
+      "title": "Interframe Reinitialization",
+      "slug": "ch03-ip-development-guide-sec09-interframe-reinitialization",
+      "file": "sections/ch03-ip-development-guide-sec09-interframe-reinitialization.md",
+      "start_line": 7787,
+      "end_line": 7796,
+      "start_page": 75,
+      "end_page": 75,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-10",
+      "parent": "chapter-3",
+      "title": "Interrupt Subsystem",
+      "slug": "ch03-ip-development-guide-sec10-interrupt-subsystem",
+      "file": "sections/ch03-ip-development-guide-sec10-interrupt-subsystem.md",
+      "start_line": 7797,
+      "end_line": 7810,
+      "start_page": 75,
+      "end_page": 75,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-3-sec-11",
+      "parent": "chapter-3",
+      "title": "Debugging Features",
+      "slug": "ch03-ip-development-guide-sec11-debugging-features",
+      "file": "sections/ch03-ip-development-guide-sec11-debugging-features.md",
+      "start_line": 7811,
+      "end_line": 7907,
+      "start_page": 76,
+      "end_page": 77,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-4-sec-01",
+      "parent": "chapter-4",
+      "title": "Core Generator and Vivado Compatibility",
+      "slug": "ch04-tool-support-sec01-core-generator-and-vivado-compatibility",
+      "file": "sections/ch04-tool-support-sec01-core-generator-and-vivado-compatibility.md",
+      "start_line": 7912,
+      "end_line": 7927,
+      "start_page": 78,
+      "end_page": 78,
+      "kind": "section"
+    },
+    {
+      "id": "chapter-4-sec-02",
+      "parent": "chapter-4",
+      "title": "EDK Compatibility",
+      "slug": "ch04-tool-support-sec02-edk-compatibility",
+      "file": "sections/ch04-tool-support-sec02-edk-compatibility.md",
+      "start_line": 7928,
+      "end_line": 7941,
+      "start_page": 78,
+      "end_page": 78,
+      "kind": "section"
+    },
+    {
+      "id": "appendix-a-sec-01",
+      "parent": "appendix-a",
+      "title": "Xilinx Resources",
+      "slug": "app-a-additional-resources-and-legal-notices-sec01-xilinx-resources",
+      "file": "sections/app-a-additional-resources-and-legal-notices-sec01-xilinx-resources.md",
+      "start_line": 7946,
+      "end_line": 7950,
+      "start_page": 79,
+      "end_page": 79,
+      "kind": "section"
+    },
+    {
+      "id": "appendix-a-sec-02",
+      "parent": "appendix-a",
+      "title": "Solution Centers",
+      "slug": "app-a-additional-resources-and-legal-notices-sec02-solution-centers",
+      "file": "sections/app-a-additional-resources-and-legal-notices-sec02-solution-centers.md",
+      "start_line": 7951,
+      "end_line": 7956,
+      "start_page": 79,
+      "end_page": 79,
+      "kind": "section"
+    },
+    {
+      "id": "appendix-a-sec-03",
+      "parent": "appendix-a",
+      "title": "Documentation Navigator and Design Hubs",
+      "slug": "app-a-additional-resources-and-legal-notices-sec03-documentation-navigator-and-design-hubs",
+      "file": "sections/app-a-additional-resources-and-legal-notices-sec03-documentation-navigator-and-design-hubs.md",
+      "start_line": 7957,
+      "end_line": 8064,
+      "start_page": 79,
+      "end_page": 79,
+      "kind": "section"
+    },
+    {
+      "id": "appendix-a-sec-04",
+      "parent": "appendix-a",
+      "title": "Please Read: Important Legal Notices",
+      "slug": "app-a-additional-resources-and-legal-notices-sec04-please-read-important-legal-notices",
+      "file": "sections/app-a-additional-resources-and-legal-notices-sec04-please-read-important-legal-notices.md",
+      "start_line": 8065,
+      "end_line": 8114,
+      "start_page": 80,
+      "end_page": 80,
+      "kind": "section"
+    }
+  ]
+}

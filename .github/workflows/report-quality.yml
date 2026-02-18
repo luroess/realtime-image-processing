@@ -1,0 +1,38 @@
+name: report-quality
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docs/report/**"
+      - "Makefile"
+      - ".github/workflows/report-quality.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/report/**"
+      - "Makefile"
+      - ".github/workflows/report-quality.yml"
+
+jobs:
+  report-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Typst
+        uses: typst-community/setup-typst@v4
+
+      - name: Validate citations
+        run: python3 docs/report/analysis/check_citations.py
+
+      - name: Build report without diagnostics
+        run: make report-check

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import numpy as np
 from typing import List
+
+import numpy as np
 from models.image_model import Image
 
 

@@ -1,6 +1,6 @@
 """Transport layer: self for sending button inputs."""
 
-from cocotb.triggers import Timer, RisingEdge
+from cocotb.triggers import RisingEdge, Timer
 
 BOUNCE_NS = 20
 

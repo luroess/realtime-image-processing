@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import tomllib
 from pathlib import Path
 from typing import Any
 
-import tomllib
 from cocotb_tools.runner import get_runner
 
 
