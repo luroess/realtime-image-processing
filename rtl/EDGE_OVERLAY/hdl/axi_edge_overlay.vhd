@@ -25,11 +25,11 @@ entity AXI_EdgeOverlay is
 
     -- AXI4-Stream edge input -- Sobel output stream / passthrough
     -- Non-zero payload is treated as edge detected.
-    s_axis_ video_edges_tvalid  : in  std_logic;
-    s_axis_video_edges_tready  : out std_logic;
-    s_axis_video_edges_tdata   : in  std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
-    s_axis_video_edges_tuser   : in  std_logic; -- SOF
-    s_axis_video_edges_tlast   : in  std_logic; -- EOL
+    s_axis_rbg888_tvalid  : in  std_logic;
+    s_axis_rbg888_tready  : out std_logic;
+    s_axis_rbg888_tdata   : in  std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
+    s_axis_rbg888_tuser   : in  std_logic; -- SOF
+    s_axis_rbg888_tlast   : in  std_logic; -- EOL
 
     -- AXI4-Stream RGB output to AXI_VDMA
     m_axis_video_rbg888_tvalid : out std_logic;
@@ -49,8 +49,8 @@ begin
   -- between base-stream and edge-mask
   s_axis_video_rbg888_tready <= '0' when (i_aresetn = '0') else
                                   m_axis_video_rbg888_tready;
-  s_axis_video_edges_tready <= '0' when (i_aresetn = '0') else
-                                 m_axis_video_rbg888_tready;
+  s_axis_rbg888_tready <= '0' when (i_aresetn = '0') else
+                               m_axis_video_rbg888_tready;
   m_axis_video_rbg888_tvalid <= '0' when (i_aresetn = '0') else
                                 s_axis_video_rbg888_tvalid;
 
