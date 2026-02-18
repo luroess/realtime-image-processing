@@ -93,7 +93,33 @@ class AxiVideoStreamSource:
         first_beat_len = min(self._byte_lanes, line_bytes_len)
         return [1] * first_beat_len + [0] * (line_bytes_len - first_beat_len)
 
-    async def send_image(self, image: Image) -> None:
+    async def send_padding_pixels(
+        self,
+        *,
+        count: int,
+        value: tuple[int, int, int] = (0, 0, 0),
+    ) -> None:
+        if count <= 0:
+            return
+
+        r, g, b = (int(v) & 0xFF for v in value)
+        tdata = bytearray()
+        for _ in range(count):
+            if self._pixel_order == "rgb":
+                tdata.extend((b, g, r))
+            else:
+                tdata.extend((g, b, r))
+
+        tuser = [0] * len(tdata)
+        await self._source.send(AxiStreamFrame(tdata=tdata, tuser=tuser))
+
+    async def send_image(
+        self,
+        image: Image,
+        *,
+        tail_padding_pixels: int = 0,
+        tail_padding_value: tuple[int, int, int] = (0, 0, 0),
+    ) -> None:
         """Send one image as AXI4-Video: one AXI packet per line."""
         for y in range(image.height):
             line_bytes = bytearray()
@@ -117,5 +143,9 @@ class AxiVideoStreamSource:
 
             await self._source.send(AxiStreamFrame(tdata=line_bytes, tuser=tuser))
 
+        await self.send_padding_pixels(
+            count=tail_padding_pixels,
+            value=tail_padding_value,
+        )
         await self._source.wait()
         self._drive_idle_known()
