@@ -15,7 +15,7 @@ from verification.scoreboard import Scoreboard
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 S_AXIS_PREFIX = "s_axis_video"
 M_AXIS_PREFIX = "m_axis_video"
-RESET_ACTIVE_LEVEL = False
+RESET_ACTIVE_LEVEL = True
 
 
 def _get_first_attr(dut, names: tuple[str, ...]):
@@ -54,7 +54,13 @@ async def run_frame_test(dut, image: Image, output_path: Path | None = None) -> 
     cocotb.start_soon(Clock(clk, 10, unit="ns").start())
     await apply_reset(dut=dut, clk=clk, rst=rst)
 
-    driver = AxiStreamDriver(dut=dut, i_clk=clk, i_rst_n=rst, prefix=S_AXIS_PREFIX)
+    driver = AxiStreamDriver(
+        dut=dut,
+        i_clk=clk,
+        i_rst_n=rst,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
     monitor = AxiStreamMonitor(
         dut=dut,
         i_clk=clk,
@@ -62,6 +68,7 @@ async def run_frame_test(dut, image: Image, output_path: Path | None = None) -> 
         width=image.width,
         height=image.height,
         prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
     )
     scoreboard = Scoreboard()
 
