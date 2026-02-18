@@ -66,10 +66,7 @@ architecture A_Rtl of window_generator is
   signal col_cnt_out : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter needed for padding
   signal row_cnt_out : natural range 0 to G_NUM_ROW+1 := 0; -- row counter needed for padding
 
-  -- window data
-  signal wndw : t_wndw;
-  -- signal wndw_2d : t_wndw_t := (others => (others => C_ZERO));
-  signal wndw_valid : std_logic := '0';
+  -- output registers
   signal m_axis_window_tvalid_reg : std_logic := '0';
   signal m_axis_window_tuser_reg  : std_logic := '0';
   signal m_axis_window_tlast_reg  : std_logic := '0';
@@ -125,8 +122,6 @@ begin
         -- clear registers
         sof_reg     <= (others => '0');
         eol_reg     <= (others => '0');
-        wndw_valid  <= '0';
-        wndw        <= (others => C_ZERO);
         buf_reg     <= (others => C_ZERO);
         -- reset outputs
         m_axis_window_tvalid_reg  <= '0';
@@ -141,12 +136,9 @@ begin
         if pxl_cnt <= C_FILL_MIN then -- warm-up: wait until taps for first output window are available
           -- buffer not filled: keep signalling ready, until buffer completely filled
           v_in_ready := '1';
-          wndw_valid <= '0';
         else
           -- buffer filled: pass on downstream status
           v_in_ready := m_axis_window_tready;
-          -- valid follows upstream VALID after warm-up and remains independent from READY
-          wndw_valid <= s_axis_gray8_tvalid;
         end if;
         -- AXI Stream handshake occured for input data stream
         if s_axis_gray8_tvalid = '1' and v_in_ready = '1' then
@@ -263,7 +255,6 @@ begin
         col_cnt_out <= v_col_out_next;
         row_cnt_out <= v_row_out_next;
 
-        wndw <= v_wndw_now;
         -- Hold payload stable while stalled (VALID=1, READY=0).
         if m_axis_window_tready = '1' or m_axis_window_tvalid_reg = '0' then
           if v_in_hs = '1' and pxl_cnt > C_FILL_MIN then
