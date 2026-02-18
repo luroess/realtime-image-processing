@@ -12,7 +12,7 @@ entity AXI_BlurrWindowModule is
     -- Blurr filter generics
     G_COEFF_WIDTH       : positive := 8;
     -- Default: 3x3 Gaussian [1 2 1; 2 4 2; 1 2 1], tap0 at LSB
-    G_KERNEL_COEFFS     : std_logic_vector((3 * 3 * 8) - 1 downto 0) := x"010201020402010201";
+    G_KERNEL_COEFFS     : std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_COEFF_WIDTH) - 1 downto 0) := x"010201020402010201";
     G_NORMALIZE_DIVISOR : positive := 16;
     G_BIAS              : integer := 0
   );
@@ -59,8 +59,9 @@ begin
     report "AXI_BlurrWindowModule: G_KERNEL_COEFFS length must equal G_KERNEL_SIZE*G_KERNEL_SIZE*G_COEFF_WIDTH."
     severity failure;
 
-  -- Disable filter pipeline input while pass-through is active
-  s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
+  -- Always feed the window generator / filter pipeline so internal state
+  -- stays aligned with the live input stream, independent of pass-through
+  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid;
 
   U_WindowGenerator: entity work.window_generator
     generic map (

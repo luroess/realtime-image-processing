@@ -61,8 +61,9 @@ begin
     report "AXI_SobelWindowModule with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
     severity failure;
 
-  -- Disable filter pipeline input while pass-through is active.
-  s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
+  -- Always feed the window generator / filter pipeline so internal state
+  -- stays aligned with the live input stream, independent of pass-through
+  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid;
 
   U_WindowGenerator: entity work.window_generator
     generic map (
