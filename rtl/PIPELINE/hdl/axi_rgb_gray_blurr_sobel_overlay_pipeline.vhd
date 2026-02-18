@@ -21,8 +21,8 @@ entity AXI_RgbGrayBlurrSobelOverlayPipeline is
 
     G_SOBEL_THRESHOLD : natural := 200;
     G_EDGE_COLOR      : std_logic_vector((3 * G_PIXEL_WIDTH) - 1 downto 0) :=
-                        ((3 * G_PIXEL_WIDTH) - 1 downto (2 * G_PIXEL_WIDTH) => '1',
-                         others => '0')
+                        (G_PIXEL_WIDTH - 1 downto 0 => '1') &
+                        ((2 * G_PIXEL_WIDTH) - 1 downto 0 => '0')
   );
   port (
     i_aclk   : in  std_logic;
@@ -104,8 +104,8 @@ begin
       G_DEBOUNCE_NS => G_DEBOUNCE_NS
     )
     port map (
-      i_aclk               => i_aclk,
-      i_aresetn             => i_aresetn,
+      i_clk                => i_aclk,
+      i_rst_n              => i_aresetn,
       i_btn               => i_btn,
       o_btn_debounced     => o_btn_debounced,
       o_pass_grayscale    => s_pass_grayscale,

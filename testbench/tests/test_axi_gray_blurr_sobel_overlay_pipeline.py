@@ -126,24 +126,24 @@ async def _run_pipeline_case(
     cocotb.start_soon(Clock(i_aclk, 10, unit="ns").start())
     await apply_reset(
         dut=dut,
-        i_aclk=i_aclk,
-        i_aresetn=i_aresetn,
+        i_clk=i_aclk,
+        i_rst_n=i_aresetn,
         stream_input_prefix=S_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
     )
 
     source = AxiVideoStreamSource(
         dut=dut,
-        i_aclk=i_aclk,
-        i_aresetn=i_aresetn,
+        i_clk=i_aclk,
+        i_rst_n=i_aresetn,
         prefix=S_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,
     )
     sink = AxiVideoStreamSink(
         dut=dut,
-        i_aclk=i_aclk,
-        i_aresetn=i_aresetn,
+        i_clk=i_aclk,
+        i_rst_n=i_aresetn,
         prefix=M_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,
