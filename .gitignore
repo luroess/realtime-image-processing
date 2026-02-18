@@ -83,3 +83,22 @@ isim/
 
 # Codex generated knowledge-db cache
 .codex/skills/fpga-vivado-vitis-structure/references/.cache/
+
+# -----------------------------------------------------------------------------
+# Report generated artifacts and local notebook caches
+# -----------------------------------------------------------------------------
+docs/report/build/
+docs/report/analysis/__pycache__/
+docs/report/analysis/.ipynb_checkpoints/
+docs/report/figures/generated/fig_*.png
+
+# Currently-unused large artifact snapshots (keep only report-referenced set)
+docs/report/figures/artifacts/lenna_128_128_input_gray.png
+docs/report/figures/artifacts/lenna_512_512_fast_wrapper_diff.png
+docs/report/figures/artifacts/lenna_512_512_out_fast.png
+docs/report/figures/artifacts/lenna_512_512_out_wrapper_fast.png
+docs/report/figures/artifacts/mountains_1920_1080_center_fast_wrapper_diff.png
+docs/report/figures/artifacts/mountains_1920_1080_center_input_gray.png
+docs/report/figures/artifacts/mountains_1920_1080_center_out_fast.png
+docs/report/figures/artifacts/mountains_1920_1080_center_out_wrapper_fast.png
+docs/report/figures/artifacts/overlay_ours_vs_opencv_lenna.png
