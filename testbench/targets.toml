@@ -46,7 +46,10 @@ sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
 description = "Debounced Click Detector checks."
 toplevel    = "debouncedclickdetector"
 test_module = "tests.test_debounced_click_detector"
-sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
+sources     = [
+  "rtl/DEBOUNCER/hdl/*.vhd",
+  "rtl/CLICK_DETECTOR/hdl/*.vhd",
+]
 
   [targets.test_debounced_click_detector.parameters]
   G_DEBOUNCE_NS = 100
@@ -98,4 +101,37 @@ sources     = [
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 512
   G_NUM_ROW = 512
+  G_SOBEL_THRESHOLD = 200
+
+[targets.axi_gray_blurr_sobel_overlay_pipeline]
+description = "Gray AXI pipeline with blurr window-module, sobel window-module, debounced click control, and edge overlay."
+toplevel    = "axi_grayblurrsobeloverlaypipeline"
+test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline"
+waves       = false
+sources     = [
+  "rtl/DEBOUNCER/hdl/debouncing.vhd",
+  "rtl/CLICK_DETECTOR/hdl/click_detection.vhd",
+  "rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd",
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/BLURR_FILTER/blurr_core.vhd",
+  "rtl/BLURR_FILTER/axi_blurr_filter.vhd",
+  "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
+  "rtl/SOBEL_FILTER/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
+  "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
+  "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
+  "rtl/PIPELINE/hdl/axi_gray_blurr_sobel_overlay_pipeline.vhd",
+]
+
+  [targets.axi_gray_blurr_sobel_overlay_pipeline.parameters]
+  G_CLK_FREQ_HZ = 100000000
+  G_DEBOUNCE_NS = 100
+  G_PIXEL_WIDTH = 8
+  G_LINE_WIDTH = 64
+  G_NUM_ROW = 64
+  G_BLURR_KERNEL_SIZE = 3
+  G_BLURR_COEFF_WIDTH = 8
+  G_BLURR_NORMALIZE_DIVISOR = 16
+  G_BLURR_BIAS = 0
   G_SOBEL_THRESHOLD = 200
