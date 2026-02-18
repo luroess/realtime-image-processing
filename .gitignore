@@ -80,3 +80,6 @@ xst/
 isim/
 .vscode/
 .external
+
+# Remove src of generated ip block
+RTL/PIPELINE/src
