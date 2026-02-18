@@ -42,8 +42,10 @@ architecture A_Rtl of window_generator is
   subtype t_wndw_flat_t is std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
 
   constant C_ZERO : t_pxl := (others => '0');
-  constant C_BUF_LEN : positive := ((G_KERNEL_SIZE - 1) * G_LINE_WIDTH) + G_KERNEL_SIZE + 1;
-  constant C_FILL_MIN : positive := (G_LINE_WIDTH + 1) * ((G_KERNEL_SIZE - 1) / 2);
+  constant C_OFFSET : natural := 0;
+  constant C_BUF_LEN : positive := ((G_KERNEL_SIZE - 1) * G_LINE_WIDTH) + G_KERNEL_SIZE + C_OFFSET;
+  constant C_CENTER_PXL_IDX : positive := (G_LINE_WIDTH + 1) * ((G_KERNEL_SIZE - 1) / 2); -- 6 for 3x3 kernel and line width of 5
+  constant C_FILL_MIN : positive := C_BUF_LEN - C_CENTER_PXL_IDX; -- 7 for 3x3 kernel and line width of 5
 
   ------------------------------------------------------------------
   -- types
@@ -56,8 +58,8 @@ architecture A_Rtl of window_generator is
   ------------------------------------------------------------------
   -- buffers
   signal buf_reg  : t_buf; -- pixel buffer
-  signal sof_reg  : std_logic_vector((C_FILL_MIN-1)+1 downto 0) := (others => '0'); -- control signal buffer aligned to output payload timing
-  signal eol_reg  : std_logic_vector((C_FILL_MIN-1)+1 downto 0) := (others => '0'); -- control signal buffer aligned to output payload timing
+  signal sof_reg  : std_logic_vector((C_FILL_MIN-1)+C_OFFSET downto 0) := (others => '0'); -- control signal buffer aligned to output payload timing
+  signal eol_reg  : std_logic_vector((C_FILL_MIN-1)+C_OFFSET downto 0) := (others => '0'); -- control signal buffer aligned to output payload timing
 
   -- counters
   signal col_cnt : natural range 0 to G_LINE_WIDTH+1 := 0; -- column counter needed for padding
@@ -75,8 +77,8 @@ architecture A_Rtl of window_generator is
   -- functions
   ------------------------------------------------------------------
   -- 1D window array to flat_window (std_logic_vector)
-  function f_pack_1d_wndw(i_w : t_wndw)
-    return t_wndw_flat_t is
+  function f_pack_1d_wndw(i_w : t_wndw) return t_wndw_flat_t is
+    -- returned variable
     variable v_flat : t_wndw_flat_t := (others => '0');
   begin
     for i in 0 to G_KERNEL_SIZE*G_KERNEL_SIZE-1 loop
@@ -85,7 +87,51 @@ architecture A_Rtl of window_generator is
     return v_flat;
   end function;
 
+  -- buffer to 1D window array
+  function f_wndw_from_buffer(i_buf : t_buf; i_col : natural; i_row : natural) return t_wndw is
+    constant C_MAX_PAD : natural := ((G_KERNEL_SIZE - 1) / 2); -- max padding needed for odd kernel sizes (e.g. 1 for 3x3, 2 for 5x5)
+    -- returned variable
+    variable v_wndw : t_wndw := (others => C_ZERO);
+    -- indexing helpers
+    variable v_1d_wndw_idx : natural := 0;
+    variable v_buf_idx : natural := 0;
+  begin
+    ------------------------------------------------------------------
+    -- Window generation with Zero Padding
+    -- E.g. 3x3 1D window:
+    -- wndw(0)   wndw(1)   wndw(2)
+    -- wndw(3)   wndw(4)   wndw(5)
+    -- wndw(6)   wndw(7)   wndw(8)
+    ------------------------------------------------------------------
+    for r in 0 to G_KERNEL_SIZE-1 loop
+      for c in 0 to G_KERNEL_SIZE-1 loop
+        v_1d_wndw_idx := (r * G_KERNEL_SIZE) + c;
+        v_buf_idx := (r * G_LINE_WIDTH) + c;
+
+        -- set window pixel value
+        v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx); -- normal image pixel behavior
+        -- padding for out-of-bounds pixels
+        if (i_col < C_MAX_PAD and c < C_MAX_PAD) then -- out of img bounds to the left
+          v_wndw(v_1d_wndw_idx) := C_ZERO;
+        end if;
+        if (i_col >= G_LINE_WIDTH-C_MAX_PAD and c >= G_KERNEL_SIZE-C_MAX_PAD) then -- out of img bounds to the right
+          v_wndw(v_1d_wndw_idx) := C_ZERO;
+        end if;
+        if (i_row < C_MAX_PAD and r < C_MAX_PAD) then -- out of img bounds to the top
+          v_wndw(v_1d_wndw_idx) := C_ZERO;
+        end if;
+        if (i_row >= G_NUM_ROW-C_MAX_PAD and r >= G_KERNEL_SIZE-C_MAX_PAD) then -- out of img bounds to the bottom
+          v_wndw(v_1d_wndw_idx) := C_ZERO;
+        end if;
+
+      end loop;
+    end loop;
+    return v_wndw;
+  end function;
+
 begin
+
+  assert (G_KERNEL_SIZE mod 2 = 1) report "Currently only odd window/kernel sizes are supported" severity failure;
 
   m_axis_window_tvalid <= m_axis_window_tvalid_reg;
   m_axis_window_tuser  <= m_axis_window_tuser_reg;
@@ -94,7 +140,7 @@ begin
   -- Expose input READY combinationally so upstream and internal handshake
   -- observe the same value in the same cycle.
   s_axis_gray8_tready <= '0' when i_aresetn = '0' else
-                         '1' when pxl_cnt <= C_FILL_MIN else
+                         '1' when pxl_cnt <=C_FILL_MIN else
                          m_axis_window_tready;
 
   ------------------------------------------------------------------
@@ -133,7 +179,7 @@ begin
         v_in_hs := '0';
 
         -- buffer fill control
-        if pxl_cnt <= C_FILL_MIN then -- warm-up: wait until taps for first output window are available
+        if pxl_cnt < C_FILL_MIN then -- warm-up: wait until taps for first output window are available
           -- buffer not filled: keep signalling ready, until buffer completely filled
           v_in_ready := '1';
         else
@@ -215,39 +261,8 @@ begin
         -- wndw(6)   wndw(7)   wndw(8)
         ------------------------------------------------------------------
 
-        -- default to normal case (no edge pixel)
-        v_wndw_now(0) := buf_reg(1);
-        v_wndw_now(1) := buf_reg(2);
-        v_wndw_now(2) := buf_reg(3);
-        v_wndw_now(3) := buf_reg(G_LINE_WIDTH+1);
-        v_wndw_now(4) := buf_reg(G_LINE_WIDTH+2); -- pixel that convolution produces result for
-        v_wndw_now(5) := buf_reg(G_LINE_WIDTH+3);
-        v_wndw_now(6) := buf_reg(2*G_LINE_WIDTH+1);
-        v_wndw_now(7) := buf_reg(2*G_LINE_WIDTH+2);
-        v_wndw_now(8) := buf_reg(2*G_LINE_WIDTH+3);
-
-        -- edge cases
-        -- first and last line
-        if v_row_out_next < 1 then -- first row in frame
-          v_wndw_now(0) := C_ZERO;
-          v_wndw_now(1) := C_ZERO;
-          v_wndw_now(2) := C_ZERO;
-        elsif v_row_out_next >= G_NUM_ROW-1 then -- last row in frame
-          v_wndw_now(6) := C_ZERO;
-          v_wndw_now(7) := C_ZERO;
-          v_wndw_now(8) := C_ZERO;
-        end if;
-
-        -- first and last column
-        if v_col_out_next < 1 then -- first column in line
-          v_wndw_now(0) := C_ZERO;
-          v_wndw_now(3) := C_ZERO;
-          v_wndw_now(6) := C_ZERO;
-        elsif v_col_out_next >= G_LINE_WIDTH-1 then -- last column in line
-          v_wndw_now(2) := C_ZERO;
-          v_wndw_now(5) := C_ZERO;
-          v_wndw_now(8) := C_ZERO;
-        end if;
+        --v_wndw_now := f_wndw_from_buffer(v_buf_now, v_col_out_next, v_row_out_next);
+        v_wndw_now := f_wndw_from_buffer(buf_reg, v_col_out_next, v_row_out_next);
 
         ------------------------------------------------------------------
         -- AXI Stream Master outputs
@@ -257,7 +272,7 @@ begin
 
         -- Hold payload stable while stalled (VALID=1, READY=0).
         if m_axis_window_tready = '1' or m_axis_window_tvalid_reg = '0' then
-          if v_in_hs = '1' and pxl_cnt > C_FILL_MIN then
+          if v_in_hs = '1' and pxl_cnt >= C_FILL_MIN then
             m_axis_window_tvalid_reg  <= '1';
             m_axis_window_tdata   <= f_pack_1d_wndw(v_wndw_now);
             m_axis_window_tlast_reg   <= eol_reg(eol_reg'high);
