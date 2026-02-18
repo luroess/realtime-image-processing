@@ -80,28 +80,49 @@ proc cleanup_edit_ip_generated_paths {xpr_path} {
   delete_if_exists [file join $ip_dir "${stem}.log"]
 }
 
+proc regex_escape {text} {
+  set escaped $text
+  regsub -all {[][(){}.^$*+?\\|]} $escaped {\\&} escaped
+  return $escaped
+}
+
+proc find_xpr_files {root_dir} {
+  set results [list]
+
+  foreach entry [glob -nocomplain -directory $root_dir *] {
+    if {[file isdirectory $entry]} {
+      set nested [find_xpr_files $entry]
+      if {[llength $nested] > 0} {
+        set results [concat $results $nested]
+      }
+    } elseif {[string equal -nocase [file extension $entry] ".xpr"]} {
+      lappend results $entry
+    }
+  }
+
+  return $results
+}
+
+proc build_xpr_rules {xpr_path} {
+  set xpr_name [file tail $xpr_path]
+  set xpr_name_pattern [regex_escape $xpr_name]
+
+  return [list \
+    [list [format {Path="[^"]*%s"} $xpr_name_pattern] [format {Path="$PPRDIR/%s"} $xpr_name]] \
+  ]
+}
+
 set rtl_dir [file dirname [file normalize [info script]]]
 
-set rgb_xpr [file join $rtl_dir RGB_TO_GRAYSCALE ip edit_AXI_RgbToGrayscale.xpr]
-set edge_xpr [file join $rtl_dir EDGE_OVERLAY ip edit_AXI_EdgeOverlay.xpr]
+set xpr_files [find_xpr_files $rtl_dir]
+if {[llength $xpr_files] == 0} {
+  error "No .xpr files found under $rtl_dir"
+}
 
-set rgb_rules [list \
-  [list {Path="[^"]*edit_AXI_RgbToGrayscale\.xpr"} {Path="$PPRDIR/edit_AXI_RgbToGrayscale.xpr"}] \
-  [list {<Option Name="IPRepoPath" Val="\$PPRDIR/\.\./\.\./ip_repo"/>} {<Option Name="IPRepoPath" Val="$PPRDIR/../.."/>}] \
-  [list {<File Path="\$PPRDIR/\.\./\.\./ip_repo/component\.xml">} {<File Path="$PPRDIR/../component.xml">}] \
-]
-
-set edge_rules [list \
-  [list {Path="[^"]*edit_AXI_EdgeOverlay\.xpr"} {Path="$PPRDIR/edit_AXI_EdgeOverlay.xpr"}] \
-  [list {<Option Name="IPRepoPath" Val="[^"]*[Ee][Dd][Gg][Ee]_[Oo][Vv][Ee][Rr][Ll][Aa][Yy]"/>} {<Option Name="IPRepoPath" Val="$PPRDIR/.."/>}] \
-  [list {<File Path="[^"]*[Ee][Dd][Gg][Ee]_[Oo][Vv][Ee][Rr][Ll][Aa][Yy]/hdl/edge_overlay\.vhd">} {<File Path="$PPRDIR/../hdl/edge_overlay.vhd">}] \
-  [list {<File Path="[^"]*[Ee][Dd][Gg][Ee]_[Oo][Vv][Ee][Rr][Ll][Aa][Yy]/hdl/axi_edge_overlay\.vhd">} {<File Path="$PPRDIR/../hdl/axi_edge_overlay.vhd">}] \
-]
-
-normalize_file $rgb_xpr $rgb_rules
-normalize_file $edge_xpr $edge_rules
-
-cleanup_edit_ip_generated_paths $rgb_xpr
-cleanup_edit_ip_generated_paths $edge_xpr
+foreach xpr_path $xpr_files {
+  set rules [build_xpr_rules $xpr_path]
+  normalize_file $xpr_path $rules
+  cleanup_edit_ip_generated_paths $xpr_path
+}
 
 puts "Done."
