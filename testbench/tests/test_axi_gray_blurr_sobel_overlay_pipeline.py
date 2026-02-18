@@ -16,8 +16,8 @@ from drivers.axis_video_source import AxiVideoStreamSource
 from models.image_model import Image
 from monitors.axis_video_sink import AxiVideoStreamSink
 
-ACLK_SIGNAL = "i_clk"
-ARESETN_SIGNAL = "i_rst_n"
+ACLK_SIGNAL = "i_aclk"
+ARESETN_SIGNAL = "i_aresetn"
 BTN_SIGNAL = "i_btn"
 S_AXIS_PREFIX = "s_axis_video_rbg888"
 M_AXIS_PREFIX = "m_axis_video_rbg888"
@@ -112,38 +112,38 @@ async def _run_pipeline_case(
     source_pause_pattern: tuple[int, ...] | None = None,
     sink_pause_pattern: tuple[int, ...] | None = None,
 ) -> Image:
-    i_clk = getattr(dut, ACLK_SIGNAL)
-    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    i_aclk = getattr(dut, ACLK_SIGNAL)
+    i_aresetn = getattr(dut, ARESETN_SIGNAL)
     i_btn = getattr(dut, BTN_SIGNAL)
 
-    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
+    i_aresetn.value = int(RESET_ACTIVE_LEVEL)
     i_btn.value = 0
     getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
     getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
     getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
     getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
 
-    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    cocotb.start_soon(Clock(i_aclk, 10, unit="ns").start())
     await apply_reset(
         dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_rst_n,
+        i_aclk=i_aclk,
+        i_aresetn=i_aresetn,
         stream_input_prefix=S_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
     )
 
     source = AxiVideoStreamSource(
         dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_rst_n,
+        i_aclk=i_aclk,
+        i_aresetn=i_aresetn,
         prefix=S_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,
     )
     sink = AxiVideoStreamSink(
         dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_rst_n,
+        i_aclk=i_aclk,
+        i_aresetn=i_aresetn,
         prefix=M_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,

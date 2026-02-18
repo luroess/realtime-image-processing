@@ -21,8 +21,8 @@ entity AXI_RgbGrayBlurrSobelOverlayPipeline is
     G_EDGE_COLOR      : std_logic_vector(23 downto 0) := x"FF0000"
   );
   port (
-    i_clk   : in  std_logic;
-    i_rst_n : in  std_logic;
+    i_aclk   : in  std_logic;
+    i_aresetn : in  std_logic;
     i_btn   : in  std_logic_vector(3 downto 0);
 
     -- AXI4-Stream RGB input (R|B|G packed)
@@ -100,8 +100,8 @@ begin
       G_DEBOUNCE_NS => G_DEBOUNCE_NS
     )
     port map (
-      i_clk               => i_clk,
-      i_rst_n             => i_rst_n,
+      i_aclk               => i_aclk,
+      i_aresetn             => i_aresetn,
       i_btn               => i_btn,
       o_btn_debounced     => o_btn_debounced,
       o_pass_grayscale    => s_pass_grayscale,
@@ -120,8 +120,8 @@ begin
       G_COMPONENT_WIDTH => G_PIXEL_WIDTH
     )
     port map (
-      i_aclk               => i_clk,
-      i_aresetn            => i_rst_n,
+      i_aclk               => i_aclk,
+      i_aresetn            => i_aresetn,
       i_pass_through       => s_pass_grayscale,
       s_axis_video_tvalid  => s_axis_video_rbg888_tvalid,
       s_axis_video_tready  => s_axis_video_rbg888_tready,
@@ -152,8 +152,8 @@ begin
       G_BIAS              => G_BLURR_BIAS
     )
     port map (
-      i_aclk                => i_clk,
-      i_aresetn             => i_rst_n,
+      i_aclk                => i_aclk,
+      i_aresetn             => i_aresetn,
       i_pass_through        => s_pass_blurr_filter,
       s_axis_gray8_tvalid   => s_gray_tvalid,
       s_axis_gray8_tready   => s_gray_tready,
@@ -176,8 +176,8 @@ begin
       G_NUM_ROW         => G_NUM_ROW
     )
     port map (
-      i_aclk              => i_clk,
-      i_aresetn           => i_rst_n,
+      i_aclk              => i_aclk,
+      i_aresetn           => i_aresetn,
       i_pass_through      => s_pass_sobel,
       s_axis_gray8_tvalid => s_blurr_tvalid,
       s_axis_gray8_tready => s_blurr_tready,
@@ -197,8 +197,8 @@ begin
       G_EDGE_COLOR      => G_EDGE_COLOR
     )
     port map (
-      i_aclk                     => i_clk,
-      i_aresetn                  => i_rst_n,
+      i_aclk                     => i_aclk,
+      i_aresetn                  => i_aresetn,
       i_overlay_enable           => s_overlay_enable,
       s_axis_video_rbg888_tvalid => s_sobel_tvalid,
       s_axis_video_rbg888_tready => s_sobel_tready,
@@ -218,10 +218,10 @@ begin
     );
 
   -- Select visible output branch and drain the non-selected branch.
-  s_rgb_stage_tready <= '0' when (i_rst_n = '0') else
+  s_rgb_stage_tready <= '0' when (i_aresetn = '0') else
                         m_axis_video_rbg888_tready when (s_pass_grayscale = '1') else
                         '1';
-  s_overlay_tready <= '0' when (i_rst_n = '0') else
+  s_overlay_tready <= '0' when (i_aresetn = '0') else
                       m_axis_video_rbg888_tready when (s_pass_grayscale /= '1') else
                       '1';
 
@@ -234,10 +234,10 @@ begin
   s_selected_tlast <= s_rgb_stage_tlast when (s_pass_grayscale = '1') else
                       s_overlay_tlast;
 
-  m_axis_video_rbg888_tvalid <= '0' when (i_rst_n = '0') else
+  m_axis_video_rbg888_tvalid <= '0' when (i_aresetn = '0') else
                                 s_selected_tvalid;
 
-  s_output_idle <= (i_rst_n = '0') or (s_selected_tvalid = '0');
+  s_output_idle <= (i_aresetn = '0') or (s_selected_tvalid = '0');
   m_axis_video_rbg888_tdata <= (others => '0') when s_output_idle else
                                s_selected_tdata;
   m_axis_video_rbg888_tuser <= '0' when s_output_idle else
