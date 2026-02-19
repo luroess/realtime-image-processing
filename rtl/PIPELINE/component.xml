@@ -2,8 +2,8 @@
 <spirit:component xmlns:xilinx="http://www.xilinx.com" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <spirit:vendor>xilinx.com</spirit:vendor>
   <spirit:library>user</spirit:library>
-  <spirit:name>AXI_RgbGrayBlurrSobelOverlayPipeline</spirit:name>
-  <spirit:version>1.2</spirit:version>
+  <spirit:name>AXI_Pipeline</spirit:name>
+  <spirit:version>1.1</spirit:version>
   <spirit:busInterfaces>
     <spirit:busInterface>
       <spirit:name>m_axis_video_rbg888</spirit:name>
@@ -102,7 +102,7 @@
       </spirit:portMaps>
     </spirit:busInterface>
     <spirit:busInterface>
-      <spirit:name>i_rst_n</spirit:name>
+      <spirit:name>i_aresetn</spirit:name>
       <spirit:busType spirit:vendor="xilinx.com" spirit:library="signal" spirit:name="reset" spirit:version="1.0"/>
       <spirit:abstractionType spirit:vendor="xilinx.com" spirit:library="signal" spirit:name="reset_rtl" spirit:version="1.0"/>
       <spirit:slave/>
@@ -112,19 +112,19 @@
             <spirit:name>RST</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>i_rst_n</spirit:name>
+            <spirit:name>i_aresetn</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
       </spirit:portMaps>
       <spirit:parameters>
         <spirit:parameter>
           <spirit:name>POLARITY</spirit:name>
-          <spirit:value spirit:id="BUSIFPARAM_VALUE.I_RST_N.POLARITY" spirit:choiceRef="choice_list_9d8b0d81">ACTIVE_LOW</spirit:value>
+          <spirit:value spirit:id="BUSIFPARAM_VALUE.I_ARESETN.POLARITY" spirit:choiceRef="choice_list_9d8b0d81">ACTIVE_LOW</spirit:value>
         </spirit:parameter>
       </spirit:parameters>
     </spirit:busInterface>
     <spirit:busInterface>
-      <spirit:name>i_clk</spirit:name>
+      <spirit:name>i_aclk</spirit:name>
       <spirit:busType spirit:vendor="xilinx.com" spirit:library="signal" spirit:name="clock" spirit:version="1.0"/>
       <spirit:abstractionType spirit:vendor="xilinx.com" spirit:library="signal" spirit:name="clock_rtl" spirit:version="1.0"/>
       <spirit:slave/>
@@ -134,18 +134,18 @@
             <spirit:name>CLK</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>i_clk</spirit:name>
+            <spirit:name>i_aclk</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
       </spirit:portMaps>
       <spirit:parameters>
         <spirit:parameter>
           <spirit:name>ASSOCIATED_RESET</spirit:name>
-          <spirit:value spirit:id="BUSIFPARAM_VALUE.I_CLK.ASSOCIATED_RESET">i_rst_n</spirit:value>
+          <spirit:value spirit:id="BUSIFPARAM_VALUE.I_ACLK.ASSOCIATED_RESET">i_aresetn</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>ASSOCIATED_BUSIF</spirit:name>
-          <spirit:value spirit:id="BUSIFPARAM_VALUE.I_CLK.ASSOCIATED_BUSIF">m_axis_video_rbg888:s_axis_video_rbg888</spirit:value>
+          <spirit:value spirit:id="BUSIFPARAM_VALUE.I_ACLK.ASSOCIATED_BUSIF">m_axis_video_rbg888:s_axis_video_rbg888</spirit:value>
         </spirit:parameter>
       </spirit:parameters>
     </spirit:busInterface>
@@ -157,14 +157,14 @@
         <spirit:displayName>Synthesis</spirit:displayName>
         <spirit:envIdentifier>:vivado.xilinx.com:synthesis</spirit:envIdentifier>
         <spirit:language>VHDL</spirit:language>
-        <spirit:modelName>AXI_RgbGrayBlurrSobelOverlayPipeline</spirit:modelName>
+        <spirit:modelName>AXI_Pipeline</spirit:modelName>
         <spirit:fileSetRef>
           <spirit:localName>xilinx_anylanguagesynthesis_view_fileset</spirit:localName>
         </spirit:fileSetRef>
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>fd06ae18</spirit:value>
+            <spirit:value>20f9721e</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -173,14 +173,14 @@
         <spirit:displayName>Simulation</spirit:displayName>
         <spirit:envIdentifier>:vivado.xilinx.com:simulation</spirit:envIdentifier>
         <spirit:language>VHDL</spirit:language>
-        <spirit:modelName>AXI_RgbGrayBlurrSobelOverlayPipeline</spirit:modelName>
+        <spirit:modelName>AXI_Pipeline</spirit:modelName>
         <spirit:fileSetRef>
           <spirit:localName>xilinx_anylanguagebehavioralsimulation_view_fileset</spirit:localName>
         </spirit:fileSetRef>
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>fd06ae18</spirit:value>
+            <spirit:value>20f9721e</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -194,14 +194,14 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>b341a8c9</spirit:value>
+            <spirit:value>116049f4</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
     </spirit:views>
     <spirit:ports>
       <spirit:port>
-        <spirit:name>i_clk</spirit:name>
+        <spirit:name>i_aclk</spirit:name>
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
           <spirit:wireTypeDefs>
@@ -214,7 +214,7 @@
         </spirit:wire>
       </spirit:port>
       <spirit:port>
-        <spirit:name>i_rst_n</spirit:name>
+        <spirit:name>i_aresetn</spirit:name>
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
           <spirit:wireTypeDefs>
@@ -499,7 +499,7 @@
         <spirit:displayName>G Blurr Coeff Width</spirit:displayName>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_BLURR_COEFF_WIDTH" spirit:minimum="0" spirit:rangeType="long">8</spirit:value>
       </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="std_logic_vector((((3 * 3) * 8) - 1) downto 0)">
+      <spirit:modelParameter spirit:dataType="std_logic_vector((((G_BLURR_KERNEL_SIZE * G_BLURR_KERNEL_SIZE) * G_BLURR_COEFF_WIDTH) - 1) downto 0)">
         <spirit:name>G_BLURR_KERNEL_COEFFS</spirit:name>
         <spirit:displayName>G Blurr Kernel Coeffs</spirit:displayName>
         <spirit:value spirit:format="bitString" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_BLURR_KERNEL_COEFFS" spirit:bitStringLength="72">0x010201020402010201</spirit:value>
@@ -517,7 +517,32 @@
       <spirit:modelParameter spirit:dataType="integer">
         <spirit:name>G_SOBEL_THRESHOLD</spirit:name>
         <spirit:displayName>G Sobel Threshold</spirit:displayName>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_THRESHOLD" spirit:minimum="0" spirit:rangeType="long">200</spirit:value>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_THRESHOLD" spirit:minimum="0" spirit:rangeType="long">150</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="integer">
+        <spirit:name>G_SOBEL_MEAN_SHIFT</spirit:name>
+        <spirit:displayName>G Sobel Mean Shift</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_MEAN_SHIFT" spirit:minimum="0" spirit:rangeType="long">9</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="integer">
+        <spirit:name>G_SOBEL_MEAN_UPDATE_INTERVAL</spirit:name>
+        <spirit:displayName>G Sobel Mean Update Interval</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_MEAN_UPDATE_INTERVAL" spirit:minimum="0" spirit:rangeType="long">1</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="integer">
+        <spirit:name>G_SOBEL_THRESHOLD_GAIN_NUM</spirit:name>
+        <spirit:displayName>G Sobel Threshold Gain Num</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_THRESHOLD_GAIN_NUM" spirit:minimum="0" spirit:rangeType="long">1</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="integer">
+        <spirit:name>G_SOBEL_THRESHOLD_GAIN_DEN</spirit:name>
+        <spirit:displayName>G Sobel Threshold Gain Den</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_THRESHOLD_GAIN_DEN" spirit:minimum="0" spirit:rangeType="long">1</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="integer">
+        <spirit:name>G_SOBEL_THRESHOLD_OFFSET</spirit:name>
+        <spirit:displayName>G Sobel Threshold Offset</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.G_SOBEL_THRESHOLD_OFFSET">0</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="std_logic_vector(23 downto 0)">
         <spirit:name>G_EDGE_COLOR</spirit:name>
@@ -604,7 +629,7 @@
       <spirit:file>
         <spirit:name>hdl/axi_pipeline.vhd</spirit:name>
         <spirit:fileType>vhdlSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_48e065ba</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_d599d7d3</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -682,14 +707,14 @@
     <spirit:fileSet>
       <spirit:name>xilinx_xpgui_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>xgui/AXI_RgbGrayBlurrSobelOverlayPipeline_v1_2.tcl</spirit:name>
+        <spirit:name>xgui/AXI_Pipeline_v1_1.tcl</spirit:name>
         <spirit:fileType>tclSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_b341a8c9</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_116049f4</spirit:userFileType>
         <spirit:userFileType>XGUI_VERSION_2</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
   </spirit:fileSets>
-  <spirit:description>AXI_RgbGrayBlurrSobelOverlayPipeline_v1_2</spirit:description>
+  <spirit:description>AXI_Pipeline_v1_1</spirit:description>
   <spirit:parameters>
     <spirit:parameter>
       <spirit:name>G_CLK_FREQ_HZ</spirit:name>
@@ -744,7 +769,32 @@
     <spirit:parameter>
       <spirit:name>G_SOBEL_THRESHOLD</spirit:name>
       <spirit:displayName>G Sobel Threshold</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_THRESHOLD" spirit:minimum="0" spirit:rangeType="long">200</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_THRESHOLD" spirit:minimum="0" spirit:rangeType="long">150</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>G_SOBEL_MEAN_SHIFT</spirit:name>
+      <spirit:displayName>G Sobel Mean Shift</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_MEAN_SHIFT" spirit:minimum="0" spirit:rangeType="long">9</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>G_SOBEL_MEAN_UPDATE_INTERVAL</spirit:name>
+      <spirit:displayName>G Sobel Mean Update Interval</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_MEAN_UPDATE_INTERVAL" spirit:minimum="0" spirit:rangeType="long">1</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>G_SOBEL_THRESHOLD_GAIN_NUM</spirit:name>
+      <spirit:displayName>G Sobel Threshold Gain Num</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_THRESHOLD_GAIN_NUM" spirit:minimum="0" spirit:rangeType="long">1</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>G_SOBEL_THRESHOLD_GAIN_DEN</spirit:name>
+      <spirit:displayName>G Sobel Threshold Gain Den</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_THRESHOLD_GAIN_DEN" spirit:minimum="0" spirit:rangeType="long">1</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>G_SOBEL_THRESHOLD_OFFSET</spirit:name>
+      <spirit:displayName>G Sobel Threshold Offset</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.G_SOBEL_THRESHOLD_OFFSET">0</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>G_EDGE_COLOR</spirit:name>
@@ -753,7 +803,7 @@
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>Component_Name</spirit:name>
-      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">AXI_RgbGrayBlurrSobelOverlayPipeline_v1_0</spirit:value>
+      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">AXI_Pipeline_v1_0</spirit:value>
     </spirit:parameter>
   </spirit:parameters>
   <spirit:vendorExtensions>
@@ -766,21 +816,18 @@
       <xilinx:taxonomies>
         <xilinx:taxonomy>/UserIP</xilinx:taxonomy>
       </xilinx:taxonomies>
-      <xilinx:displayName>AXI_RgbGrayBlurrSobelOverlayPipeline_v1_2</xilinx:displayName>
+      <xilinx:displayName>AXI_Pipeline_v1_1</xilinx:displayName>
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
-      <xilinx:coreRevision>1</xilinx:coreRevision>
-      <xilinx:upgrades>
-        <xilinx:canUpgradeFrom>xilinx.com:user:AXI_RgbGrayBlurrSobelOverlayPipeline:1.0</xilinx:canUpgradeFrom>
-      </xilinx:upgrades>
-      <xilinx:coreCreationDateTime>2026-02-18T08:45:44Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>3</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2026-02-19T13:09:06Z</xilinx:coreCreationDateTime>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2025.1</xilinx:xilinxVersion>
-      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="f9fddf2b"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="58646748"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="df8afb36"/>
-      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="d8e3ebce"/>
-      <xilinx:checksum xilinx:scope="parameters" xilinx:value="829ff93d"/>
+      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="f6cb0549"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="9697a891"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="e37ceab9"/>
+      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="395f1626"/>
+      <xilinx:checksum xilinx:scope="parameters" xilinx:value="2e73d126"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>
 </spirit:component>
