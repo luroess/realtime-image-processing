@@ -11,7 +11,9 @@ entity window_generator is
     -- Image line width
     G_LINE_WIDTH : natural := 5;
     -- Image row count
-    G_NUM_ROW : natural := 5
+    G_NUM_ROW : natural := 5;
+    -- Type of padding for out-of-bounds pixels (zero padding or replication)
+    G_REPLICATE_EDGE : std_logic := '0' -- '0' for zero padding, '1' for replicate edge
   );
   port (
     i_aclk            : in  std_logic;
@@ -95,6 +97,13 @@ architecture A_Rtl of window_generator is
     -- indexing helpers
     variable v_1d_wndw_idx : natural := 0;
     variable v_buf_idx : natural := 0;
+    variable v_replicate_offset_r : natural range 0 to C_MAX_PAD := 0;
+    variable v_replicate_offset_c : natural range 0 to C_MAX_PAD := 0;
+    -- edge helpers
+    variable v_out_top : std_logic := '0';
+    variable v_out_bottom : std_logic := '0';
+    variable v_out_left : std_logic := '0';
+    variable v_out_right : std_logic := '0';
   begin
     ------------------------------------------------------------------
     -- Window generation with Zero Padding
@@ -108,20 +117,54 @@ architecture A_Rtl of window_generator is
         v_1d_wndw_idx := (r * G_KERNEL_SIZE) + c;
         v_buf_idx := (r * G_LINE_WIDTH) + c;
 
+        v_out_top := '1' when (i_row < C_MAX_PAD and r < C_MAX_PAD) else '0'; -- out of img bounds to the top
+        v_out_bottom := '1' when (i_row >= G_NUM_ROW-C_MAX_PAD and r >= G_KERNEL_SIZE-C_MAX_PAD) else '0'; -- out of img bounds to the bottom
+        v_out_left := '1' when (i_col < C_MAX_PAD and c < C_MAX_PAD) else '0'; -- out of img bounds to the left
+        v_out_right := '1' when (i_col >= G_LINE_WIDTH-C_MAX_PAD and c >= G_KERNEL_SIZE-C_MAX_PAD) else '0'; -- out of img bounds to the right
+
         -- set window pixel value
         v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx); -- normal image pixel behavior
-        -- padding for out-of-bounds pixels
-        if (i_col < C_MAX_PAD and c < C_MAX_PAD) then -- out of img bounds to the left
-          v_wndw(v_1d_wndw_idx) := C_ZERO;
-        end if;
-        if (i_col >= G_LINE_WIDTH-C_MAX_PAD and c >= G_KERNEL_SIZE-C_MAX_PAD) then -- out of img bounds to the right
-          v_wndw(v_1d_wndw_idx) := C_ZERO;
-        end if;
-        if (i_row < C_MAX_PAD and r < C_MAX_PAD) then -- out of img bounds to the top
-          v_wndw(v_1d_wndw_idx) := C_ZERO;
-        end if;
-        if (i_row >= G_NUM_ROW-C_MAX_PAD and r >= G_KERNEL_SIZE-C_MAX_PAD) then -- out of img bounds to the bottom
-          v_wndw(v_1d_wndw_idx) := C_ZERO;
+
+        if G_REPLICATE_EDGE = '1' then
+          -- Replicate edge pixels for out-of-bounds pixels
+          v_replicate_offset_r := abs(C_MAX_PAD - r);
+          v_replicate_offset_c := abs(C_MAX_PAD - c);
+          if (v_out_top = '1' and v_out_bottom = '0' and v_out_left = '0' and v_out_right = '0') then
+            -- Only TOP out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx + (v_replicate_offset_r * G_LINE_WIDTH)); -- replicate from row below
+          elsif (v_out_top = '0' and v_out_bottom = '1' and v_out_left = '0' and v_out_right = '0') then
+            -- Only BOTTOM out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx - (v_replicate_offset_r * G_LINE_WIDTH)); -- replicate from row above
+          elsif (v_out_top = '0' and v_out_bottom = '0' and v_out_left = '1' and v_out_right = '0') then
+            -- Only LEFT out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx + v_replicate_offset_c); -- replicate from column to the right
+          elsif (v_out_top = '0' and v_out_bottom = '0' and v_out_left = '0' and v_out_right = '1') then
+            -- Only RIGHT out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx - v_replicate_offset_c); -- replicate from column to the left
+          elsif (v_out_top = '1' and v_out_bottom = '0' and v_out_left = '1' and v_out_right = '0') then
+            -- TOP and LEFT out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx + ((v_replicate_offset_r * G_LINE_WIDTH) + v_replicate_offset_c)); -- replicate from pixel diagonally down-right
+          elsif (v_out_top = '1' and v_out_bottom = '0' and v_out_left = '0' and v_out_right = '1') then
+            -- TOP and RIGHT out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx + ((v_replicate_offset_r * G_LINE_WIDTH) - v_replicate_offset_c)); -- replicate from pixel diagonally down-left
+          elsif (v_out_top = '0' and v_out_bottom = '1' and v_out_left = '1' and v_out_right = '0') then
+            -- BOTTOM and LEFT out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx - ((v_replicate_offset_r * G_LINE_WIDTH) - v_replicate_offset_c)); -- replicate from pixel diagonally up-right
+          elsif (v_out_top = '0' and v_out_bottom = '1' and v_out_left = '0' and v_out_right = '1') then
+            -- BOTTOM and RIGHT out of range
+            v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx - ((v_replicate_offset_r * G_LINE_WIDTH) + v_replicate_offset_c)); -- replicate from pixel diagonally up-left
+          end if;
+        else
+          -- zero padding for out-of-bounds pixels
+          if (v_out_left = '1') then -- out of img bounds to the left
+            v_wndw(v_1d_wndw_idx) := C_ZERO;
+          elsif (v_out_right = '1') then -- out of img bounds to the right
+            v_wndw(v_1d_wndw_idx) := C_ZERO;
+          elsif (v_out_top = '1') then -- out of img bounds to the top
+            v_wndw(v_1d_wndw_idx) := C_ZERO;
+          elsif(v_out_bottom = '1') then -- out of img bounds to the bottom
+            v_wndw(v_1d_wndw_idx) := C_ZERO;
+          end if;
         end if;
 
       end loop;
