@@ -18,7 +18,7 @@ entity AXI_SobelFilter is
     G_SOBEL_THRESHOLD_GAIN_DEN : positive := 1;
     G_SOBEL_THRESHOLD_OFFSET   : integer  := 0;
     G_THRESHOLD_MIN      : natural  := 0;
-    G_THRESHOLD_MAX      : natural  := (8 * ((2 ** G_PIXEL_WIDTH) - 1))
+    G_THRESHOLD_MAX      : natural  := 2040
   );
   port (
     i_aclk              : in  std_logic;

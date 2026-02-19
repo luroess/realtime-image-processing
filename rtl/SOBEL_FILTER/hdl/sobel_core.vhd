@@ -20,7 +20,7 @@ entity E_SobelCore is
     G_SOBEL_THRESHOLD_OFFSET   : integer  := 0;
     -- Global internal constants
     G_THRESHOLD_MIN      : natural  := 0;
-    G_THRESHOLD_MAX      : natural  := (8 * ((2 ** G_PIXEL_WIDTH) - 1))
+    G_THRESHOLD_MAX      : natural  := 2040
   );
   port (
     i_aclk         : in  std_logic;
@@ -62,7 +62,7 @@ architecture A_Rtl of E_SobelCore is
     return v_value;
   end function;
 
-  constant C_MAG_MAX       : integer := (8 * ((2 ** G_PIXEL_WIDTH) - 1));
+  constant C_MAG_MAX       : integer := 2040;
   constant C_MEAN_INIT     : integer := f_clamp(integer(G_SOBEL_THRESHOLD), 0, C_MAG_MAX);
   constant C_MEAN_ALPHA_DIV : integer := f_pow2_saturating(G_SOBEL_MEAN_SHIFT);
 
