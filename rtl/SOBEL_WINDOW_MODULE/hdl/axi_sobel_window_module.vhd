@@ -42,6 +42,7 @@ end entity;
 architecture A_Rtl of AXI_SobelWindowModule is
   constant C_WINDOW_DATA_WIDTH : positive := G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH;
 
+  signal s_axis_gray8_tready_sel : std_logic := '0';
   signal s_axis_gray8_tvalid_filter : std_logic := '0';
   signal s_axis_gray8_tready_filter : std_logic := '0';
 
@@ -66,9 +67,7 @@ begin
     report "AXI_SobelWindowModule with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
     severity failure;
 
-  -- Always feed the window generator / filter pipeline so internal state
-  -- stays aligned with the live input stream, independent of pass-through
-  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid;
+  s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
 
   U_WindowGenerator: entity work.window_generator
     generic map (
@@ -122,10 +121,6 @@ begin
   s_pass_rbg888_tdata  <= s_axis_gray8_tdata & s_axis_gray8_tdata & s_axis_gray8_tdata;
 
   -- Top-level AXI4-Stream mux: pass-through or filter output
-  s_axis_gray8_tready <= '0' when (i_aresetn = '0') else
-                         m_axis_rbg888_tready when (i_pass_through = '1') else
-                         s_axis_gray8_tready_filter;
-
   m_axis_rbg888_tvalid <= '0' when (i_aresetn = '0') else
                           s_axis_gray8_tvalid when (i_pass_through = '1') else
                           s_sobel_tvalid;

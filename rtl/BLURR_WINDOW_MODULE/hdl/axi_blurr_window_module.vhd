@@ -59,9 +59,7 @@ begin
     report "AXI_BlurrWindowModule: G_KERNEL_COEFFS length must equal G_KERNEL_SIZE*G_KERNEL_SIZE*G_COEFF_WIDTH."
     severity failure;
 
-  -- Always feed the window generator / filter pipeline so internal state
-  -- stays aligned with the live input stream, independent of pass-through
-  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid;
+  s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
 
   U_WindowGenerator: entity work.window_generator
     generic map (
@@ -110,10 +108,6 @@ begin
     );
 
   -- Top-level AXI4-Stream mux: pass-through or filter output
-  s_axis_gray8_tready <= '0' when (i_aresetn = '0') else
-                         m_axis_filter8_tready when (i_pass_through = '1') else
-                         s_axis_gray8_tready_filter;
-
   m_axis_filter8_tvalid <= '0' when (i_aresetn = '0') else
                            s_axis_gray8_tvalid when (i_pass_through = '1') else
                            s_blurr_tvalid;

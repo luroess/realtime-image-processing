@@ -4,7 +4,7 @@ library ieee;
 entity AXI_EdgeOverlay is
   generic (
     -- Pixel component width (typically 8 for R,G,B bytes).
-    G_COMPONENT_WIDTH : positive                                         := 8;
+    G_COMPONENT_WIDTH : positive                  := 8;
     -- Overlay replacement color, packed as R|B|G payload (default: full red).
     G_EDGE_COLOR  : std_logic_vector(23 downto 0) := x"FF0000"
   );
@@ -51,7 +51,7 @@ begin
                                   m_axis_video_rbg888_tready;
   -- Keep edge-stream advancement aligned with base-stream handshake, even in bypass.
   s_axis_rbg888_tready <= '0' when (i_aresetn = '0') else
-                         (m_axis_video_rbg888_tready and s_axis_video_rbg888_tvalid);
+                                m_axis_video_rbg888_tready;
   m_axis_video_rbg888_tvalid <= '0' when (i_aresetn = '0') else
                                 s_axis_video_rbg888_tvalid;
 
