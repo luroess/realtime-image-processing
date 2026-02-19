@@ -83,3 +83,5 @@ isim/
 
 # Remove src of generated ip block
 RTL/PIPELINE/src
+vivado/
+wallentowitz_helper/

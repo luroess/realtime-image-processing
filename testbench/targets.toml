@@ -137,3 +137,22 @@ sources     = [
   G_BLURR_NORMALIZE_DIVISOR = 16
   G_BLURR_BIAS = 0
   G_SOBEL_THRESHOLD = 200
+
+[targets.axi_picture_overlay]
+description = "Static BRAM-mask picture overlay on RBG888 AXI4-Stream video."
+toplevel    = "axipictureoverlay"
+test_module = "tests.test_axi_picture_overlay"
+sources     = [
+  "rtl/PICTURE_OVERLAY/hdl/MaskRomPkg.vhd",
+  "rtl/PICTURE_OVERLAY/hdl/MaskRom.vhd",
+  "rtl/PICTURE_OVERLAY/hdl/PictureOverlayCtrl.vhd",
+  "rtl/PICTURE_OVERLAY/hdl/PictureOverlayCore.vhd",
+  "rtl/PICTURE_OVERLAY/hdl/AxiPictureOverlay.vhd",
+]
+
+  [targets.axi_picture_overlay.parameters]
+  G_PIXEL_WIDTH   = 8
+  G_MASK_W        = 690
+  G_MASK_H        = 1020
+    G_LINE_WIDTH    = 1920
+    G_NUM_ROW       = 1080
