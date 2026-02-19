@@ -41,6 +41,7 @@ end entity;
 architecture A_Rtl of AXI_BlurrWindowModule is
   constant C_WINDOW_DATA_WIDTH : positive := G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH;
 
+  signal s_axis_gray8_tready_sel : std_logic := '0';
   signal s_axis_gray8_tvalid_filter : std_logic := '0';
   signal s_axis_gray8_tready_filter : std_logic := '0';
 
@@ -58,6 +59,11 @@ begin
   assert G_KERNEL_COEFFS'length = (G_KERNEL_SIZE * G_KERNEL_SIZE * G_COEFF_WIDTH)
     report "AXI_BlurrWindowModule: G_KERNEL_COEFFS length must equal G_KERNEL_SIZE*G_KERNEL_SIZE*G_COEFF_WIDTH."
     severity failure;
+
+  s_axis_gray8_tready_sel <= '0' when (i_aresetn = '0') else
+                             m_axis_filter8_tready when (i_pass_through = '1') else
+                             s_axis_gray8_tready_filter;
+  s_axis_gray8_tready <= s_axis_gray8_tready_sel;
 
   s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
 

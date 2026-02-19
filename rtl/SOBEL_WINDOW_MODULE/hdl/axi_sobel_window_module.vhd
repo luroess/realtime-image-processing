@@ -67,6 +67,11 @@ begin
     report "AXI_SobelWindowModule with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
     severity failure;
 
+  s_axis_gray8_tready_sel <= '0' when (i_aresetn = '0') else
+                             m_axis_rbg888_tready when (i_pass_through = '1') else
+                             s_axis_gray8_tready_filter;
+  s_axis_gray8_tready <= s_axis_gray8_tready_sel;
+
   s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
 
   U_WindowGenerator: entity work.window_generator

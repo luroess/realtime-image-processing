@@ -9,6 +9,7 @@ import cocotb
 import numpy as np
 from cocotb.clock import Clock
 
+from common.pause import repeating_pause
 from common.reset import apply_reset
 from drivers.axis_gray_source import AxiGrayStreamSource
 from models.image_model import Image
@@ -197,6 +198,8 @@ async def run_wrapper_case(
     gray_plane: np.ndarray,
     pass_through: bool = False,
     output_path: Path | None = None,
+    source_pause_pattern: tuple[int, ...] | None = None,
+    sink_pause_pattern: tuple[int, ...] | None = None,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
@@ -235,6 +238,12 @@ async def run_wrapper_case(
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,
     )
+
+    if source_pause_pattern is not None:
+        source.set_pause_generator(repeating_pause(source_pause_pattern))
+    if sink_pause_pattern is not None:
+        sink.set_pause_generator(repeating_pause(sink_pause_pattern))
+
     m_axis_tready.value = 1
 
     if pass_through:
@@ -291,3 +300,29 @@ async def test_axi_sobel_window_module_passthrough_gray(dut) -> None:
     image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray, pass_through=True)
+
+
+@cocotb.test(timeout_time=700, timeout_unit="ms")
+async def test_axi_sobel_window_module_backpressure_filter_mode(dut) -> None:
+    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(
+        dut,
+        gray,
+        pass_through=False,
+        source_pause_pattern=(0, 1, 0, 0, 1, 0, 1, 0),
+        sink_pause_pattern=(0, 0, 1, 0, 1, 0, 0),
+    )
+
+
+@cocotb.test(timeout_time=700, timeout_unit="ms")
+async def test_axi_sobel_window_module_backpressure_passthrough_mode(dut) -> None:
+    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(
+        dut,
+        gray,
+        pass_through=True,
+        source_pause_pattern=(0, 1, 0, 0, 1, 0, 1, 0),
+        sink_pause_pattern=(0, 0, 1, 0, 1, 0, 0),
+    )

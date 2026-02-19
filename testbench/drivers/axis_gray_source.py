@@ -55,6 +55,10 @@ class AxiGrayStreamSource:
         if hasattr(self._source.bus, "tuser"):
             self._source.bus.tuser.value = 0
 
+    def set_pause_generator(self, generator=None) -> None:
+        """Apply optional TVALID throttling pattern."""
+        self._source.set_pause_generator(generator)
+
     def _build_line_tuser(self, line_bytes_len: int, *, line_index: int) -> list[int]:
         if line_index != 0 or line_bytes_len == 0:
             return [0] * line_bytes_len
