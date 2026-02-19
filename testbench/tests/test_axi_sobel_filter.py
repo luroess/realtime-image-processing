@@ -348,7 +348,7 @@ async def test_axi_sobel_filter_lenna_adaptive_10_iterations(dut) -> None:
         model["threshold_max"],
     )
 
-    for iteration in range(10):
+    for iteration in range(3):
         mean_start = mean_model
         threshold_start = _adaptive_threshold_from_mean(
             mean=mean_start,

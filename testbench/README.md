@@ -60,8 +60,8 @@ uv run tb-sim --target example_passthrough
 uv run tb-sim --target test_example
 uv run tb-sim --target axi_rgb_to_grayscale
 uv run tb-sim --target window_generator
-uv run tb-sim --target axi_sobel_filter
 uv run tb-sim --target axi_blurr_window_module
+uv run tb-sim --target axi_sobel_filter
 uv run tb-sim --target axi_sobel_window_module
 uv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline
 uv run tb-sim --target test_debouncer
