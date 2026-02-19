@@ -73,15 +73,15 @@ def _resolve_sobel_model_params(dut) -> dict[str, int]:
     threshold_max_default = 8 * ((2 ** pixel_width) - 1)
     return {
         "threshold": _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD),
-        "mean_shift": _dut_generic_int(dut, "G_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
+        "mean_shift": _dut_generic_int(dut, "G_SOBEL_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
         "mean_update_interval": _dut_generic_int(
             dut,
-            "G_MEAN_UPDATE_INTERVAL",
+            "G_SOBEL_MEAN_UPDATE_INTERVAL",
             SOBEL_MEAN_UPDATE_INTERVAL,
         ),
-        "gain_num": _dut_generic_int(dut, "G_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
-        "gain_den": _dut_generic_int(dut, "G_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
-        "offset": _dut_generic_int(dut, "G_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
+        "gain_num": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
+        "gain_den": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
+        "offset": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
         "threshold_min": 0,
         "threshold_max": threshold_max_default,
     }

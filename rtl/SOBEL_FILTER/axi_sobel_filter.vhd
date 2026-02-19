@@ -9,14 +9,14 @@ entity AXI_SobelFilter is
     G_KERNEL_SIZE    : positive := 3;
     -- Initial threshold for running-mean
     G_SOBEL_THRESHOLD : natural := 150;
-    -- Running-mean update factor: mean += (mag - mean) / 2^G_MEAN_SHIFT
-    G_MEAN_SHIFT : natural := 9;
+    -- Running-mean update factor: mean += (mag - mean) / 2^G_SOBEL_MEAN_SHIFT
+    G_SOBEL_MEAN_SHIFT : natural := 9;
     -- Update running mean once every N accepted pixels (demo purpose of adaption)
-    G_MEAN_UPDATE_INTERVAL : positive := 1;
+    G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
     -- Adaptive threshold = clamp((mean * NUM / DEN) + OFFSET))
-    G_THRESHOLD_GAIN_NUM : positive := 1;
-    G_THRESHOLD_GAIN_DEN : positive := 1;
-    G_THRESHOLD_OFFSET   : integer  := 0;
+    G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;
+    G_SOBEL_THRESHOLD_GAIN_DEN : positive := 1;
+    G_SOBEL_THRESHOLD_OFFSET   : integer  := 0;
     G_THRESHOLD_MIN      : natural  := 0;
     G_THRESHOLD_MAX      : natural  := (8 * ((2 ** G_PIXEL_WIDTH) - 1))
   );
@@ -54,11 +54,11 @@ begin
       G_PIXEL_WIDTH    => G_PIXEL_WIDTH,
       G_KERNEL_SIZE    => G_KERNEL_SIZE,
       G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD,
-      G_MEAN_SHIFT      => G_MEAN_SHIFT,
-      G_MEAN_UPDATE_INTERVAL => G_MEAN_UPDATE_INTERVAL,
-      G_THRESHOLD_GAIN_NUM => G_THRESHOLD_GAIN_NUM,
-      G_THRESHOLD_GAIN_DEN => G_THRESHOLD_GAIN_DEN,
-      G_THRESHOLD_OFFSET   => G_THRESHOLD_OFFSET,
+      G_SOBEL_MEAN_SHIFT      => G_SOBEL_MEAN_SHIFT,
+      G_SOBEL_MEAN_UPDATE_INTERVAL => G_SOBEL_MEAN_UPDATE_INTERVAL,
+      G_SOBEL_THRESHOLD_GAIN_NUM => G_SOBEL_THRESHOLD_GAIN_NUM,
+      G_SOBEL_THRESHOLD_GAIN_DEN => G_SOBEL_THRESHOLD_GAIN_DEN,
+      G_SOBEL_THRESHOLD_OFFSET   => G_SOBEL_THRESHOLD_OFFSET,
       G_THRESHOLD_MIN      => G_THRESHOLD_MIN,
       G_THRESHOLD_MAX      => G_THRESHOLD_MAX
     )

@@ -10,14 +10,14 @@ entity E_SobelCore is
     G_KERNEL_SIZE    : positive := 3;
     -- Initial threshold for running-mean
     G_SOBEL_THRESHOLD : natural := 150;
-    -- Running-mean update factor: mean += (mag - mean) / 2^G_MEAN_SHIFT
-    G_MEAN_SHIFT : natural := 9;
+    -- Running-mean update factor: mean += (mag - mean) / 2^G_SOBEL_MEAN_SHIFT
+    G_SOBEL_MEAN_SHIFT : natural := 9;
     -- Update running mean once every N accepted pixels (demo purpose of adaption)
-    G_MEAN_UPDATE_INTERVAL : positive := 1;
+    G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
     -- Adaptive threshold = clamp((mean * NUM / DEN) + OFFSET))
-    G_THRESHOLD_GAIN_NUM : positive := 1;
-    G_THRESHOLD_GAIN_DEN : positive := 1;
-    G_THRESHOLD_OFFSET   : integer  := 0;
+    G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;
+    G_SOBEL_THRESHOLD_GAIN_DEN : positive := 1;
+    G_SOBEL_THRESHOLD_OFFSET   : integer  := 0;
     -- Global internal constants
     G_THRESHOLD_MIN      : natural  := 0;
     G_THRESHOLD_MAX      : natural  := (8 * ((2 ** G_PIXEL_WIDTH) - 1))
@@ -64,7 +64,7 @@ architecture A_RtlComb of E_SobelCore is
 
   constant C_MAG_MAX       : integer := (8 * ((2 ** G_PIXEL_WIDTH) - 1));
   constant C_MEAN_INIT     : integer := f_clamp(integer(G_SOBEL_THRESHOLD), 0, C_MAG_MAX);
-  constant C_MEAN_ALPHA_DIV : integer := f_pow2_saturating(G_MEAN_SHIFT);
+  constant C_MEAN_ALPHA_DIV : integer := f_pow2_saturating(G_SOBEL_MEAN_SHIFT);
 
   signal s_p1_u : unsigned(G_PIXEL_WIDTH - 1 downto 0);
   signal s_p2_u : unsigned(G_PIXEL_WIDTH - 1 downto 0);
@@ -77,7 +77,7 @@ architecture A_RtlComb of E_SobelCore is
   signal s_p9_u : unsigned(G_PIXEL_WIDTH - 1 downto 0);
   signal s_mag          : integer range 0 to C_MAG_MAX := 0;
   signal s_running_mean : integer range 0 to C_MAG_MAX := C_MEAN_INIT;
-  signal s_update_counter : natural range 0 to G_MEAN_UPDATE_INTERVAL - 1 := 0;
+  signal s_update_counter : natural range 0 to G_SOBEL_MEAN_UPDATE_INTERVAL - 1 := 0;
 begin
   assert G_KERNEL_SIZE = 3
     report "E_SobelCore: fixed Sobel logic requires G_KERNEL_SIZE=3."
@@ -131,8 +131,8 @@ begin
   process(s_running_mean, s_mag)
     variable v_threshold : integer;
   begin
-    v_threshold := ((s_running_mean * integer(G_THRESHOLD_GAIN_NUM)) / integer(G_THRESHOLD_GAIN_DEN))
-                   + G_THRESHOLD_OFFSET;
+    v_threshold := ((s_running_mean * integer(G_SOBEL_THRESHOLD_GAIN_NUM)) / integer(G_SOBEL_THRESHOLD_GAIN_DEN))
+                   + G_SOBEL_THRESHOLD_OFFSET;
     v_threshold := f_clamp(v_threshold, integer(G_THRESHOLD_MIN), integer(G_THRESHOLD_MAX));
     v_threshold := f_clamp(v_threshold, 0, C_MAG_MAX);
 
@@ -153,7 +153,7 @@ begin
         s_running_mean <= C_MEAN_INIT;
         s_update_counter <= 0;
       elsif i_sample_valid = '1' then
-        if s_update_counter = (G_MEAN_UPDATE_INTERVAL - 1) then
+        if s_update_counter = (G_SOBEL_MEAN_UPDATE_INTERVAL - 1) then
           s_update_counter <= 0;
 
           v_delta := s_mag - s_running_mean;
