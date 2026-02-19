@@ -24,8 +24,6 @@ RESET_ACTIVE_LEVEL = False
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 FRAME_WIDTH = 512
 FRAME_HEIGHT = 512
-BACKPRESSURE_WIDTH = 192
-BACKPRESSURE_HEIGHT = 128
 
 # Default 3x3 Gaussian used by AXI_BlurrFilter.
 GAUSS3X3 = np.array(
@@ -61,6 +59,22 @@ def _gray_from_rgb(image: Image) -> np.ndarray:
     g = pixels_u16[:, :, 1]
     b = pixels_u16[:, :, 2]
     return ((r >> 2) + (g >> 1) + (b >> 2)).astype(np.uint8)
+
+
+def _dut_generic_int(dut, generic_name: str, default: int) -> int:
+    handle = getattr(dut, generic_name, None)
+    if handle is None:
+        return int(default)
+    try:
+        return int(handle.value)
+    except Exception:
+        return int(default)
+
+
+def _frame_shape_from_dut(dut) -> tuple[int, int]:
+    width = _dut_generic_int(dut, "G_LINE_WIDTH", FRAME_WIDTH)
+    height = _dut_generic_int(dut, "G_NUM_ROW", FRAME_HEIGHT)
+    return int(width), int(height)
 
 
 def _apply_kernel_expected(
@@ -194,7 +208,8 @@ async def run_wrapper_case(
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
 async def test_axi_blurr_window_module_simple_image(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray)
 
@@ -205,20 +220,30 @@ async def test_axi_blurr_window_module_lenna_end_to_end(dut) -> None:
     output_path = _sim_artifact_dir() / "lenna_512_512_out_window_module_blurr.png"
 
     image = Image.from_png(input_path)
+    width, height = _frame_shape_from_dut(dut)
+    if image.width < width or image.height < height:
+        raise AssertionError(
+            f"Input image too small for configured frame ({width}, {height}), "
+            f"got ({image.width}, {image.height})",
+        )
+    if image.width != width or image.height != height:
+        image = Image(image.pixels[:height, :width, :])
     gray = _gray_from_rgb(image)
     await run_wrapper_case(dut, gray, output_path=output_path)
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
 async def test_axi_blurr_window_module_passthrough_gray(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray, pass_through=True)
 
 
 @cocotb.test(timeout_time=700, timeout_unit="ms")
 async def test_axi_blurr_window_module_backpressure_filter_mode(dut) -> None:
-    image = Image.gradient_gray(width=BACKPRESSURE_WIDTH, height=BACKPRESSURE_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(
         dut,
@@ -231,7 +256,8 @@ async def test_axi_blurr_window_module_backpressure_filter_mode(dut) -> None:
 
 @cocotb.test(timeout_time=700, timeout_unit="ms")
 async def test_axi_blurr_window_module_backpressure_passthrough_mode(dut) -> None:
-    image = Image.gradient_gray(width=BACKPRESSURE_WIDTH, height=BACKPRESSURE_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(
         dut,
@@ -284,8 +310,7 @@ async def test_axi_blurr_window_module_backpressure_mode_switch_passthrough_to_f
     sink.set_pause_generator(repeating_pause((0, 0, 1, 0, 1, 0, 0)))
     m_axis_tready.value = 1
 
-    width = BACKPRESSURE_WIDTH
-    height = BACKPRESSURE_HEIGHT
+    width, height = _frame_shape_from_dut(dut)
     frame0 = Image.gradient_gray(width=width, height=height).pixels[:, :, 0]
     frame1 = np.roll(frame0, shift=13, axis=1)
 
