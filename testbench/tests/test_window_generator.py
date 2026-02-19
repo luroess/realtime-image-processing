@@ -599,13 +599,37 @@ async def test_axi_rgb_to_window_without_pressure(dut) -> None:
     )
 
 @cocotb.test()
-async def test_axi_rgb_to_window_with_pressure(dut) -> None:
+async def test_axi_rgb_to_window_with_pressure_1(dut) -> None:
     """Test for window generation with pressure."""
     await run_single_frame_test(
         dut=dut,
         image=Image.gradient_gray(width=5, height=5),
         with_backpressure=True,
         pause_pattern=(0, 0, 1, 0, 1, 1),
+        check_handshake=True,
+        min_ready_low_run=1,
+    )
+
+@cocotb.test()
+async def test_axi_rgb_to_window_with_pressure_2(dut) -> None:
+    """Test for window generation with pressure."""
+    await run_single_frame_test(
+        dut=dut,
+        image=Image.gradient_gray(width=5, height=5),
+        with_backpressure=True,
+        pause_pattern=(0, 1, 1, 0, 0, 1),
+        check_handshake=True,
+        min_ready_low_run=1,
+    )
+
+@cocotb.test()
+async def test_axi_rgb_to_window_with_pressure_3(dut) -> None:
+    """Test for window generation with pressure."""
+    await run_single_frame_test(
+        dut=dut,
+        image=Image.gradient_gray(width=5, height=5),
+        with_backpressure=True,
+        pause_pattern=(1, 0, 1, 0, 0, 1),
         check_handshake=True,
         min_ready_low_run=1,
     )
