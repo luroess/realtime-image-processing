@@ -20,6 +20,12 @@ entity AXI_RgbGrayBlurrSobelOverlayPipeline is
     G_BLURR_BIAS              : integer := 0;
 
     G_SOBEL_THRESHOLD : natural := 200;
+    G_SOBEL_MEAN_SHIFT : natural := 4;
+    G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;
+    G_SOBEL_THRESHOLD_GAIN_DEN : positive := 1;
+    G_SOBEL_THRESHOLD_OFFSET   : integer  := 0;
+    G_SOBEL_THRESHOLD_MIN      : natural  := 0;
+    G_SOBEL_THRESHOLD_MAX      : natural  := (8 * ((2 ** G_PIXEL_WIDTH) - 1));
     G_EDGE_COLOR      : std_logic_vector((3 * G_PIXEL_WIDTH) - 1 downto 0) :=
                         (G_PIXEL_WIDTH - 1 downto 0 => '1') &
                         ((2 * G_PIXEL_WIDTH) - 1 downto 0 => '0')
@@ -174,6 +180,12 @@ begin
   U_AxiSobelWindowModule: entity work.AXI_SobelWindowModule
     generic map (
       G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD,
+      G_SOBEL_MEAN_SHIFT => G_SOBEL_MEAN_SHIFT,
+      G_SOBEL_THRESHOLD_GAIN_NUM => G_SOBEL_THRESHOLD_GAIN_NUM,
+      G_SOBEL_THRESHOLD_GAIN_DEN => G_SOBEL_THRESHOLD_GAIN_DEN,
+      G_SOBEL_THRESHOLD_OFFSET   => G_SOBEL_THRESHOLD_OFFSET,
+      G_SOBEL_THRESHOLD_MIN      => G_SOBEL_THRESHOLD_MIN,
+      G_SOBEL_THRESHOLD_MAX      => G_SOBEL_THRESHOLD_MAX,
       G_PIXEL_WIDTH     => G_PIXEL_WIDTH,
       G_KERNEL_SIZE     => 3,
       G_LINE_WIDTH      => G_LINE_WIDTH,

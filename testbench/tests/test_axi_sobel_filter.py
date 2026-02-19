@@ -20,6 +20,12 @@ S_AXIS_PREFIX = "s_axis_window"
 M_AXIS_PREFIX = "m_axis_filter8"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
+SOBEL_MEAN_SHIFT = 4
+SOBEL_THRESHOLD_GAIN_NUM = 1
+SOBEL_THRESHOLD_GAIN_DEN = 1
+SOBEL_THRESHOLD_OFFSET = 0
+SOBEL_THRESHOLD_MIN = 0
+SOBEL_THRESHOLD_MAX = 2040
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -38,10 +44,26 @@ def _gray_from_rgb(image: Image) -> np.ndarray:
     return ((r >> 2) + (g >> 1) + (b >> 2)).astype(np.uint8)
 
 
+def _clamp(value: int, lo: int, hi: int) -> int:
+    if value < lo:
+        return lo
+    if value > hi:
+        return hi
+    return value
+
+
+def _trunc_div_towards_zero(numerator: int, denominator: int) -> int:
+    if numerator >= 0:
+        return numerator // denominator
+    return -((-numerator) // denominator)
+
+
 def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) -> np.ndarray:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
     out = np.zeros((height, width), dtype=np.uint8)
+    mean = _clamp(int(threshold), 0, SOBEL_THRESHOLD_MAX)
+    alpha_div = 1 << SOBEL_MEAN_SHIFT
 
     for y in range(height):
         for x in range(width):
@@ -56,7 +78,26 @@ def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) ->
 
             gx = (p3 + 2 * p6 + p9) - (p1 + 2 * p4 + p7)
             gy = (p1 + 2 * p2 + p3) - (p7 + 2 * p8 + p9)
-            out[y, x] = 255 if (abs(gx) + abs(gy)) >= threshold else 0
+            mag = abs(gx) + abs(gy)
+
+            adaptive_threshold = (
+                (mean * SOBEL_THRESHOLD_GAIN_NUM) // SOBEL_THRESHOLD_GAIN_DEN
+            ) + SOBEL_THRESHOLD_OFFSET
+            adaptive_threshold = _clamp(
+                adaptive_threshold,
+                SOBEL_THRESHOLD_MIN,
+                SOBEL_THRESHOLD_MAX,
+            )
+
+            out[y, x] = 255 if mag >= adaptive_threshold else 0
+
+            delta = mag - mean
+            step = (
+                _trunc_div_towards_zero(delta, alpha_div)
+                if alpha_div > 1
+                else delta
+            )
+            mean = _clamp(mean + step, 0, SOBEL_THRESHOLD_MAX)
 
     return out
 
