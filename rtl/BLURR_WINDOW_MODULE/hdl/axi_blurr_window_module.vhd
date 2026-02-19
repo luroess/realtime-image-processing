@@ -41,6 +41,7 @@ end entity;
 architecture A_Rtl of AXI_BlurrWindowModule is
   constant C_WINDOW_DATA_WIDTH : positive := G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH;
 
+  signal s_axis_gray8_tready_sel : std_logic := '0';
   signal s_axis_gray8_tvalid_filter : std_logic := '0';
   signal s_axis_gray8_tready_filter : std_logic := '0';
 
@@ -54,18 +55,19 @@ architecture A_Rtl of AXI_BlurrWindowModule is
   signal s_blurr_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
   signal s_blurr_tuser  : std_logic := '0';
   signal s_blurr_tlast  : std_logic := '0';
-  signal s_axis_gray8_tready_mux : std_logic := '0';
-  signal s_axis_gray8_accept     : std_logic := '0';
 begin
   assert G_KERNEL_COEFFS'length = (G_KERNEL_SIZE * G_KERNEL_SIZE * G_COEFF_WIDTH)
     report "AXI_BlurrWindowModule: G_KERNEL_COEFFS length must equal G_KERNEL_SIZE*G_KERNEL_SIZE*G_COEFF_WIDTH."
     severity failure;
 
-  -- In filter mode, keep the hidden filter path live.
-  -- In pass-through mode, advance hidden state only on externally accepted beats
-  -- so internal warm-up cannot consume unacknowledged input during stalls.
-  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid when (i_pass_through /= '1') else
-                                s_axis_gray8_accept;
+  -- In pass-through mode, keep the hidden filter path quiescent.
+  -- This avoids consuming internal warm-up beats while output is bypassed.
+  s_axis_gray8_tready_sel <= '0' when (i_aresetn = '0') else
+                             m_axis_filter8_tready when (i_pass_through = '1') else
+                             s_axis_gray8_tready_filter;
+  s_axis_gray8_tready <= s_axis_gray8_tready_sel;
+
+  s_axis_gray8_tvalid_filter <= '0' when (i_pass_through = '1') else s_axis_gray8_tvalid;
 
   U_WindowGenerator: entity work.window_generator
     generic map (
@@ -114,12 +116,6 @@ begin
     );
 
   -- Top-level AXI4-Stream mux: pass-through or filter output
-  s_axis_gray8_tready_mux <= '0' when (i_aresetn = '0') else
-                             m_axis_filter8_tready when (i_pass_through = '1') else
-                             s_axis_gray8_tready_filter;
-  s_axis_gray8_tready <= s_axis_gray8_tready_mux;
-  s_axis_gray8_accept <= s_axis_gray8_tvalid and s_axis_gray8_tready_mux;
-
   m_axis_filter8_tvalid <= '0' when (i_aresetn = '0') else
                            s_axis_gray8_tvalid when (i_pass_through = '1') else
                            s_blurr_tvalid;

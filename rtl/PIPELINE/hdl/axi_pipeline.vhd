@@ -102,6 +102,7 @@ architecture A_RtlStruct of AXI_Pipeline is
   signal s_gray_tdata         : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
   signal s_gray_tuser         : std_logic                                    := '0';
   signal s_gray_tlast         : std_logic                                    := '0';
+  signal s_input_tready       : std_logic                                    := '0';
 
   signal s_rgb_stage_tvalid : std_logic                                          := '0';
   signal s_rgb_stage_tready : std_logic                                          := '0';
@@ -179,7 +180,7 @@ begin
 
   -- SOF beat that captures a new frame-level control tuple.
   s_input_sof_accept <= s_axis_video_rbg888_tvalid and
-                        s_axis_video_rbg888_tready and
+                        s_input_tready and
                         s_axis_video_rbg888_tuser;
 
   -- The first accepted beat of a new frame must see the new mode value
@@ -262,7 +263,7 @@ begin
       i_aresetn            => i_aresetn,
       i_pass_through       => s_pass_grayscale_eff,
       s_axis_video_tvalid  => s_axis_video_rbg888_tvalid,
-      s_axis_video_tready  => s_axis_video_rbg888_tready,
+      s_axis_video_tready  => s_input_tready,
       s_axis_video_tdata   => s_axis_video_rbg888_tdata,
       s_axis_video_tuser   => s_axis_video_rbg888_tuser,
       s_axis_video_tlast   => s_axis_video_rbg888_tlast,
@@ -277,6 +278,8 @@ begin
       m_axis_gray8_tuser   => s_gray_tuser,
       m_axis_gray8_tlast   => s_gray_tlast
     );
+
+  s_axis_video_rbg888_tready <= s_input_tready;
 
   U_AxiBlurrWindowModule: entity work.AXI_BlurrWindowModule
     generic map (

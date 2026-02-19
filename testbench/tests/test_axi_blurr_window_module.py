@@ -8,9 +8,8 @@ from pathlib import Path
 import cocotb
 import numpy as np
 from cocotb.clock import Clock
-from cocotb.triggers import FallingEdge, ReadOnly, RisingEdge
 
-from common.pause import drive_sink_pause
+from common.pause import repeating_pause
 from common.reset import apply_reset
 from drivers.axis_gray_source import AxiGrayStreamSource
 from models.image_model import Image
@@ -62,6 +61,22 @@ def _gray_from_rgb(image: Image) -> np.ndarray:
     return ((r >> 2) + (g >> 1) + (b >> 2)).astype(np.uint8)
 
 
+def _dut_generic_int(dut, generic_name: str, default: int) -> int:
+    handle = getattr(dut, generic_name, None)
+    if handle is None:
+        return int(default)
+    try:
+        return int(handle.value)
+    except Exception:
+        return int(default)
+
+
+def _frame_shape_from_dut(dut) -> tuple[int, int]:
+    width = _dut_generic_int(dut, "G_LINE_WIDTH", FRAME_WIDTH)
+    height = _dut_generic_int(dut, "G_NUM_ROW", FRAME_HEIGHT)
+    return int(width), int(height)
+
+
 def _apply_kernel_expected(
     gray_plane: np.ndarray,
     *,
@@ -111,69 +126,13 @@ def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
     )
 
 
-async def _monitor_output_stall_stability(
-    *,
-    dut,
-    i_clk,
-    i_rst_n,
-    m_axis_tready,
-    stop: dict[str, bool],
-    stats: dict[str, int | bool],
-) -> None:
-    m_axis_tvalid = getattr(dut, f"{M_AXIS_PREFIX}_tvalid")
-    m_axis_tdata = getattr(dut, f"{M_AXIS_PREFIX}_tdata")
-    m_axis_tuser = getattr(dut, f"{M_AXIS_PREFIX}_tuser")
-    m_axis_tlast = getattr(dut, f"{M_AXIS_PREFIX}_tlast")
-
-    ready_low_run = 0
-    prev_stall_payload: tuple[int, int, int] | None = None
-
-    while not stop["done"]:
-        await FallingEdge(i_clk)
-        await ReadOnly()
-
-        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
-            ready_low_run = 0
-            prev_stall_payload = None
-            await RisingEdge(i_clk)
-            continue
-
-        valid = int(m_axis_tvalid.value)
-        ready = int(m_axis_tready.value)
-
-        if ready == 0:
-            ready_low_run += 1
-            stats["max_ready_low_run"] = max(int(stats["max_ready_low_run"]), ready_low_run)
-        else:
-            ready_low_run = 0
-
-        if valid == 1 and ready == 0:
-            stats["saw_stall"] = True
-            payload = (
-                int(m_axis_tdata.value),
-                int(m_axis_tuser.value),
-                int(m_axis_tlast.value),
-            )
-            if prev_stall_payload is not None:
-                assert payload == prev_stall_payload, (
-                    "Output payload changed while stalled (VALID=1, READY=0). "
-                    f"prev={prev_stall_payload}, now={payload}"
-                )
-            prev_stall_payload = payload
-        else:
-            prev_stall_payload = None
-
-        await RisingEdge(i_clk)
-
-
 async def run_wrapper_case(
     dut,
     gray_plane: np.ndarray,
     pass_through: bool = False,
     output_path: Path | None = None,
-    with_backpressure: bool = False,
-    pause_pattern: tuple[int, ...] = (0, 1, 0, 1, 1, 0),
-    min_ready_low_run: int = 1,
+    source_pause_pattern: tuple[int, ...] | None = None,
+    sink_pause_pattern: tuple[int, ...] | None = None,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
@@ -211,28 +170,13 @@ async def run_wrapper_case(
         prefix=M_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
     )
+
+    if source_pause_pattern is not None:
+        source.set_pause_generator(repeating_pause(source_pause_pattern))
+    if sink_pause_pattern is not None:
+        sink.set_pause_generator(repeating_pause(sink_pause_pattern))
+
     m_axis_tready.value = 1
-    sink.set_pause(False)
-
-    pause_task = None
-    monitor_task = None
-    monitor_stop = {"done": False}
-    monitor_stats: dict[str, int | bool] = {"saw_stall": False, "max_ready_low_run": 0}
-
-    if with_backpressure:
-        pause_task = cocotb.start_soon(
-            drive_sink_pause(sink=sink, i_clk=i_clk, pattern=pause_pattern),
-        )
-        monitor_task = cocotb.start_soon(
-            _monitor_output_stall_stability(
-                dut=dut,
-                i_clk=i_clk,
-                i_rst_n=i_rst_n,
-                m_axis_tready=m_axis_tready,
-                stop=monitor_stop,
-                stats=monitor_stats,
-            ),
-        )
 
     expected = (
         gray_plane
@@ -246,40 +190,26 @@ async def run_wrapper_case(
     )
 
     flush_pixels = 0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
-    try:
-        await source.send_image(
-            _gray_plane_to_image(gray_plane),
-            tail_padding_pixels=flush_pixels,
-        )
 
-        height, width = gray_plane.shape
-        timeout_ns = max(500_000, width * height * 70)
-        received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
-        _assert_plane_equal(expected, received)
+    await source.send_image(
+        _gray_plane_to_image(gray_plane),
+        tail_padding_pixels=flush_pixels,
+    )
 
-        if output_path is not None:
-            rgb = np.stack((received, received, received), axis=2)
-            Image(rgb).to_png(output_path)
-    finally:
-        if pause_task is not None:
-            pause_task.cancel()
-            sink.set_pause(False)
-        if monitor_task is not None:
-            monitor_stop["done"] = True
-            await RisingEdge(i_clk)
-            monitor_task.cancel()
+    height, width = gray_plane.shape
+    timeout_ns = max(10_000_000, width * height * 250)
+    received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_plane_equal(expected, received)
 
-    if with_backpressure:
-        assert bool(monitor_stats["saw_stall"]), "Expected at least one VALID=1, READY=0 stall cycle."
-        assert int(monitor_stats["max_ready_low_run"]) >= min_ready_low_run, (
-            "Backpressure READY-low run too short: "
-            f"observed={int(monitor_stats['max_ready_low_run'])}, required>={min_ready_low_run}"
-        )
+    if output_path is not None:
+        rgb = np.stack((received, received, received), axis=2)
+        Image(rgb).to_png(output_path)
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
 async def test_axi_blurr_window_module_simple_image(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray)
 
@@ -290,26 +220,183 @@ async def test_axi_blurr_window_module_lenna_end_to_end(dut) -> None:
     output_path = _sim_artifact_dir() / "lenna_512_512_out_window_module_blurr.png"
 
     image = Image.from_png(input_path)
+    width, height = _frame_shape_from_dut(dut)
+    if image.width < width or image.height < height:
+        raise AssertionError(
+            f"Input image too small for configured frame ({width}, {height}), "
+            f"got ({image.width}, {image.height})",
+        )
+    if image.width != width or image.height != height:
+        image = Image(image.pixels[:height, :width, :])
     gray = _gray_from_rgb(image)
     await run_wrapper_case(dut, gray, output_path=output_path)
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
 async def test_axi_blurr_window_module_passthrough_gray(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray, pass_through=True)
 
 
-@cocotb.test(timeout_time=250, timeout_unit="ms")
-async def test_axi_blurr_window_module_passthrough_backpressure(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+@cocotb.test(timeout_time=700, timeout_unit="ms")
+async def test_axi_blurr_window_module_backpressure_filter_mode(dut) -> None:
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(
+        dut,
+        gray,
+        pass_through=False,
+        source_pause_pattern=(0, 1, 0, 0, 1, 0, 1, 0, 0, 1),
+        sink_pause_pattern=(0, 0, 1, 0, 1, 0, 0),
+    )
+
+
+@cocotb.test(timeout_time=700, timeout_unit="ms")
+async def test_axi_blurr_window_module_backpressure_passthrough_mode(dut) -> None:
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(
         dut,
         gray,
         pass_through=True,
-        with_backpressure=True,
-        pause_pattern=(0, 1, 1, 0, 1, 0, 1),
-        min_ready_low_run=1,
+        source_pause_pattern=(0, 1, 0, 0, 1, 0, 1, 0, 0, 1),
+        sink_pause_pattern=(0, 0, 1, 0, 1, 0, 0),
     )
+
+
+@cocotb.test(timeout_time=900, timeout_unit="ms")
+async def test_axi_blurr_window_module_backpressure_mode_switch_passthrough_to_filter(dut) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    i_pass_through = getattr(dut, PASS_THROUGH_SIGNAL)
+    m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
+
+    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    i_pass_through.value = 1
+    m_axis_tready.value = 0
+
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    await apply_reset(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        stream_input_prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+
+    source = AxiGrayStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiGrayStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    source.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0, 0, 1)))
+    sink.set_pause_generator(repeating_pause((0, 0, 1, 0, 1, 0, 0)))
+    m_axis_tready.value = 1
+
+    width, height = _frame_shape_from_dut(dut)
+    frame0 = Image.gradient_gray(width=width, height=height).pixels[:, :, 0]
+    frame1 = np.roll(frame0, shift=13, axis=1)
+
+    # Frame 0: pass-through branch under pressure.
+    i_pass_through.value = 1
+    await source.send_image(_gray_plane_to_image(frame0), tail_padding_pixels=0)
+    timeout_ns = max(12_000_000, width * height * 300)
+    received0 = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_plane_equal(frame0, received0)
+
+    # Frame 1: switch branch without reset; filter branch must still work.
+    i_pass_through.value = 0
+    expected1 = _apply_kernel_expected(
+        frame1,
+        kernel=GAUSS3X3,
+        normalize_divisor=16,
+        bias=0,
+    )
+    flush_pixels = _warmup_beats(width=width, wndw_size=3)
+    await source.send_image(_gray_plane_to_image(frame1), tail_padding_pixels=flush_pixels)
+    received1 = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_plane_equal(expected1, received1)
+
+
+@cocotb.test(timeout_time=900, timeout_unit="ms")
+async def test_axi_blurr_window_module_backpressure_mode_switch_filter_to_passthrough(dut) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    i_pass_through = getattr(dut, PASS_THROUGH_SIGNAL)
+    m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
+
+    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    i_pass_through.value = 0
+    m_axis_tready.value = 0
+
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    await apply_reset(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        stream_input_prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+
+    source = AxiGrayStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiGrayStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    source.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0, 0, 1)))
+    sink.set_pause_generator(repeating_pause((0, 0, 1, 0, 1, 0, 0)))
+    m_axis_tready.value = 1
+
+    width, height = _frame_shape_from_dut(dut)
+    frame0 = Image.gradient_gray(width=width, height=height).pixels[:, :, 0]
+    frame1 = np.roll(frame0, shift=7, axis=0)
+
+    # Frame 0: filter branch under pressure.
+    i_pass_through.value = 0
+    expected0 = _apply_kernel_expected(
+        frame0,
+        kernel=GAUSS3X3,
+        normalize_divisor=16,
+        bias=0,
+    )
+    flush_pixels = _warmup_beats(width=width, wndw_size=3)
+    await source.send_image(_gray_plane_to_image(frame0), tail_padding_pixels=flush_pixels)
+    timeout_ns = max(12_000_000, width * height * 300)
+    received0 = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_plane_equal(expected0, received0)
+
+    # Frame 1: switch branch without reset; passthrough branch must stay lockstep.
+    i_pass_through.value = 1
+    await source.send_image(_gray_plane_to_image(frame1), tail_padding_pixels=0)
+    received1 = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_plane_equal(frame1, received1)

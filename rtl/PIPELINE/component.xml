@@ -167,7 +167,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>7082b4cf</spirit:value>
+            <spirit:value>8970087a</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -186,7 +186,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>7082b4cf</spirit:value>
+            <spirit:value>8970087a</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -903,13 +903,13 @@
       </xilinx:taxonomies>
       <xilinx:displayName>AXI_Pipeline_v1_0</xilinx:displayName>
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
-      <xilinx:coreRevision>7</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2026-02-19T20:08:37Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>8</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2026-02-19T20:15:50Z</xilinx:coreCreationDateTime>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2025.1</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="f6cb0549"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="ae67ee30"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="b03d18eb"/>
       <xilinx:checksum xilinx:scope="ports" xilinx:value="06797e20"/>
       <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="701467a2"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="ba41ef10"/>
