@@ -9,7 +9,6 @@ import cocotb
 import numpy as np
 from cocotb.clock import Clock
 from cocotb.triggers import Timer
-
 from common.pause import repeating_pause
 from common.reset import apply_reset
 from drivers.axis_video_source import AxiVideoStreamSource
@@ -63,7 +62,12 @@ def _rgb_from_gray(gray_plane: np.ndarray) -> np.ndarray:
     return np.stack((gray_u8, gray_u8, gray_u8), axis=2)
 
 
-def _assert_rgb_equal(expected: np.ndarray, received: np.ndarray, *, label: str) -> None:
+def _assert_rgb_equal(
+    expected: np.ndarray,
+    received: np.ndarray,
+    *,
+    label: str,
+) -> None:
     if expected.shape != received.shape:
         raise AssertionError(
             f"{label}: shape mismatch expected={expected.shape}, received={received.shape}",
@@ -80,7 +84,9 @@ def _assert_rgb_equal(expected: np.ndarray, received: np.ndarray, *, label: str)
 
 def _assert_rgb_is_grayscale(image: Image, *, label: str) -> None:
     pixels = image.pixels
-    gray_mask = (pixels[:, :, 0] == pixels[:, :, 1]) & (pixels[:, :, 1] == pixels[:, :, 2])
+    gray_mask = (pixels[:, :, 0] == pixels[:, :, 1]) & (
+        pixels[:, :, 1] == pixels[:, :, 2]
+    )
     if np.all(gray_mask):
         return
 
@@ -163,52 +169,60 @@ async def _run_pipeline_case(
     )
 
     timeout_ns = max(350_000, image.width * image.height * 120)
-    return await sink.recv_image(width=image.width, height=image.height, timeout_ns=timeout_ns)
+    return await sink.recv_image(
+        width=image.width,
+        height=image.height,
+        timeout_ns=timeout_ns,
+    )
 
 
 @cocotb.test(timeout_time=240, timeout_unit="ms")
 async def test_pipeline_full_chain_state_progression(dut) -> None:
     image = _full_frame_image()
+    gray_expected = _rgb_from_gray(_gray_from_rgb(image))
 
-    passthrough = await _run_pipeline_case(
+    pass_all = await _run_pipeline_case(
         dut,
         image=image,
         clicks=0,
         warmup_stages=0,
     )
-    _assert_rgb_equal(image.pixels, passthrough.pixels, label="passthrough state")
+    _assert_rgb_equal(gray_expected, pass_all.pixels, label="pass-all state")
 
-    grayscale = await _run_pipeline_case(
+    blurr = await _run_pipeline_case(
         dut,
         image=image,
         clicks=1,
-        warmup_stages=0,
+        warmup_stages=1,
     )
-    gray_expected = _rgb_from_gray(_gray_from_rgb(image))
-    _assert_rgb_equal(gray_expected, grayscale.pixels, label="grayscale state")
+    _assert_rgb_is_grayscale(blurr, label="blurr state")
+    if np.array_equal(blurr.pixels, pass_all.pixels):
+        raise AssertionError(
+            "blurr state did not differ from pass-all state on edge-rich image",
+        )
 
-    blurr = await _run_pipeline_case(
+    sobel = await _run_pipeline_case(
         dut,
         image=image,
         clicks=2,
         warmup_stages=1,
     )
-    _assert_rgb_is_grayscale(blurr, label="blurr state")
-    if np.array_equal(blurr.pixels, grayscale.pixels):
-        raise AssertionError("blurr state did not differ from grayscale state on edge-rich image")
+    _assert_rgb_is_grayscale(sobel, label="sobel state")
+    if int(np.count_nonzero(sobel.pixels)) == 0:
+        raise AssertionError("sobel state produced no non-zero edge pixels")
 
-    sobel = await _run_pipeline_case(
+    blurr_sobel = await _run_pipeline_case(
         dut,
         image=image,
         clicks=3,
         warmup_stages=2,
     )
-    _assert_rgb_is_grayscale(sobel, label="sobel state")
-    if int(np.count_nonzero(sobel.pixels)) == 0:
-        raise AssertionError("sobel state produced no non-zero edge pixels")
+    _assert_rgb_is_grayscale(blurr_sobel, label="blurr-sobel state")
+    if int(np.count_nonzero(blurr_sobel.pixels)) == 0:
+        raise AssertionError("blurr-sobel state produced no non-zero edge pixels")
 
-    output_path = _sim_artifact_dir() / "pipeline_full_chain_state3_sobel.png"
-    sobel.to_png(output_path)
+    output_path = _sim_artifact_dir() / "pipeline_full_chain_state3_blurr_sobel.png"
+    blurr_sobel.to_png(output_path)
 
 
 @cocotb.test(timeout_time=220, timeout_unit="ms")

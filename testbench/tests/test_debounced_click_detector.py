@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import cocotb
 from cocotb.clock import Clock
-from drivers.debouncing_driver import DebouncingDriver
 from drivers.click_detection_driver import ClickDetectionDriver
-
+from drivers.debouncing_driver import DebouncingDriver
 
 # CONSTANTS
 CLK_PERIOD_NS = 10  # 100 MHz
 CLK_TIMER_NS = 140  # debounce + settling margin
+
 
 @cocotb.test()
 async def test_debounced_click_detection(dut) -> None:
@@ -24,7 +24,9 @@ async def test_debounced_click_detection(dut) -> None:
 
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await debouncing_driver.apply_reset()
-    await click_detection_driver.check_output(0, 1, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     async def click_btn0() -> None:
         await debouncing_driver.simulate_bouncing(0)
@@ -50,39 +52,57 @@ async def test_debounced_click_detection(dut) -> None:
     # --------------------------------------------------
     print("Transition to state ST_BLUR")
     await click_btn0()
-    await click_detection_driver.check_output(0, 0, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 0, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     print("Transition to state ST_SOBEL")
     await click_btn0()
-    await click_detection_driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     # --------------------------------------------------
     # BTN2 in ST_SOBEL: ZEROS -> BRAM_RGB -> BRAM_GRAY -> ZEROS
     # --------------------------------------------------
     print("Transition base mode to ST_BRAM_RGB")
     await click_btn1()
-    await click_detection_driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=1, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        1, 1, 0, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+    )
 
     print("Transition base mode to ST_BRAM_GRAY")
     await click_btn1()
-    await click_detection_driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=2, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+    )
 
     print("Transition base mode to ST_ZEROS")
     await click_btn1()
-    await click_detection_driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     print("Transition to state ST_BLUR_SOBEL")
     await click_btn0()
-    await click_detection_driver.check_output(0, 0, 0, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 0, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     print("Transition to state ST_FAST")
     await click_btn0()
-    await click_detection_driver.check_output(0, 1, 1, expected_pass_fast=0, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=0, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     print("Transition to state ST_PASS_ALL")
     await click_btn0()
-    await click_detection_driver.check_output(0, 1, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
     print("BTN2 click in ST_PASS_ALL keeps ST_ZEROS")
     await click_btn1()
-    await click_detection_driver.check_output(0, 1, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=20)
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
