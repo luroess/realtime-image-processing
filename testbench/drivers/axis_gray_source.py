@@ -48,6 +48,10 @@ class AxiGrayStreamSource:
                 f"got byte_lanes={self._byte_lanes}.",
             )
 
+    def set_pause_generator(self, generator=None) -> None:
+        """Apply optional TVALID throttling pattern."""
+        self._source.set_pause_generator(generator)
+
     def _drive_idle_known(self) -> None:
         self._source.bus.tdata.value = 0
         if hasattr(self._source.bus, "tlast"):
