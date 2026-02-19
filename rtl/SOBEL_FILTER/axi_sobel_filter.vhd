@@ -11,7 +11,7 @@ entity AXI_SobelFilter is
     G_SOBEL_THRESHOLD : natural := 150;
     -- Running-mean update factor: mean += (mag - mean) / 2^G_SOBEL_MEAN_SHIFT
     G_SOBEL_MEAN_SHIFT : natural := 9;
-    -- Update running mean once every N accepted pixels (demo purpose of adaption)
+    -- Update running mean once every N accepted pixels (demo purpose of adaptation)
     G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
     -- Adaptive threshold = clamp((mean * NUM / DEN) + OFFSET))
     G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;
