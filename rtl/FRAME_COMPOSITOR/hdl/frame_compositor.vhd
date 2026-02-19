@@ -33,7 +33,11 @@ architecture A_Rtl of FrameCompositor is
   signal s_overlay_active      : std_logic                                              := '0';
   signal s_overlay_color       : std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0) := (others => '0');
 
-  -- Expand RGB888 generic colors to the configured component width.
+  -- Expand packed RGB888 generic colors to current component width.
+  -- i_color layout is interpreted as R[23:16] | B[15:8] | G[7:0] to match
+  -- project stream order on 24-bit "rbg" buses.
+  -- For G_COMPONENT_WIDTH > 8, each channel is zero-extended via resize().
+  -- For G_COMPONENT_WIDTH = 8 (current integration), this is identity mapping.
   function f_expand_color(i_color : std_logic_vector(23 downto 0))
     return std_logic_vector is
     variable v_r : unsigned(G_COMPONENT_WIDTH - 1 downto 0);
@@ -52,7 +56,11 @@ begin
   s_sobel_color_resized <= f_expand_color(G_SOBEL_COLOR);
   s_fast_color_resized  <= f_expand_color(G_FAST_COLOR);
 
-  -- Pure combinational overlay selection with base pixel passthrough fallback.
+  -- Combinational overlay selection:
+  -- 1) decode overlay mode,
+  -- 2) gate mode-specific edge flag,
+  -- 3) select overlay color only when the corresponding edge is asserted.
+  -- Any unsupported mode value falls back to base-pixel passthrough.
   P_COMB_OVERLAY: process (i_overlay_mode, i_sobel_edge, i_fast_edge, s_sobel_color_resized, s_fast_color_resized)
   begin
     s_overlay_active <= '0';

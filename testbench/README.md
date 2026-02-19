@@ -49,6 +49,7 @@ cd testbench
 uv sync
 uv run tb-sim
 ```
+`uv run tb-sim` without `--target` now executes all registered targets in sorted order.
 
 ### Target + DUT selection (recommended)
 
@@ -70,7 +71,7 @@ uv run tb-sim --target test_debounced_click_detector
 uv run tb-sim --toplevel example_passthrough
 ```
 
-`--target` selects a full config bundle (`sim`, `toplevel`, `test_module`, `sources`).
+`--target` selects a single full config bundle (`sim`, `toplevel`, `test_module`, `sources`).
 `--toplevel` overrides only the HDL toplevel entity/module while keeping the selected/default target.
 
 No other CLI options are supported by design. Keep configuration in `testbench/targets.toml`.
