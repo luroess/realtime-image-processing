@@ -11,7 +11,7 @@ entity AXI_BlurrFilter is
     G_COEFF_WIDTH : positive := 8;
     -- Packed signed coefficients in row-major order, tap0 at LSB
     -- Default: 3x3 Gaussian [1 2 1; 2 4 2; 1 2 1]
-    G_KERNEL_COEFFS : std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_COEFF_WIDTH) - 1 downto 0) := x"010201020402010201";
+    G_KERNEL_COEFFS : std_logic_vector(23 downto 0) := x"010201020402010201";
     -- Post-accumulation normalization divisor (must be >=1)
     G_NORMALIZE_DIVISOR : positive := 16;
     -- Optional bias added before normalization

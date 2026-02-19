@@ -12,7 +12,7 @@ entity AXI_BlurrWindowModule is
     -- Blurr filter generics
     G_COEFF_WIDTH       : positive := 8;
     -- Default: 3x3 Gaussian [1 2 1; 2 4 2; 1 2 1], tap0 at LSB
-    G_KERNEL_COEFFS     : std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_COEFF_WIDTH) - 1 downto 0) := x"010201020402010201";
+    G_KERNEL_COEFFS     : std_logic_vector(23 downto 0) := x"010201020402010201";
     G_NORMALIZE_DIVISOR : positive := 16;
     G_BIAS              : integer := 0
   );
