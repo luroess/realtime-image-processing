@@ -13,9 +13,7 @@ entity AXI_Pipeline is
     G_BLURR_KERNEL_SIZE       : positive := 3;
     G_BLURR_COEFF_WIDTH       : positive := 8;
     -- Default: 3x3 Gaussian [1 2 1; 2 4 2; 1 2 1], tap0 at LSB.
-    G_BLURR_KERNEL_COEFFS     : std_logic_vector(
-                                (G_BLURR_KERNEL_SIZE * G_BLURR_KERNEL_SIZE * G_BLURR_COEFF_WIDTH) - 1
-                                downto 0) := x"010201020402010201";
+    G_BLURR_KERNEL_COEFFS     : std_logic_vector(71 downto 0) := x"010201020402010201";
     G_BLURR_NORMALIZE_DIVISOR : positive := 16;
     G_BLURR_BIAS              : integer := 0;
 
