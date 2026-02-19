@@ -119,7 +119,7 @@ sources     = [
 
 [targets.axi_pipeline]
 description = "RGB-entry full pipeline (rgb->gray->blurr->sobel->overlay) with debounced click control."
-toplevel    = "axi_rgbgrayblurrsobeloverlaypipeline"
+toplevel    = "axi_pipeline"
 test_module = "tests.test_axi_pipeline"
 waves       = false
 sources     = [

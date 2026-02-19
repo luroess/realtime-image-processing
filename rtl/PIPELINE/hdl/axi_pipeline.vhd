@@ -1,7 +1,7 @@
 library ieee;
   use ieee.std_logic_1164.all;
 
-entity AXI_RgbGrayBlurrSobelOverlayPipeline is
+entity AXI_Pipeline is
   generic (
     G_CLK_FREQ_HZ : integer := 100_000_000;
     G_DEBOUNCE_NS : integer := 10_000_000;
@@ -55,7 +55,7 @@ entity AXI_RgbGrayBlurrSobelOverlayPipeline is
   );
 end entity;
 
-architecture A_RtlStruct of AXI_RgbGrayBlurrSobelOverlayPipeline is
+architecture A_RtlStruct of AXI_Pipeline is
   signal s_pass_grayscale    : std_logic := '0';
   signal s_pass_blurr_filter : std_logic := '1';
   signal s_pass_sobel        : std_logic := '1';
@@ -98,7 +98,7 @@ architecture A_RtlStruct of AXI_RgbGrayBlurrSobelOverlayPipeline is
   signal s_output_idle     : boolean := false;
 begin
   assert G_BLURR_KERNEL_COEFFS'length = (G_BLURR_KERNEL_SIZE * G_BLURR_KERNEL_SIZE * G_BLURR_COEFF_WIDTH)
-    report "AXI_RgbGrayBlurrSobelOverlayPipeline: G_BLURR_KERNEL_COEFFS length must equal G_BLURR_KERNEL_SIZE*G_BLURR_KERNEL_SIZE*G_BLURR_COEFF_WIDTH."
+    report "AXI_Pipeline: G_BLURR_KERNEL_COEFFS length must equal G_BLURR_KERNEL_SIZE*G_BLURR_KERNEL_SIZE*G_BLURR_COEFF_WIDTH."
     severity failure;
 
   U_DebouncedClickDetector: entity work.DebouncedClickDetector
