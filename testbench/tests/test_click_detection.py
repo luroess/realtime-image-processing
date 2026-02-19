@@ -27,11 +27,27 @@ async def test_click_state_machine(dut) -> None:
     # --------------------------------------------------
     print("Transition to state ST_BLUR")
     await driver.transition_state_btn1(1)
-    await driver.check_output(0, 0, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        0,
+        1,
+        expected_pass_fast=1,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     print("Transition to state ST_SOBEL")
     await driver.transition_state_btn1(1)
-    await driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        1,
+        0,
+        expected_pass_fast=1,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     # --------------------------------------------------
     # BTN2 is relevant in ST_SOBEL / ST_BLUR_SOBEL:
@@ -39,29 +55,85 @@ async def test_click_state_machine(dut) -> None:
     # --------------------------------------------------
     print("Transition base mode to ST_BRAM_RGB")
     await driver.transition_state_btn2(1)
-    await driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=1, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        1,
+        1,
+        0,
+        expected_pass_fast=1,
+        expected_overlay_zeros=0,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     print("Transition base mode to ST_BRAM_GRAY")
     await driver.transition_state_btn2(1)
-    await driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=2, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        1,
+        0,
+        expected_pass_fast=1,
+        expected_overlay_zeros=0,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     print("Transition base mode to ST_ZEROS")
     await driver.transition_state_btn2(1)
-    await driver.check_output(0, 1, 0, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        1,
+        0,
+        expected_pass_fast=1,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     print("Transition to state ST_BLUR_SOBEL")
     await driver.transition_state_btn1(1)
-    await driver.check_output(0, 0, 0, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        0,
+        0,
+        expected_pass_fast=1,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     print("Transition to state ST_FAST")
     await driver.transition_state_btn1(1)
-    await driver.check_output(0, 1, 1, expected_pass_fast=0, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        1,
+        1,
+        expected_pass_fast=0,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     print("Transition to state ST_PASS_ALL")
     await driver.transition_state_btn1(1)
-    await driver.check_output(0, 1, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        1,
+        1,
+        expected_pass_fast=1,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
 
     # In ST_PASS_ALL, BTN2 should keep mode fixed at ST_ZEROS.
     print("BTN2 click in ST_PASS_ALL keeps ST_ZEROS")
     await driver.transition_state_btn2(1)
-    await driver.check_output(0, 1, 1, expected_pass_fast=1, expected_base_mode=0, wait_duration_ns=10, stable_duration_ns=50)
+    await driver.check_output(
+        0,
+        1,
+        1,
+        expected_pass_fast=1,
+        expected_overlay_zeros=1,
+        wait_duration_ns=10,
+        stable_duration_ns=50,
+    )
