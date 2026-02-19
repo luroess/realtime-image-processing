@@ -22,6 +22,11 @@ M_AXIS_PREFIX = "m_axis_rbg888"
 PIXEL_ORDER = "rbg"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
+SOBEL_MEAN_SHIFT = 4
+SOBEL_MEAN_UPDATE_INTERVAL = 1
+SOBEL_THRESHOLD_GAIN_NUM = 1
+SOBEL_THRESHOLD_GAIN_DEN = 1
+SOBEL_THRESHOLD_OFFSET = 0
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 FRAME_WIDTH = 512
 FRAME_HEIGHT = 512
@@ -52,10 +57,69 @@ def _gray_from_rgb(image: Image) -> np.ndarray:
     return ((r >> 2) + (g >> 1) + (b >> 2)).astype(np.uint8)
 
 
-def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) -> np.ndarray:
+def _clamp(value: int, lo: int, hi: int) -> int:
+    if value < lo:
+        return lo
+    if value > hi:
+        return hi
+    return value
+
+
+def _trunc_div_towards_zero(numerator: int, denominator: int) -> int:
+    if numerator >= 0:
+        return numerator // denominator
+    return -((-numerator) // denominator)
+
+
+def _dut_generic_int(dut, generic_name: str, default: int) -> int:
+    handle = getattr(dut, generic_name, None)
+    if handle is None:
+        return int(default)
+    try:
+        return int(handle.value)
+    except Exception:
+        return int(default)
+
+
+def _resolve_sobel_model_params(dut) -> dict[str, int]:
+    pixel_width = _dut_generic_int(dut, "G_PIXEL_WIDTH", 8)
+    threshold_max_default = 8 * ((2 ** pixel_width) - 1)
+    return {
+        "threshold": _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD),
+        "mean_shift": _dut_generic_int(dut, "G_SOBEL_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
+        "mean_update_interval": _dut_generic_int(
+            dut,
+            "G_SOBEL_MEAN_UPDATE_INTERVAL",
+            SOBEL_MEAN_UPDATE_INTERVAL,
+        ),
+        "gain_num": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
+        "gain_den": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
+        "offset": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
+        "threshold_min": 0,
+        "threshold_max": threshold_max_default,
+    }
+
+
+def _sobel_expected(
+    gray_plane: np.ndarray,
+    *,
+    threshold: int = SOBEL_THRESHOLD,
+    mean_shift: int = SOBEL_MEAN_SHIFT,
+    mean_update_interval: int = SOBEL_MEAN_UPDATE_INTERVAL,
+    gain_num: int = SOBEL_THRESHOLD_GAIN_NUM,
+    gain_den: int = SOBEL_THRESHOLD_GAIN_DEN,
+    offset: int = SOBEL_THRESHOLD_OFFSET,
+    threshold_min: int = 0,
+    threshold_max: int = (8 * ((2 ** 8) - 1)),
+) -> np.ndarray:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
     out = np.zeros((height, width), dtype=np.uint8)
+    mean = _clamp(int(threshold), 0, int(threshold_max))
+    alpha_div = 1 << int(mean_shift)
+    update_interval = max(1, int(mean_update_interval))
+    update_counter = 0
+    gain_den_safe = max(1, int(gain_den))
 
     for y in range(height):
         for x in range(width):
@@ -70,7 +134,30 @@ def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) ->
 
             gx = (p3 + 2 * p6 + p9) - (p1 + 2 * p4 + p7)
             gy = (p1 + 2 * p2 + p3) - (p7 + 2 * p8 + p9)
-            out[y, x] = 255 if (abs(gx) + abs(gy)) >= threshold else 0
+            mag = abs(gx) + abs(gy)
+
+            adaptive_threshold = (
+                (mean * int(gain_num)) // gain_den_safe
+            ) + int(offset)
+            adaptive_threshold = _clamp(
+                adaptive_threshold,
+                int(threshold_min),
+                int(threshold_max),
+            )
+
+            out[y, x] = 255 if mag >= adaptive_threshold else 0
+
+            if update_counter == (update_interval - 1):
+                delta = mag - mean
+                step = (
+                    _trunc_div_towards_zero(delta, alpha_div)
+                    if alpha_div > 1
+                    else delta
+                )
+                mean = _clamp(mean + step, 0, int(threshold_max))
+                update_counter = 0
+            else:
+                update_counter += 1
 
     return out
 
@@ -150,7 +237,21 @@ async def run_wrapper_case(
     )
     m_axis_tready.value = 1
 
-    expected = gray_plane if pass_through else _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
+    if pass_through:
+        expected = gray_plane
+    else:
+        model = _resolve_sobel_model_params(dut)
+        expected = _sobel_expected(
+            gray_plane,
+            threshold=model["threshold"],
+            mean_shift=model["mean_shift"],
+            mean_update_interval=model["mean_update_interval"],
+            gain_num=model["gain_num"],
+            gain_den=model["gain_den"],
+            offset=model["offset"],
+            threshold_min=model["threshold_min"],
+            threshold_max=model["threshold_max"],
+        )
     expected_rgb = np.stack((expected, expected, expected), axis=2)
     flush_pixels = 0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
 

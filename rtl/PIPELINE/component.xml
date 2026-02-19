@@ -602,7 +602,7 @@
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd</spirit:name>
+        <spirit:name>hdl/axi_pipeline.vhd</spirit:name>
         <spirit:fileType>vhdlSource</spirit:fileType>
         <spirit:userFileType>CHECKSUM_48e065ba</spirit:userFileType>
       </spirit:file>
@@ -675,7 +675,7 @@
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd</spirit:name>
+        <spirit:name>hdl/axi_pipeline.vhd</spirit:name>
         <spirit:fileType>vhdlSource</spirit:fileType>
       </spirit:file>
     </spirit:fileSet>

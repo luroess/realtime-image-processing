@@ -47,8 +47,8 @@ entity RgbToGray is
     G_PIXEL_W : natural := 8
   );
   port (
-    i_clk     : in  std_logic;
-    i_rst_n   : in  std_logic;
+    i_aclk     : in  std_logic;
+    i_areset_n   : in  std_logic;
     i_valid   : in  std_logic;
     i_r       : in  std_logic_vector(G_PIXEL_W-1 downto 0);
     i_g       : in  std_logic_vector(G_PIXEL_W-1 downto 0);

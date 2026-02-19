@@ -32,7 +32,7 @@ def _sim_artifact_dir() -> Path:
     results_file = os.getenv("COCOTB_RESULTS_FILE")
     if results_file:
         return Path(results_file).resolve().parent
-    return TESTBENCH_ROOT / "sim_build" / "test_axi_gray_blurr_sobel_overlay_pipeline"
+    return TESTBENCH_ROOT / "sim_build" / "test_axi_pipeline"
 
 
 def _warmup_beats(*, width: int, wndw_size: int = 3) -> int:

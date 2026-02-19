@@ -63,6 +63,15 @@ sources     = [
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
 ]
 
+  [targets.axi_sobel_filter.parameters]
+  G_PIXEL_WIDTH = 8
+  G_SOBEL_THRESHOLD = 150
+  G_SOBEL_MEAN_SHIFT = 8
+  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
+  G_SOBEL_THRESHOLD_GAIN_NUM = 1
+  G_SOBEL_THRESHOLD_GAIN_DEN = 1
+  G_SOBEL_THRESHOLD_OFFSET = 0
+
 [targets.axi_blurr_window_module]
 description = "AXI4-Stream internal window-generator + blurr window-module checks."
 toplevel    = "axi_blurrwindowmodule"
@@ -101,12 +110,17 @@ sources     = [
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 512
   G_NUM_ROW = 512
-  G_SOBEL_THRESHOLD = 200
+  G_SOBEL_THRESHOLD = 150
+  G_SOBEL_MEAN_SHIFT = 8
+  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
+  G_SOBEL_THRESHOLD_GAIN_NUM = 1
+  G_SOBEL_THRESHOLD_GAIN_DEN = 1
+  G_SOBEL_THRESHOLD_OFFSET = 0
 
-[targets.axi_gray_blurr_sobel_overlay_pipeline]
+[targets.axi_pipeline]
 description = "RGB-entry full pipeline (rgb->gray->blurr->sobel->overlay) with debounced click control."
-toplevel    = "axi_rgbgrayblurrsobeloverlaypipeline"
-test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline"
+toplevel    = "axi_pipeline"
+test_module = "tests.test_axi_pipeline"
 waves       = false
 sources     = [
   "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
@@ -123,10 +137,10 @@ sources     = [
   "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
   "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
   "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
-  "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
+  "rtl/PIPELINE/hdl/axi_pipeline.vhd",
 ]
 
-  [targets.axi_gray_blurr_sobel_overlay_pipeline.parameters]
+  [targets.axi_pipeline.parameters]
   G_CLK_FREQ_HZ = 100000000
   G_DEBOUNCE_NS = 100
   G_PIXEL_WIDTH = 8
@@ -136,4 +150,9 @@ sources     = [
   G_BLURR_COEFF_WIDTH = 8
   G_BLURR_NORMALIZE_DIVISOR = 16
   G_BLURR_BIAS = 0
-  G_SOBEL_THRESHOLD = 200
+  G_SOBEL_THRESHOLD = 150
+  G_SOBEL_MEAN_SHIFT = 8
+  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
+  G_SOBEL_THRESHOLD_GAIN_NUM = 1
+  G_SOBEL_THRESHOLD_GAIN_DEN = 1
+  G_SOBEL_THRESHOLD_OFFSET = 0

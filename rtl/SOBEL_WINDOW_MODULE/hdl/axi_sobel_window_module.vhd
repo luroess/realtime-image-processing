@@ -4,7 +4,12 @@ library ieee;
 entity AXI_SobelWindowModule is
   generic (
     -- Sobel generic
-    G_SOBEL_THRESHOLD : natural := 200;
+    G_SOBEL_THRESHOLD : natural := 150;
+    G_SOBEL_MEAN_SHIFT : natural := 9;
+    G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
+    G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;
+    G_SOBEL_THRESHOLD_GAIN_DEN : positive := 1;
+    G_SOBEL_THRESHOLD_OFFSET   : integer  := 0;
 
     -- Internal window_generator generics
     G_PIXEL_WIDTH : positive := 8;
@@ -91,7 +96,12 @@ begin
     generic map (
       G_PIXEL_WIDTH     => G_PIXEL_WIDTH,
       G_KERNEL_SIZE     => G_KERNEL_SIZE,
-      G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD
+      G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD,
+      G_SOBEL_MEAN_SHIFT      => G_SOBEL_MEAN_SHIFT,
+      G_SOBEL_MEAN_UPDATE_INTERVAL => G_SOBEL_MEAN_UPDATE_INTERVAL,
+      G_SOBEL_THRESHOLD_GAIN_NUM => G_SOBEL_THRESHOLD_GAIN_NUM,
+      G_SOBEL_THRESHOLD_GAIN_DEN => G_SOBEL_THRESHOLD_GAIN_DEN,
+      G_SOBEL_THRESHOLD_OFFSET   => G_SOBEL_THRESHOLD_OFFSET
     )
     port map (
       i_aclk               => i_aclk,

@@ -6,9 +6,7 @@ entity AXI_EdgeOverlay is
     -- Pixel component width (typically 8 for R,G,B bytes).
     G_COMPONENT_WIDTH : positive                                         := 8;
     -- Overlay replacement color, packed as R|B|G payload (default: full red).
-    G_EDGE_COLOR  : std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0) :=
-                    (G_COMPONENT_WIDTH - 1 downto 0 => '1') &
-                    ((2 * G_COMPONENT_WIDTH) - 1 downto 0 => '0')
+    G_EDGE_COLOR  : std_logic_vector(23 downto 0) := x"FF0000"
   );
   port (
     -- AXI4-Stream clock and lockstep reset.
