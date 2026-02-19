@@ -11,6 +11,8 @@ entity AXI_SobelFilter is
     G_SOBEL_THRESHOLD : natural := 200;
     -- Running-mean update factor: mean += (mag - mean) / 2^G_MEAN_SHIFT.
     G_MEAN_SHIFT : natural := 4;
+    -- Update running mean once every N accepted pixels.
+    G_MEAN_UPDATE_INTERVAL : positive := 1;
     -- Adaptive threshold = clamp((mean * NUM / DEN) + OFFSET, MIN..MAX).
     G_THRESHOLD_GAIN_NUM : positive := 1;
     G_THRESHOLD_GAIN_DEN : positive := 1;
@@ -53,6 +55,7 @@ begin
       G_KERNEL_SIZE    => G_KERNEL_SIZE,
       G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD,
       G_MEAN_SHIFT      => G_MEAN_SHIFT,
+      G_MEAN_UPDATE_INTERVAL => G_MEAN_UPDATE_INTERVAL,
       G_THRESHOLD_GAIN_NUM => G_THRESHOLD_GAIN_NUM,
       G_THRESHOLD_GAIN_DEN => G_THRESHOLD_GAIN_DEN,
       G_THRESHOLD_OFFSET   => G_THRESHOLD_OFFSET,

@@ -63,6 +63,16 @@ sources     = [
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
 ]
 
+  [targets.axi_sobel_filter.parameters]
+  G_SOBEL_THRESHOLD = 10
+  G_MEAN_SHIFT = 8
+  G_MEAN_UPDATE_INTERVAL = 4096
+  G_THRESHOLD_GAIN_NUM = 1
+  G_THRESHOLD_GAIN_DEN = 1
+  G_THRESHOLD_OFFSET = 0
+  G_THRESHOLD_MIN = 0
+  G_THRESHOLD_MAX = 2040
+
 [targets.axi_blurr_window_module]
 description = "AXI4-Stream internal window-generator + blurr window-module checks."
 toplevel    = "axi_blurrwindowmodule"

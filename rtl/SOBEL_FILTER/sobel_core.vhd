@@ -12,6 +12,8 @@ entity E_SobelCore is
     G_SOBEL_THRESHOLD : natural := 200;
     -- Running-mean update factor: mean += (mag - mean) / 2^G_MEAN_SHIFT.
     G_MEAN_SHIFT : natural := 4;
+    -- Update running mean once every N accepted pixels.
+    G_MEAN_UPDATE_INTERVAL : positive := 1;
     -- Adaptive threshold = clamp((mean * NUM / DEN) + OFFSET, MIN..MAX).
     G_THRESHOLD_GAIN_NUM : positive := 1;
     G_THRESHOLD_GAIN_DEN : positive := 1;
@@ -74,6 +76,7 @@ architecture A_RtlComb of E_SobelCore is
   signal s_p9_u : unsigned(G_PIXEL_WIDTH - 1 downto 0);
   signal s_mag          : integer range 0 to C_MAG_MAX := 0;
   signal s_running_mean : integer range 0 to C_MAG_MAX := C_MEAN_INIT;
+  signal s_update_counter : natural range 0 to G_MEAN_UPDATE_INTERVAL - 1 := 0;
 begin
   assert G_KERNEL_SIZE = 3
     report "E_SobelCore: fixed Sobel logic requires G_KERNEL_SIZE=3."
@@ -147,17 +150,24 @@ begin
     if rising_edge(i_aclk) then
       if i_aresetn /= '1' then
         s_running_mean <= C_MEAN_INIT;
+        s_update_counter <= 0;
       elsif i_sample_valid = '1' then
-        v_delta := s_mag - s_running_mean;
-        if C_MEAN_ALPHA_DIV > 1 then
-          -- Integer division in VHDL truncates toward zero; keep model behavior explicit.
-          v_step := v_delta / C_MEAN_ALPHA_DIV;
-        else
-          v_step := v_delta;
-        end if;
+        if s_update_counter = (G_MEAN_UPDATE_INTERVAL - 1) then
+          s_update_counter <= 0;
 
-        v_mean_next := f_clamp(s_running_mean + v_step, 0, C_MAG_MAX);
-        s_running_mean <= v_mean_next;
+          v_delta := s_mag - s_running_mean;
+          if C_MEAN_ALPHA_DIV > 1 then
+            -- Integer division in VHDL truncates toward zero; keep model behavior explicit
+            v_step := v_delta / C_MEAN_ALPHA_DIV;
+          else
+            v_step := v_delta;
+          end if;
+
+          v_mean_next := f_clamp(s_running_mean + v_step, 0, C_MAG_MAX);
+          s_running_mean <= v_mean_next;
+        else
+          s_update_counter <= s_update_counter + 1;
+        end if;
       end if;
     end if;
   end process;

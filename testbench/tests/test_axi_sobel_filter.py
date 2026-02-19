@@ -21,6 +21,7 @@ M_AXIS_PREFIX = "m_axis_filter8"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
 SOBEL_MEAN_SHIFT = 4
+SOBEL_MEAN_UPDATE_INTERVAL = 1
 SOBEL_THRESHOLD_GAIN_NUM = 1
 SOBEL_THRESHOLD_GAIN_DEN = 1
 SOBEL_THRESHOLD_OFFSET = 0
@@ -58,12 +59,80 @@ def _trunc_div_towards_zero(numerator: int, denominator: int) -> int:
     return -((-numerator) // denominator)
 
 
-def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) -> np.ndarray:
+def _dut_generic_int(dut, generic_name: str, default: int) -> int:
+    handle = getattr(dut, generic_name, None)
+    if handle is None:
+        return int(default)
+    try:
+        return int(handle.value)
+    except Exception:
+        return int(default)
+
+
+def _resolve_sobel_model_params(dut) -> dict[str, int]:
+    return {
+        "threshold": _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD),
+        "mean_shift": _dut_generic_int(dut, "G_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
+        "mean_update_interval": _dut_generic_int(
+            dut,
+            "G_MEAN_UPDATE_INTERVAL",
+            SOBEL_MEAN_UPDATE_INTERVAL,
+        ),
+        "gain_num": _dut_generic_int(dut, "G_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
+        "gain_den": _dut_generic_int(dut, "G_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
+        "offset": _dut_generic_int(dut, "G_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
+        "threshold_min": _dut_generic_int(dut, "G_THRESHOLD_MIN", SOBEL_THRESHOLD_MIN),
+        "threshold_max": _dut_generic_int(dut, "G_THRESHOLD_MAX", SOBEL_THRESHOLD_MAX),
+    }
+
+
+def _sobel_expected(
+    gray_plane: np.ndarray,
+    *,
+    threshold: int = SOBEL_THRESHOLD,
+    mean_shift: int = SOBEL_MEAN_SHIFT,
+    mean_update_interval: int = SOBEL_MEAN_UPDATE_INTERVAL,
+    gain_num: int = SOBEL_THRESHOLD_GAIN_NUM,
+    gain_den: int = SOBEL_THRESHOLD_GAIN_DEN,
+    offset: int = SOBEL_THRESHOLD_OFFSET,
+    threshold_min: int = SOBEL_THRESHOLD_MIN,
+    threshold_max: int = SOBEL_THRESHOLD_MAX,
+) -> np.ndarray:
+    out, _, _ = _sobel_expected_with_mean(
+        gray_plane,
+        mean_start=threshold,
+        mean_shift=mean_shift,
+        update_counter_start=0,
+        mean_update_interval=mean_update_interval,
+        gain_num=gain_num,
+        gain_den=gain_den,
+        offset=offset,
+        threshold_min=threshold_min,
+        threshold_max=threshold_max,
+    )
+    return out
+
+
+def _sobel_expected_with_mean(
+    gray_plane: np.ndarray,
+    *,
+    mean_start: int,
+    mean_shift: int = SOBEL_MEAN_SHIFT,
+    update_counter_start: int = 0,
+    mean_update_interval: int = SOBEL_MEAN_UPDATE_INTERVAL,
+    gain_num: int = SOBEL_THRESHOLD_GAIN_NUM,
+    gain_den: int = SOBEL_THRESHOLD_GAIN_DEN,
+    offset: int = SOBEL_THRESHOLD_OFFSET,
+    threshold_min: int = SOBEL_THRESHOLD_MIN,
+    threshold_max: int = SOBEL_THRESHOLD_MAX,
+) -> tuple[np.ndarray, int, int]:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
     out = np.zeros((height, width), dtype=np.uint8)
-    mean = _clamp(int(threshold), 0, SOBEL_THRESHOLD_MAX)
-    alpha_div = 1 << SOBEL_MEAN_SHIFT
+    mean = _clamp(int(mean_start), 0, int(threshold_max))
+    alpha_div = 1 << int(mean_shift)
+    update_interval = max(1, int(mean_update_interval))
+    update_counter = int(update_counter_start) % update_interval
 
     for y in range(height):
         for x in range(width):
@@ -81,25 +150,42 @@ def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) ->
             mag = abs(gx) + abs(gy)
 
             adaptive_threshold = (
-                (mean * SOBEL_THRESHOLD_GAIN_NUM) // SOBEL_THRESHOLD_GAIN_DEN
-            ) + SOBEL_THRESHOLD_OFFSET
+                (mean * int(gain_num)) // int(gain_den)
+            ) + int(offset)
             adaptive_threshold = _clamp(
                 adaptive_threshold,
-                SOBEL_THRESHOLD_MIN,
-                SOBEL_THRESHOLD_MAX,
+                int(threshold_min),
+                int(threshold_max),
             )
 
             out[y, x] = 255 if mag >= adaptive_threshold else 0
 
-            delta = mag - mean
-            step = (
-                _trunc_div_towards_zero(delta, alpha_div)
-                if alpha_div > 1
-                else delta
-            )
-            mean = _clamp(mean + step, 0, SOBEL_THRESHOLD_MAX)
+            if update_counter == (update_interval - 1):
+                delta = mag - mean
+                step = (
+                    _trunc_div_towards_zero(delta, alpha_div)
+                    if alpha_div > 1
+                    else delta
+                )
+                mean = _clamp(mean + step, 0, int(threshold_max))
+                update_counter = 0
+            else:
+                update_counter += 1
 
-    return out
+    return out, mean, update_counter
+
+
+def _adaptive_threshold_from_mean(
+    *,
+    mean: int,
+    gain_num: int,
+    gain_den: int,
+    offset: int,
+    threshold_min: int,
+    threshold_max: int,
+) -> int:
+    threshold = ((int(mean) * int(gain_num)) // int(gain_den)) + int(offset)
+    return _clamp(threshold, int(threshold_min), int(threshold_max))
 
 
 def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
@@ -158,7 +244,18 @@ async def run_sobel_case(
     )
     m_axis_tready.value = 1
 
-    expected = _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
+    model = _resolve_sobel_model_params(dut)
+    expected = _sobel_expected(
+        gray_plane,
+        threshold=model["threshold"],
+        mean_shift=model["mean_shift"],
+        mean_update_interval=model["mean_update_interval"],
+        gain_num=model["gain_num"],
+        gain_den=model["gain_den"],
+        offset=model["offset"],
+        threshold_min=model["threshold_min"],
+        threshold_max=model["threshold_max"],
+    )
     await source.send_gray_image(gray_plane)
 
     height, width = gray_plane.shape
@@ -186,3 +283,119 @@ async def test_axi_sobel_filter_lenna_end_to_end(dut) -> None:
     image = Image.from_png(input_path)
     gray = _gray_from_rgb(image)
     await run_sobel_case(dut, gray, output_path=output_path)
+
+
+@cocotb.test(timeout_time=400, timeout_unit="ms")
+async def test_axi_sobel_filter_lenna_adaptive_10_iterations(dut) -> None:
+    input_path = TESTBENCH_ROOT / "images" / "lenna_512_512.png"
+    output_dir = _sim_artifact_dir()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    image = Image.from_png(input_path)
+    gray = _gray_from_rgb(image)
+    height, width = gray.shape
+
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
+
+    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    m_axis_tready.value = 0
+
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    await apply_reset(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        stream_input_prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+
+    source = AxiWindowGraySource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiGrayStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    m_axis_tready.value = 1
+
+    model = _resolve_sobel_model_params(dut)
+    mean_model = model["threshold"]
+    update_counter_model = 0
+    timeout_ns = max(250_000, width * height * 60)
+    dut._log.info(
+        "Adaptive Sobel model params: threshold_init=%d, mean_shift=%d, update_interval=%d, gain=%d/%d, offset=%d, clamp=[%d,%d]",
+        model["threshold"],
+        model["mean_shift"],
+        model["mean_update_interval"],
+        model["gain_num"],
+        model["gain_den"],
+        model["offset"],
+        model["threshold_min"],
+        model["threshold_max"],
+    )
+
+    for iteration in range(10):
+        mean_start = mean_model
+        threshold_start = _adaptive_threshold_from_mean(
+            mean=mean_start,
+            gain_num=model["gain_num"],
+            gain_den=model["gain_den"],
+            offset=model["offset"],
+            threshold_min=model["threshold_min"],
+            threshold_max=model["threshold_max"],
+        )
+        expected, mean_model, update_counter_model = _sobel_expected_with_mean(
+            gray,
+            mean_start=mean_start,
+            mean_shift=model["mean_shift"],
+            update_counter_start=update_counter_model,
+            mean_update_interval=model["mean_update_interval"],
+            gain_num=model["gain_num"],
+            gain_den=model["gain_den"],
+            offset=model["offset"],
+            threshold_min=model["threshold_min"],
+            threshold_max=model["threshold_max"],
+        )
+        threshold_end = _adaptive_threshold_from_mean(
+            mean=mean_model,
+            gain_num=model["gain_num"],
+            gain_den=model["gain_den"],
+            offset=model["offset"],
+            threshold_min=model["threshold_min"],
+            threshold_max=model["threshold_max"],
+        )
+        await source.send_gray_image(gray)
+        received = await sink.recv_plane(
+            width=width,
+            height=height,
+            timeout_ns=timeout_ns,
+        )
+        _assert_plane_equal(expected, received)
+
+        rgb = np.stack((received, received, received), axis=2)
+        output_path = output_dir / f"lenna_512_512_out_sobel_iter_{iteration:02d}.png"
+        Image(rgb).to_png(output_path)
+        dut._log.info(
+            "Adaptive Sobel iteration %d/10 saved to %s (nonzero=%d, mean_start=%d, threshold_start=%d, mean_end=%d, threshold_end=%d, update_counter_end=%d)",
+            iteration + 1,
+            output_path,
+            int(np.count_nonzero(received)),
+            mean_start,
+            threshold_start,
+            mean_model,
+            threshold_end,
+            update_counter_model,
+        )
