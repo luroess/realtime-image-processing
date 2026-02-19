@@ -389,3 +389,24 @@ waves            = false
   G_BLURR_NORMALIZE_DIVISOR = 16
   G_BLURR_BIAS              = 0
   G_SOBEL_THRESHOLD         = 200
+
+  # [targets.axi_fast_filter]
+  # description = "AXI4-Stream FAST-9 filter checks (parallel core, no NMS)."
+  # toplevel = "axi_fastfilter"
+  # test_module = "tests.test_axi_fast_filter"
+  # sources = [
+  #   "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  #   "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  #   "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  # ]
+
+  #   [targets.axi_fast_filter.parameters]
+  #   G_PIXEL_WIDTH          = 8
+  #   G_KERNEL_SIZE          = 7
+  #   G_LINE_WIDTH           = 128
+  #   G_NUM_ROW              = 128
+  #   G_FAST_THRESHOLD       = 20
+  #   G_FAST_N               = 9
+  #   G_FAST_PRECHECK_ENABLE = 0
+  #   G_FAST_ENABLE_NMS      = 0
+  #   G_FAST_IMPL            = 1
