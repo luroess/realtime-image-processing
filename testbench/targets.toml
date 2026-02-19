@@ -134,6 +134,8 @@ sources = [
   "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
   "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
   "rtl/PIPELINE/hdl/axi_pipeline.vhd",
+  "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
+  "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
 ]
 test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline"
 waves = false
@@ -153,7 +155,7 @@ waves = false
 
 [targets.axi_gray_blurr_sobel_overlay_pipeline_downscaled]
 description = "Downscaled real-image full pipeline overlay check with saved output image."
-toplevel = "axi_rgbgrayblurrsobeloverlaypipeline"
+toplevel = "axi_pipeline"
 test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline_downscaled"
 waves = false
 sources = [
@@ -173,7 +175,7 @@ sources = [
   "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
   "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
   "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
-  "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
+  "rtl/PIPELINE/hdl/axi_pipeline.vhd",
 ]
 
   [targets.axi_gray_blurr_sobel_overlay_pipeline_downscaled.parameters]
@@ -188,10 +190,10 @@ sources = [
   G_BLURR_BIAS              = 0
   G_SOBEL_THRESHOLD         = 200
 
-[targets.axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi]
+[targets.axi_pipeline_synth_fsm]
 description = "Synthetic minimal-frame full pipeline AXI/FSM/compositor synchronization checks."
-toplevel = "axi_rgbgrayblurrsobeloverlaypipeline"
-test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi"
+toplevel = "axi_pipeline"
+test_module = "tests.test_axi_pipeline_synth_fsm"
 waves = true
 sources = [
   "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
@@ -210,10 +212,10 @@ sources = [
   "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
   "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
   "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
-  "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
+  "rtl/PIPELINE/hdl/axi_pipeline.vhd",
 ]
 
-  [targets.axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi.parameters]
+  [targets.axi_pipeline_synth_fsm.parameters]
   G_CLK_FREQ_HZ             = 100000000
   G_DEBOUNCE_NS             = 100
   G_PIXEL_WIDTH             = 8
@@ -316,7 +318,7 @@ waves            = true
 [targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa]
 description      = "Full pipeline checks using generated Vivado c_shift_ram_0 (Questa only; requires encrypted IP libs and A[9:0]/Depth=1024 generation)."
 sim              = "questa"
-toplevel         = "axi_rgbgrayblurrsobeloverlaypipeline"
+toplevel         = "axi_pipeline"
 toplevel_library = "top"
 test_module      = "tests.test_axi_gray_blurr_sobel_overlay_pipeline"
 waves            = false
@@ -375,7 +377,7 @@ waves            = false
     "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
     "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
     "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
-    "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
+    "rtl/PIPELINE/hdl/axi_pipeline.vhd",
   ]
 
   [targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.parameters]
@@ -390,23 +392,44 @@ waves            = false
   G_BLURR_BIAS              = 0
   G_SOBEL_THRESHOLD         = 200
 
-  # [targets.axi_fast_filter]
-  # description = "AXI4-Stream FAST-9 filter checks (parallel core, no NMS)."
-  # toplevel = "axi_fastfilter"
-  # test_module = "tests.test_axi_fast_filter"
-  # sources = [
-  #   "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
-  #   "rtl/FAST_FILTER/hdl/fast_core.vhd",
-  #   "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
-  # ]
+[targets.axi_fast_filter]
+description = "AXI4-Stream FAST-9 filter checks (parallel core, no NMS)."
+toplevel = "axi_fastfilter"
+test_module = "tests.test_axi_fast_filter"
+sources = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+]
 
-  #   [targets.axi_fast_filter.parameters]
-  #   G_PIXEL_WIDTH          = 8
-  #   G_KERNEL_SIZE          = 7
-  #   G_LINE_WIDTH           = 128
-  #   G_NUM_ROW              = 128
-  #   G_FAST_THRESHOLD       = 20
-  #   G_FAST_N               = 9
-  #   G_FAST_PRECHECK_ENABLE = 0
-  #   G_FAST_ENABLE_NMS      = 0
-  #   G_FAST_IMPL            = 1
+  [targets.axi_fast_filter.parameters]
+  G_PIXEL_WIDTH     = 8
+  G_KERNEL_SIZE     = 7
+  G_LINE_WIDTH      = 128
+  G_NUM_ROW         = 128
+  G_FAST_THRESHOLD  = 20
+  G_FAST_N          = 9
+  G_FAST_ENABLE_NMS = 0
+  G_FAST_IMPL       = 1
+
+[targets.axi_fast_window_module]
+description = "AXI4-Stream gray8 input -> internal 7x7 window-generator -> FAST-9 filter checks."
+toplevel = "axi_fastwindowmodule"
+test_module = "tests.test_axi_fast_window_module"
+waves = false
+sources = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_window_module.vhd",
+]
+
+  [targets.axi_fast_window_module.parameters]
+  G_PIXEL_WIDTH     = 8
+  G_KERNEL_SIZE     = 7
+  G_LINE_WIDTH      = 128
+  G_NUM_ROW         = 128
+  G_FAST_THRESHOLD  = 20
+  G_FAST_N          = 9
+  G_FAST_ENABLE_NMS = 0
+  G_FAST_IMPL       = 1

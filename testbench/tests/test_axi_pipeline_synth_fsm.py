@@ -255,9 +255,11 @@ async def _monitor_output_axi_and_sync(
     height: int,
     check_merge_sync: bool,
     check_binary_sync: bool,
+    trace: bool = False,
 ) -> MonitorStats:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    cycle = 0
 
     out_tvalid = getattr(dut, f"{M_AXIS_PREFIX}_tvalid")
     out_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
@@ -271,6 +273,7 @@ async def _monitor_output_axi_and_sync(
     fc_base_delayed_eol = u_fc.s_base_delayed_eol
 
     accepted = 0
+    input_accepted = 0
     row = 0
     col = 0
     stalls = 0
@@ -280,6 +283,7 @@ async def _monitor_output_axi_and_sync(
 
     total_beats = width * height
     while accepted < total_beats:
+        cycle += 1
         await RisingEdge(i_clk)
         await ReadOnly()
 
@@ -308,6 +312,27 @@ async def _monitor_output_axi_and_sync(
         user = int(out_tuser.value)
         last = int(out_tlast.value)
 
+        in_valid = int(getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value)
+        in_ready = int(getattr(dut, f"{S_AXIS_PREFIX}_tready").value)
+        in_user = int(getattr(dut, f"{S_AXIS_PREFIX}_tuser").value)
+        in_last = int(getattr(dut, f"{S_AXIS_PREFIX}_tlast").value)
+        if in_valid and in_ready:
+            input_accepted += 1
+
+        # if trace and (
+        #     cycle <= 50
+        #     or int(dut.s_fc_gray_tvalid.value) == 1
+        #     or valid == 1
+        #     or stalls
+        #     or cycle % 50 == 0
+        # ):
+        #     print(
+        #         f"CYCLE={cycle} in_v={in_valid} in_r={in_ready} gray_v={int(dut.s_fc_gray_tvalid.value)} "
+        #         f"gray_r={int(dut.s_fc_gray_tready.value)} out_v={valid} out_r={ready} "
+        #         f"inp_u={in_user} inp_l={in_last} out_u={user} out_l={last} "
+        #         f"base_v={int(u_fc.s_base_delayed_valid.value)}",
+        #     )
+
         if valid == 1 and ready == 0:
             stalls += 1
             payload = (data, user, last)
@@ -321,6 +346,17 @@ async def _monitor_output_axi_and_sync(
         prev_stall_payload = None
 
         if valid == 1 and ready == 1:
+            # if trace:
+            #     print(
+            #         f"TRACE beat={accepted} "
+            #         f"in_beat={input_accepted} "
+            #         f"user={user} last={last} "
+            #         f"gray_user={int(dut.s_fc_gray_tuser.value)} "
+            #         f"gray_last={int(dut.s_fc_gray_tlast.value)} "
+            #         f"base_sof={int(fc_base_delayed_sof.value)} "
+            #         f"base_eol={int(fc_base_delayed_eol.value)} "
+            #         f"in_valid={in_valid} in_user={in_user} in_last={in_last} ",
+            #     )
             exp_user = 1 if (row == 0 and col == 0) else 0
             exp_last = 1 if (col == width - 1) else 0
             assert user == exp_user, (
@@ -344,10 +380,16 @@ async def _monitor_output_axi_and_sync(
                 )
                 assert int(fc_base_delayed_sof.value) == int(
                     dut.s_fc_gray_tuser.value,
-                ), "FRAME_COMPOSITOR delayed base SOF does not match gray SOF."
+                ), (
+                    f"FRAME_COMPOSITOR delayed base SOF does not match gray SOF at beat {accepted} "
+                    f"(x={col}, y={row})."
+                )
                 assert int(fc_base_delayed_eol.value) == int(
                     dut.s_fc_gray_tlast.value,
-                ), "FRAME_COMPOSITOR delayed base EOL does not match gray EOL."
+                ), (
+                    f"FRAME_COMPOSITOR delayed base EOL does not match gray EOL at beat {accepted} "
+                    f"(x={col}, y={row})."
+                )
 
                 if fc_gray != 0:
                     if overlay_mode == C_OVERLAY_SOBEL:
@@ -483,6 +525,7 @@ async def _run_case(
             height=image.height,
             check_merge_sync=case.check_merge_sync,
             check_binary_sync=case.check_binary_sync,
+            trace=case.name in ("blur_btn2_ignored", "sobel_bram_rgb"),
         ),
     )
 
