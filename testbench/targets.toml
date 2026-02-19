@@ -117,7 +117,7 @@ sources     = [
   G_SOBEL_THRESHOLD_GAIN_DEN = 1
   G_SOBEL_THRESHOLD_OFFSET = 0
 
-[targets.axi_gray_blurr_sobel_overlay_pipeline]
+[targets.axi_pipeline]
 description = "RGB-entry full pipeline (rgb->gray->blurr->sobel->overlay) with debounced click control."
 toplevel    = "axi_rgbgrayblurrsobeloverlaypipeline"
 test_module = "tests.test_axi_pipeline"
@@ -140,7 +140,7 @@ sources     = [
   "rtl/PIPELINE/hdl/axi_pipeline.vhd",
 ]
 
-  [targets.axi_gray_blurr_sobel_overlay_pipeline.parameters]
+  [targets.axi_pipeline.parameters]
   G_CLK_FREQ_HZ = 100000000
   G_DEBOUNCE_NS = 100
   G_PIXEL_WIDTH = 8
