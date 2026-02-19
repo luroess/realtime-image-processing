@@ -55,6 +55,8 @@ architecture A_Rtl of AXI_SobelWindowModule is
   signal s_sobel_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
   signal s_sobel_tuser  : std_logic                                    := '0';
   signal s_sobel_tlast  : std_logic                                    := '0';
+  signal s_axis_gray8_tready_mux : std_logic                           := '0';
+  signal s_axis_gray8_accept     : std_logic                           := '0';
 begin
   -- AXI_SobelFilter currently requires 3x3 windows with 8-bit grayscale pixels
   assert G_KERNEL_SIZE = 3
@@ -64,9 +66,11 @@ begin
     report "AXI_SobelWindowModule with AXI_SobelFilter requires G_PIXEL_WIDTH=8."
     severity failure;
 
-  -- Always feed the window generator / filter pipeline so internal state
-  -- stays aligned with the live input stream, independent of pass-through
-  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid;
+  -- In filter mode, keep the hidden filter path live.
+  -- In pass-through mode, advance hidden state only on externally accepted beats
+  -- so internal warm-up cannot consume unacknowledged input during stalls.
+  s_axis_gray8_tvalid_filter <= s_axis_gray8_tvalid when (i_pass_through /= '1') else
+                                s_axis_gray8_accept;
 
   U_WindowGenerator: entity work.window_generator
     generic map (
@@ -117,9 +121,11 @@ begin
     );
 
   -- Top-level AXI4-Stream mux: pass-through or filter output
-  s_axis_gray8_tready <= '0'                 when (i_aresetn = '0') else
-                         m_axis_gray8_tready when (i_pass_through = '1') else
-                         s_axis_gray8_tready_filter;
+  s_axis_gray8_tready_mux <= '0'                 when (i_aresetn = '0') else
+                             m_axis_gray8_tready when (i_pass_through = '1') else
+                             s_axis_gray8_tready_filter;
+  s_axis_gray8_tready <= s_axis_gray8_tready_mux;
+  s_axis_gray8_accept <= s_axis_gray8_tvalid and s_axis_gray8_tready_mux;
 
   m_axis_gray8_tvalid <= '0'                 when (i_aresetn = '0') else
                          s_axis_gray8_tvalid when (i_pass_through = '1') else

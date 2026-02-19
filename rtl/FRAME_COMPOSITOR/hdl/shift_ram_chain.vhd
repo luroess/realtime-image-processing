@@ -97,6 +97,7 @@ architecture A_Rtl of ShiftRamChain is
   type t_word_arr_t is array (natural range <>) of std_logic_vector(25 downto 0);
   signal s_sobel_pipe : t_word_arr_t(0 to C_SOBEL_CHUNKS) := (others => (others => '0'));
   signal s_blur_pipe  : t_word_arr_t(0 to C_EXTRA_CHUNKS) := (others => (others => '0'));
+  signal s_invalid_sel_warned : std_logic := '0';
 begin
   assert G_BLUR_SOBEL_DELAY >= G_SOBEL_DELAY
     report "ShiftRamChain requires G_BLUR_SOBEL_DELAY >= G_SOBEL_DELAY."
@@ -151,6 +152,30 @@ begin
   o_dout <= i_din                        when i_base_delay_stage_sel = C_SEL_NONE else
             s_sobel_pipe(C_SOBEL_CHUNKS) when i_base_delay_stage_sel = C_SEL_SOBEL else
             s_blur_pipe(C_EXTRA_CHUNKS)  when i_base_delay_stage_sel = C_SEL_BLUR_SOBEL else
-            s_sobel_pipe(C_SOBEL_CHUNKS);
-  -- FIXME: Illegal selector values currently fall through to Sobel delay instead of failing fast.
+            i_din;
+  -- Illegal selector values fall back to bypass semantics.
+
+  P_ASSERT_VALID_DELAY_SEL: process (i_clk)
+  begin
+    if rising_edge(i_clk) then
+      if i_sclr = '1' then
+        s_invalid_sel_warned <= '0';
+      elsif i_ce = '1' then
+        if not (
+          (i_base_delay_stage_sel = C_SEL_NONE) or
+          (i_base_delay_stage_sel = C_SEL_SOBEL) or
+          (i_base_delay_stage_sel = C_SEL_BLUR_SOBEL)
+        ) then
+          if s_invalid_sel_warned = '0' then
+            assert false
+              report "ShiftRamChain: i_base_delay_stage_sel is illegal; only 00/01/10 are supported."
+              severity warning;
+            s_invalid_sel_warned <= '1';
+          end if;
+        else
+          s_invalid_sel_warned <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
 end architecture;

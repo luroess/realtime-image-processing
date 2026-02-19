@@ -25,7 +25,7 @@ async def test_debounced_click_detection(dut) -> None:
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await debouncing_driver.apply_reset()
     await click_detection_driver.check_output(
-        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+        1, 1, 1, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
     )
 
     async def click_btn0() -> None:
@@ -98,11 +98,11 @@ async def test_debounced_click_detection(dut) -> None:
     print("Transition to state ST_PASS_ALL")
     await click_btn0()
     await click_detection_driver.check_output(
-        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+        1, 1, 1, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
     )
 
-    print("BTN2 click in ST_PASS_ALL keeps ST_ZEROS")
+    print("BTN2 click in ST_PASS_ALL toggles to GRAY mode")
     await click_btn1()
     await click_detection_driver.check_output(
-        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
     )

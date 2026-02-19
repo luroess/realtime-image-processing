@@ -576,19 +576,19 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             btn2_clicks=0,
             btn_both_clicks=0,
             warmup_stages=0,
-            exp_pass_grayscale=0,
+            exp_pass_grayscale=1,
             exp_pass_blur=1,
             exp_pass_sobel=1,
             exp_pass_fast=1,
-            exp_overlay_zeros=1,
+            exp_overlay_zeros=0,
             check_merge_sync=False,
             check_binary_sync=False,
-            expect_grayscale_output=True,
+            expect_grayscale_output=False,
             source_pause_pattern=bp_none[0],
             sink_pause_pattern=bp_none[1],
         ),
         StateCase(
-            name="pass_all_btn2_ignored",
+            name="pass_all_btn2_gray",
             btn1_clicks=0,
             btn2_clicks=1,
             btn_both_clicks=0,
@@ -597,7 +597,7 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             exp_pass_blur=1,
             exp_pass_sobel=1,
             exp_pass_fast=1,
-            exp_overlay_zeros=1,
+            exp_overlay_zeros=0,
             check_merge_sync=False,
             check_binary_sync=False,
             expect_grayscale_output=True,
@@ -794,7 +794,8 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
     )
 
     expected_control_space = {
-        (0, 1, 1, 1, 1),  # PASS_ALL (+ BTN2 ignored variants)
+        (1, 1, 1, 1, 0),  # PASS_ALL + RGB
+        (0, 1, 1, 1, 0),  # PASS_ALL + GRAY
         (0, 0, 1, 1, 1),  # BLUR (+ BTN2 ignored variant)
         (0, 1, 0, 1, 1),  # SOBEL + ZEROS
         (1, 1, 0, 1, 0),  # SOBEL + BRAM_RGB
@@ -841,9 +842,10 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
                 f"{case.name}: expected at least one output stall cycle under sink backpressure."
             )
 
-        if case.name in ("pass_all_initial", "pass_all_btn2_ignored"):
-            expected_gray_rgb = _rgb_from_gray(_gray_from_rgb(image))
-            _assert_rgb_equal(expected_gray_rgb, observed.pixels, label=case.name)
+        if case.name == "pass_all_initial":
+            _assert_rgb_equal(image.pixels, observed.pixels, label=case.name)
+        elif case.name == "pass_all_btn2_gray":
+            _assert_rgb_is_grayscale(observed, label=case.name)
         elif case.expect_grayscale_output:
             _assert_rgb_is_grayscale(observed, label=case.name)
 
@@ -854,3 +856,317 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             assert stats.mask_misses > 0, (
                 f"{case.name}: expected at least one mask-miss pixel."
             )
+
+
+async def _capture_latched_controls_on_input_sof(
+    dut: Any,
+    *,
+    expected_frames: int,
+    timeout_cycles: int = 20_000,
+) -> list[tuple[int, int, int, int, int]]:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+
+    in_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
+    in_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
+    in_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
+
+    captured: list[tuple[int, int, int, int, int]] = []
+    cycles = 0
+
+    while len(captured) < expected_frames:
+        cycles += 1
+        if cycles > timeout_cycles:
+            raise AssertionError(
+                f"Timed out waiting for {expected_frames} input SOF handshakes; captured={len(captured)}",
+            )
+
+        await RisingEdge(i_clk)
+        await ReadOnly()
+
+        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+            continue
+
+        if (
+            int(in_tvalid.value) == 1
+            and int(in_tready.value) == 1
+            and int(in_tuser.value) == 1
+        ):
+            captured.append(
+                (
+                    int(dut.s_pass_grayscale_l.value),
+                    int(dut.s_pass_blurr_filter_l.value),
+                    int(dut.s_pass_sobel_l.value),
+                    int(dut.s_pass_fast_l.value),
+                    int(dut.s_overlay_zeros_l.value),
+                ),
+            )
+
+    return captured
+
+
+async def _wait_for_input_sof_handshake(
+    dut: Any,
+    *,
+    timeout_cycles: int = 200_000,
+) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    in_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
+    in_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
+    in_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
+
+    cycles = 0
+    while True:
+        cycles += 1
+        if cycles > timeout_cycles:
+            raise AssertionError("Timed out waiting for input SOF handshake.")
+
+        await RisingEdge(i_clk)
+        await ReadOnly()
+
+        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+            continue
+
+        if (
+            int(in_tvalid.value) == 1
+            and int(in_tready.value) == 1
+            and int(in_tuser.value) == 1
+        ):
+            return
+
+
+async def _inject_btn1_double_click_mid_first_frame(
+    dut: Any,
+    *,
+    trigger_accepted_beats: int = 8,
+) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+
+    in_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
+    in_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
+    in_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
+
+    in_first_frame = False
+    first_frame_beats = 0
+
+    while True:
+        await RisingEdge(i_clk)
+        await ReadOnly()
+
+        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+            in_first_frame = False
+            first_frame_beats = 0
+            continue
+
+        if int(in_tvalid.value) == 1 and int(in_tready.value) == 1:
+            sof = int(in_tuser.value) == 1
+            if sof and not in_first_frame:
+                in_first_frame = True
+                first_frame_beats = 0
+            elif sof and in_first_frame:
+                raise AssertionError(
+                    "Second input frame started before mid-frame click injection completed.",
+                )
+
+            if in_first_frame:
+                first_frame_beats += 1
+                if first_frame_beats >= trigger_accepted_beats:
+                    break
+
+    await RisingEdge(i_clk)
+    await _pulse_button_once(
+        dut,
+        button_idx=BTN1_PROCESSING,
+        high_ns=320,
+        low_ns=320,
+    )
+    await _pulse_button_once(
+        dut,
+        button_idx=BTN1_PROCESSING,
+        high_ns=320,
+        low_ns=320,
+    )
+
+
+async def _observe_binary_output_beats(
+    dut: Any,
+    *,
+    beats: int,
+    timeout_cycles: int = 200_000,
+) -> set[int]:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    out_tvalid = getattr(dut, f"{M_AXIS_PREFIX}_tvalid")
+    out_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
+    out_tdata = getattr(dut, f"{M_AXIS_PREFIX}_tdata")
+
+    observed_values: set[int] = set()
+    accepted = 0
+    cycles = 0
+
+    while accepted < beats:
+        cycles += 1
+        if cycles > timeout_cycles:
+            raise AssertionError(
+                f"Timed out observing {beats} binary output beats; observed={accepted}",
+            )
+
+        await RisingEdge(i_clk)
+        await ReadOnly()
+
+        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+            continue
+
+        if int(out_tvalid.value) == 1 and int(out_tready.value) == 1:
+            data = int(out_tdata.value)
+            lane0 = data & 0xFF
+            lane1 = (data >> 8) & 0xFF
+            lane2 = (data >> 16) & 0xFF
+
+            assert lane0 == lane1 == lane2, (
+                f"Binary output beat is not replicated across RGB lanes: data=0x{data:06X}"
+            )
+            assert lane0 in (0, 255), (
+                f"Binary output beat is not 0/255: data=0x{data:06X}"
+            )
+
+            observed_values.add(lane0)
+            accepted += 1
+
+    return observed_values
+
+
+@cocotb.test(timeout_time=1200, timeout_unit="ms")
+async def test_pipeline_mode_latched_on_next_frame_sof_after_midframe_click(dut: Any) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_aresetn = getattr(dut, ARESETN_SIGNAL)
+    i_btn = getattr(dut, BTN_SIGNAL)
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+
+    i_aresetn.value = int(RESET_ACTIVE_LEVEL)
+    i_btn.value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+
+    await apply_reset(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_aresetn,
+        stream_input_prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+
+    source = AxiVideoStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_aresetn,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+    sink = AxiVideoStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_aresetn,
+        prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+
+    # Slow frame-1 ingestion enough so two debounced clicks fit inside frame 1.
+    source.set_pause_generator(repeating_pause((0, 1, 1, 0, 1, 1, 1, 0)))
+    sink.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0)))
+
+    frame_1 = _make_synthetic_frame(101)
+    frame_2 = _make_synthetic_frame(102)
+    expected_frame_1 = frame_1.pixels
+
+    assert (
+        int(dut.s_pass_grayscale_l.value),
+        int(dut.s_pass_blurr_filter_l.value),
+        int(dut.s_pass_sobel_l.value),
+        int(dut.s_pass_fast_l.value),
+        int(dut.s_overlay_zeros_l.value),
+    ) == (1, 1, 1, 1, 0), "Unexpected latched control tuple after reset."
+
+    click_task = cocotb.start_soon(
+        _inject_btn1_double_click_mid_first_frame(dut, trigger_accepted_beats=8),
+    )
+    tx_frame_1 = cocotb.start_soon(source.send_image(frame_1))
+
+    observed_frame_1 = await sink.recv_image(
+        width=frame_1.width,
+        height=frame_1.height,
+        timeout_ns=6_000_000,
+    )
+
+    await with_timeout(tx_frame_1, 30_000_000, "ns")
+    await with_timeout(click_task, 30_000_000, "ns")
+    await _assert_controls(
+        dut,
+        StateCase(
+            name="midframe_sobel_zeros_target",
+            btn1_clicks=0,
+            btn2_clicks=0,
+            btn_both_clicks=0,
+            warmup_stages=0,
+            exp_pass_grayscale=0,
+            exp_pass_blur=1,
+            exp_pass_sobel=0,
+            exp_pass_fast=1,
+            exp_overlay_zeros=1,
+            check_merge_sync=False,
+            check_binary_sync=True,
+            expect_grayscale_output=True,
+            source_pause_pattern=None,
+            sink_pause_pattern=None,
+        ),
+        settle_cycles=256,
+    )
+
+    tx_frame_2 = cocotb.start_soon(
+        source.send_image(
+            frame_2,
+            tail_padding_pixels=_warmup_beats(width=frame_2.width, wndw_size=3),
+        ),
+    )
+    await _wait_for_input_sof_handshake(dut)
+    await RisingEdge(i_clk)
+    await ReadOnly()
+    latched_tuple = (
+        int(dut.s_pass_grayscale_l.value),
+        int(dut.s_pass_blurr_filter_l.value),
+        int(dut.s_pass_sobel_l.value),
+        int(dut.s_pass_fast_l.value),
+        int(dut.s_overlay_zeros_l.value),
+    )
+    assert latched_tuple == (0, 1, 0, 1, 1), (
+        f"Unexpected latched control tuple on frame 2 SOF: {latched_tuple}"
+    )
+
+    frame_2_binary_values = await with_timeout(
+        _observe_binary_output_beats(
+            dut,
+            beats=frame_2.width * frame_2.height,
+        ),
+        30_000_000,
+        "ns",
+    )
+    await with_timeout(tx_frame_2, 30_000_000, "ns")
+
+    _assert_rgb_equal(
+        expected_frame_1,
+        observed_frame_1.pixels,
+        label="frame_1_before_midframe_mode_toggle",
+    )
+
+    assert frame_2_binary_values.issubset({0, 255}), (
+        f"Frame 2 binary output contains unexpected values: {sorted(frame_2_binary_values)}"
+    )
+    assert 0 in frame_2_binary_values and 255 in frame_2_binary_values, (
+        "Frame 2 binary stream does not contain both background and edge pixels."
+    )

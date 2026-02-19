@@ -29,11 +29,11 @@ class ClickDetectionDriver:
         await RisingEdge(self.i_clk)
 
         await self.check_output(
-            0,
+            1,
             1,
             1,
             expected_pass_fast=1,
-            expected_overlay_zeros=1,
+            expected_overlay_zeros=0,
             wait_duration_ns=10,
         )
 

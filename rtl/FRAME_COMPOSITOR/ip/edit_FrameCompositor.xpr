@@ -4,7 +4,7 @@
 <!-- Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.                   -->
 <!-- Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.   -->
 
-<Project Product="Vivado" Version="7" Minor="70" Path="C:/Users/jandu/repos/clean-3/rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.xpr">
+<Project Product="Vivado" Version="7" Minor="70" Path="$PPRDIR/edit_FrameCompositor.xpr">
   <DefaultLaunch Dir="$PRUNDIR"/>
   <Configuration>
     <Option Name="Id" Val="74fd27985b094863a50579f8180203a2"/>

@@ -654,6 +654,7 @@ async def test_axi_frame_compositor_delay_stage_sweep_with_backpressure(dut) -> 
     cases = (
         ("sobel_delay", C_DELAY_SOBEL, C_SOBEL_DELAY_EFFECTIVE),
         ("blur_sobel_delay", C_DELAY_BLUR_SOBEL, C_BLUR_SOBEL_DELAY_EFFECTIVE),
+        ("illegal_delay_sel_bypass", 0b11, 0),
     )
 
     for case_idx, (label, stage_sel, delay_cycles) in enumerate(cases):
@@ -803,3 +804,105 @@ async def test_axi_frame_compositor_binary_mode_not_blocked_by_rgb(dut) -> None:
     # RGB interface should not block binary-only output mode.
     await Timer(100, unit="ns")
     assert int(dut.s_axis_video_gray8_tready.value) == 1
+
+
+@cocotb.test(timeout_time=120, timeout_unit="ms")
+async def test_axi_frame_compositor_binary_mode_active_rgb_backpressure_lockstep(dut) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    await _reset(dut)
+
+    width = 8
+    height = 6
+
+    dut.i_overlay_mode.value = C_OVERLAY_SOBEL
+    dut.i_overlay_zeros.value = 1
+    dut.i_base_delay_stage_sel.value = C_DELAY_NONE
+
+    rgb_source = AxiVideoStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=getattr(dut, ARESETN_SIGNAL),
+        prefix=S_RGB_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+    gray_source = AxiGrayStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=getattr(dut, ARESETN_SIGNAL),
+        prefix=S_GRAY_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiVideoStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=getattr(dut, ARESETN_SIGNAL),
+        prefix=M_RGB_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+
+    # Keep RGB/gray sources continuously valid so lockstep acceptance in binary
+    # mode is exercised against sink backpressure only.
+    sink.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1)))
+
+    rgb_frame = _make_rgb_frame_size(31, width=width, height=height)
+    gray_frame = _make_gray_mask_frame_size(32, width=width, height=height)
+    expected = Image(
+        np.where(gray_frame.pixels[:, :, 0:1] != 0, 255, 0).repeat(3, axis=2).astype(np.uint8),
+    )
+
+    mon_rgb = cocotb.start_soon(
+        _monitor_axis_video_handshake(
+            dut,
+            prefix=S_RGB_PREFIX,
+            width=width,
+            height=height,
+            frames=1,
+            check_stall_stability=True,
+        ),
+    )
+    mon_gray = cocotb.start_soon(
+        _monitor_axis_video_handshake(
+            dut,
+            prefix=S_GRAY_PREFIX,
+            width=width,
+            height=height,
+            frames=1,
+            check_stall_stability=True,
+        ),
+    )
+    mon_out = cocotb.start_soon(
+        _monitor_axis_video_handshake(
+            dut,
+            prefix=M_RGB_PREFIX,
+            width=width,
+            height=height,
+            frames=1,
+            check_stall_stability=True,
+        ),
+    )
+
+    tx_rgb = cocotb.start_soon(rgb_source.send_image(rgb_frame))
+    tx_gray = cocotb.start_soon(gray_source.send_image(gray_frame))
+
+    observed = await sink.recv_image(
+        width=width,
+        height=height,
+        timeout_ns=2_000_000,
+    )
+
+    await with_timeout(tx_rgb, 30_000_000, "ns")
+    await with_timeout(tx_gray, 30_000_000, "ns")
+    rgb_stats = await with_timeout(mon_rgb, 30_000_000, "ns")
+    gray_stats = await with_timeout(mon_gray, 30_000_000, "ns")
+    out_stats = await with_timeout(mon_out, 30_000_000, "ns")
+
+    _assert_image_equal(expected, observed, label="binary active-rgb case")
+    assert rgb_stats["accepted"] == width * height
+    assert gray_stats["accepted"] == width * height
+    assert out_stats["accepted"] == width * height
+    assert rgb_stats["stall_cycles"] > 0
+    assert gray_stats["stall_cycles"] > 0
+    assert out_stats["stall_cycles"] > 0

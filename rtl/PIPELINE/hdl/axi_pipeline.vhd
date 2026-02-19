@@ -7,8 +7,8 @@ entity AXI_Pipeline is
     G_DEBOUNCE_NS                : integer                       := 10_000_000;
 
     G_PIXEL_WIDTH                : positive                      := 8;
-    G_LINE_WIDTH                 : positive                      := 1920;
-    G_NUM_ROW                    : positive                      := 1080;
+    G_LINE_WIDTH                 : positive                      := 1280;
+    G_NUM_ROW                    : positive                      := 720;
 
     G_BLURR_KERNEL_SIZE          : positive                      := 3;
     G_BLURR_COEFF_WIDTH          : positive                      := 8;
@@ -65,11 +65,20 @@ architecture A_RtlStruct of AXI_Pipeline is
 
   constant C_SOBEL_KERNEL_SIZE : positive := 3;
 
-  signal s_pass_grayscale    : std_logic := '0';
+  signal s_pass_grayscale    : std_logic := '1';
   signal s_pass_blurr_filter : std_logic := '1';
   signal s_pass_sobel        : std_logic := '1';
   signal s_pass_fast         : std_logic := '1';
-  signal s_overlay_zeros     : std_logic := '1';
+  signal s_overlay_zeros     : std_logic := '0';
+
+  -- Frame-latched control plane sampled on input SOF handshake.
+  signal s_pass_grayscale_l    : std_logic := '1';
+  signal s_pass_blurr_filter_l : std_logic := '1';
+  signal s_pass_sobel_l        : std_logic := '1';
+  signal s_pass_fast_l         : std_logic := '1';
+  signal s_overlay_zeros_l     : std_logic := '0';
+  signal s_pass_grayscale_eff  : std_logic := '1';
+  signal s_input_sof_accept    : std_logic := '0';
 
   -- FrameCompositor control plane derived from click-detector mode bits.
   -- These signals configure overlay color family and the RGB delay tap.
@@ -80,6 +89,14 @@ architecture A_RtlStruct of AXI_Pipeline is
   signal s_mode_blur_only     : std_logic                                    := '0';
   signal s_mode_overlay       : std_logic                                    := '0';
   signal s_sobel_pass_through : std_logic                                    := '1';
+
+  -- Latched mode decode used by data-path routing.
+  signal s_fc_overlay_mode_l    : std_logic_vector(1 downto 0) := C_OVERLAY_NONE;
+  signal s_fc_delay_stage_sel_l : std_logic_vector(1 downto 0) := C_DELAY_SEL_NONE;
+  signal s_mode_pass_all_l      : std_logic                    := '1';
+  signal s_mode_blur_only_l     : std_logic                    := '0';
+  signal s_mode_overlay_l       : std_logic                    := '0';
+  signal s_sobel_pass_through_l : std_logic                    := '1';
   signal s_gray_tvalid        : std_logic                                    := '0';
   signal s_gray_tready        : std_logic                                    := '0';
   signal s_gray_tdata         : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
@@ -160,6 +177,37 @@ begin
   o_pass_sobel        <= s_pass_sobel;
   o_pass_fast         <= s_pass_fast;
 
+  -- SOF beat that captures a new frame-level control tuple.
+  s_input_sof_accept <= s_axis_video_rbg888_tvalid and
+                        s_axis_video_rbg888_tready and
+                        s_axis_video_rbg888_tuser;
+
+  -- The first accepted beat of a new frame must see the new mode value
+  -- immediately, while all subsequent beats use the frame-latched control.
+  s_pass_grayscale_eff <= s_pass_grayscale when s_input_sof_accept = '1' else
+                          s_pass_grayscale_l;
+
+  -- Control capture point:
+  -- click-detector controls become active only at input-frame SOF handshake.
+  P_REG_FRAME_CTRL_LATCH: process (i_aclk)
+  begin
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
+        s_pass_grayscale_l    <= '1';
+        s_pass_blurr_filter_l <= '1';
+        s_pass_sobel_l        <= '1';
+        s_pass_fast_l         <= '1';
+        s_overlay_zeros_l     <= '0';
+      elsif s_input_sof_accept = '1' then
+        s_pass_grayscale_l    <= s_pass_grayscale;
+        s_pass_blurr_filter_l <= s_pass_blurr_filter;
+        s_pass_sobel_l        <= s_pass_sobel;
+        s_pass_fast_l         <= s_pass_fast;
+        s_overlay_zeros_l     <= s_overlay_zeros;
+      end if;
+    end if;
+  end process;
+
   -- Sobel wrapper bypasses when both Sobel and FAST overlays are disabled.
   s_sobel_pass_through <= s_pass_sobel and s_pass_fast;
 
@@ -187,6 +235,24 @@ begin
   s_mode_overlay <= '1' when s_fc_overlay_mode /= C_OVERLAY_NONE else
                     '0';
 
+  -- Latched control decode for all data-path control and routing.
+  s_sobel_pass_through_l <= s_pass_sobel_l and s_pass_fast_l;
+
+  s_fc_overlay_mode_l <= C_OVERLAY_FAST  when (s_pass_fast_l = '0') else
+                         C_OVERLAY_SOBEL when (s_pass_sobel_l = '0') else
+                         C_OVERLAY_NONE;
+
+  s_fc_delay_stage_sel_l <= C_DELAY_SEL_BLUR_SOBEL when (s_pass_blurr_filter_l = '0' and s_pass_sobel_l = '0' and s_pass_fast_l = '1') else
+                            C_DELAY_SEL_SOBEL      when (s_fc_overlay_mode_l /= C_OVERLAY_NONE) else
+                            C_DELAY_SEL_NONE;
+
+  s_mode_pass_all_l <= '1' when (s_pass_blurr_filter_l = '1' and s_pass_sobel_l = '1' and s_pass_fast_l = '1') else
+                       '0';
+  s_mode_blur_only_l <= '1' when (s_pass_blurr_filter_l = '0' and s_pass_sobel_l = '1' and s_pass_fast_l = '1') else
+                        '0';
+  s_mode_overlay_l <= '1' when s_fc_overlay_mode_l /= C_OVERLAY_NONE else
+                      '0';
+
   U_AxiRgbToGrayscale: entity work.AXI_RgbToGrayscale
     generic map (
       G_COMPONENT_WIDTH => G_PIXEL_WIDTH
@@ -194,7 +260,7 @@ begin
     port map (
       i_aclk               => i_aclk,
       i_aresetn            => i_aresetn,
-      i_pass_through       => s_pass_grayscale,
+      i_pass_through       => s_pass_grayscale_eff,
       s_axis_video_tvalid  => s_axis_video_rbg888_tvalid,
       s_axis_video_tready  => s_axis_video_rbg888_tready,
       s_axis_video_tdata   => s_axis_video_rbg888_tdata,
@@ -226,7 +292,7 @@ begin
     port map (
       i_aclk                => i_aclk,
       i_aresetn             => i_aresetn,
-      i_pass_through        => s_pass_blurr_filter,
+      i_pass_through        => s_pass_blurr_filter_l,
       s_axis_gray8_tvalid   => s_gray_tvalid,
       s_axis_gray8_tready   => s_gray_tready,
       s_axis_gray8_tdata    => s_gray_tdata,
@@ -255,7 +321,7 @@ begin
     port map (
       i_aclk              => i_aclk,
       i_aresetn           => i_aresetn,
-      i_pass_through      => s_sobel_pass_through,
+      i_pass_through      => s_sobel_pass_through_l,
       s_axis_gray8_tvalid => s_blurr_tvalid,
       s_axis_gray8_tready => s_blurr_tready,
       s_axis_gray8_tdata  => s_blurr_tdata,
@@ -270,13 +336,13 @@ begin
 
   -- Feed FrameCompositor only while overlay mode is active.
   -- Outside overlay mode the compositor channels are held idle.
-  s_fc_rgb_tvalid <= s_rgb_stage_tvalid when s_mode_overlay = '1' else
+  s_fc_rgb_tvalid <= s_rgb_stage_tvalid when (s_mode_overlay_l = '1' and s_overlay_zeros_l = '0') else
                      '0';
   s_fc_rgb_tdata <= s_rgb_stage_tdata;
   s_fc_rgb_tuser <= s_rgb_stage_tuser;
   s_fc_rgb_tlast <= s_rgb_stage_tlast;
 
-  s_fc_gray_tvalid <= s_sobel_tvalid when s_mode_overlay = '1' else
+  s_fc_gray_tvalid <= s_sobel_tvalid when s_mode_overlay_l = '1' else
                       '0';
   s_fc_gray_tdata <= s_sobel_tdata;
   s_fc_gray_tuser <= s_sobel_tuser;
@@ -285,11 +351,12 @@ begin
   -- READY propagation must follow the active output path.
   -- This keeps upstream branches from over-running the currently selected sink
   -- and preserves lockstep when compositor merge mode is active.
-  s_rgb_stage_tready <= s_fc_rgb_tready            when s_mode_overlay = '1' else
-                        m_axis_video_rbg888_tready when s_mode_pass_all = '1' else
+  s_rgb_stage_tready <= '1'                        when (s_mode_overlay_l = '1' and s_overlay_zeros_l = '1') else
+                        s_fc_rgb_tready            when s_mode_overlay_l = '1' else
+                        m_axis_video_rbg888_tready when s_mode_pass_all_l = '1' else
                         '1';
-  s_sobel_tready <= s_fc_gray_tready           when s_mode_overlay = '1' else
-                    m_axis_video_rbg888_tready when s_mode_blur_only = '1' else
+  s_sobel_tready <= s_fc_gray_tready           when s_mode_overlay_l = '1' else
+                    m_axis_video_rbg888_tready when s_mode_blur_only_l = '1' else
                     '1';
 
   -- Overlay/compositor block: merges delayed RGB base stream with Sobel/FAST
@@ -306,9 +373,9 @@ begin
     port map (
       i_aclk                     => i_aclk,
       i_aresetn                  => i_aresetn,
-      i_overlay_zeros            => s_overlay_zeros,
-      i_overlay_mode             => s_fc_overlay_mode,
-      i_base_delay_stage_sel     => s_fc_delay_stage_sel,
+      i_overlay_zeros            => s_overlay_zeros_l,
+      i_overlay_mode             => s_fc_overlay_mode_l,
+      i_base_delay_stage_sel     => s_fc_delay_stage_sel_l,
       s_axis_video_rbg888_tvalid => s_fc_rgb_tvalid,
       s_axis_video_rbg888_tready => s_fc_rgb_tready,
       s_axis_video_rbg888_tdata  => s_fc_rgb_tdata,
@@ -326,24 +393,24 @@ begin
       m_axis_video_rbg888_tlast  => s_overlay_tlast
     );
 
-  s_overlay_tready <= m_axis_video_rbg888_tready when s_mode_overlay = '1' else
+  s_overlay_tready <= m_axis_video_rbg888_tready when s_mode_overlay_l = '1' else
                       '1';
 
   -- Grayscale display path uses replicated gray in RGB lanes.
   s_sobel_rbg_tdata <= s_sobel_tdata & s_sobel_tdata & s_sobel_tdata;
 
   -- Final output mux: choose one of overlay, blur-only, or pass-all streams.
-  s_selected_tvalid <= s_overlay_tvalid when s_mode_overlay = '1' else
-                       s_sobel_tvalid   when s_mode_blur_only = '1' else
+  s_selected_tvalid <= s_overlay_tvalid when s_mode_overlay_l = '1' else
+                       s_sobel_tvalid   when s_mode_blur_only_l = '1' else
                        s_rgb_stage_tvalid;
-  s_selected_tdata <= s_overlay_tdata   when s_mode_overlay = '1' else
-                      s_sobel_rbg_tdata when s_mode_blur_only = '1' else
+  s_selected_tdata <= s_overlay_tdata   when s_mode_overlay_l = '1' else
+                      s_sobel_rbg_tdata when s_mode_blur_only_l = '1' else
                       s_rgb_stage_tdata;
-  s_selected_tuser <= s_overlay_tuser when s_mode_overlay = '1' else
-                      s_sobel_tuser   when s_mode_blur_only = '1' else
+  s_selected_tuser <= s_overlay_tuser when s_mode_overlay_l = '1' else
+                      s_sobel_tuser   when s_mode_blur_only_l = '1' else
                       s_rgb_stage_tuser;
-  s_selected_tlast <= s_overlay_tlast when s_mode_overlay = '1' else
-                      s_sobel_tlast   when s_mode_blur_only = '1' else
+  s_selected_tlast <= s_overlay_tlast when s_mode_overlay_l = '1' else
+                      s_sobel_tlast   when s_mode_blur_only_l = '1' else
                       s_rgb_stage_tlast;
 
   m_axis_video_rbg888_tvalid <= '0' when (i_aresetn = '0') else

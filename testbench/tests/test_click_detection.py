@@ -116,24 +116,24 @@ async def test_click_state_machine(dut) -> None:
     print("Transition to state ST_PASS_ALL")
     await driver.transition_state_btn1(1)
     await driver.check_output(
-        0,
+        1,
         1,
         1,
         expected_pass_fast=1,
-        expected_overlay_zeros=1,
+        expected_overlay_zeros=0,
         wait_duration_ns=10,
         stable_duration_ns=50,
     )
 
-    # In ST_PASS_ALL, BTN2 should keep mode fixed at ST_ZEROS.
-    print("BTN2 click in ST_PASS_ALL keeps ST_ZEROS")
+    # In ST_PASS_ALL, BTN2 toggles RGB passthrough <-> gray-as-RGB without zeros mode.
+    print("BTN2 click in ST_PASS_ALL toggles to GRAY mode")
     await driver.transition_state_btn2(1)
     await driver.check_output(
         0,
         1,
         1,
         expected_pass_fast=1,
-        expected_overlay_zeros=1,
+        expected_overlay_zeros=0,
         wait_duration_ns=10,
         stable_duration_ns=50,
     )

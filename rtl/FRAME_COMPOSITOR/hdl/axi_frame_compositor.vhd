@@ -133,6 +133,8 @@ architecture A_Rtl of AXI_FrameCompositor is
   signal s_base_delayed_valid : std_logic                                               := '0';
   -- Indicates merge path can consume in lockstep without underrunning delayed base.
   signal s_prefill_done : std_logic := '0';
+  -- Prevent selector warnings from flooding logs while selector stays invalid.
+  signal s_invalid_sel_warned : std_logic := '0';
 begin
   assert C_BASE_WORD_WIDTH = 26
     report "AXI_FrameCompositor requires 26-bit base packing (TUSER/TLAST/RGB24) for c_shift_ram_0."
@@ -200,12 +202,21 @@ begin
       if i_aresetn = '0' then
         s_base_valid_pipe <= (others => '0');
       elsif s_base_accept = '1' then
-        -- Mark newly accepted input as valid at stage 0, then advance prior
-        -- validity through every delayed stage.
-        s_base_valid_pipe(0) <= '1';
-        for i in 1 to C_BLUR_SOBEL_DELAY_EFFECTIVE loop
-          s_base_valid_pipe(i) <= s_base_valid_pipe(i - 1);
-        end loop;
+        if s_axis_video_rbg888_tuser = '1' then
+          -- Accepted SOF starts a new frame window: discard stale valid history
+          -- before inserting the new stage-0 valid marker.
+          s_base_valid_pipe(0) <= '1';
+          for i in 1 to C_BLUR_SOBEL_DELAY_EFFECTIVE loop
+            s_base_valid_pipe(i) <= '0';
+          end loop;
+        else
+          -- Mark newly accepted input as valid at stage 0, then advance prior
+          -- validity through every delayed stage.
+          s_base_valid_pipe(0) <= '1';
+          for i in 1 to C_BLUR_SOBEL_DELAY_EFFECTIVE loop
+            s_base_valid_pipe(i) <= s_base_valid_pipe(i - 1);
+          end loop;
+        end if;
       end if;
     end if;
   end process;
@@ -215,8 +226,33 @@ begin
   s_base_delayed_valid <= s_base_valid_pipe(C_SOBEL_DELAY_EFFECTIVE)      when i_base_delay_stage_sel = C_DELAY_SEL_SOBEL else
                           s_base_valid_pipe(C_BLUR_SOBEL_DELAY_EFFECTIVE) when i_base_delay_stage_sel = C_DELAY_SEL_BLUR_SOBEL else
                           s_axis_video_rbg888_tvalid                      when i_base_delay_stage_sel = C_DELAY_SEL_NONE else
-                          s_base_valid_pipe(C_SOBEL_DELAY_EFFECTIVE);
-  -- FIXME: Unknown stage select currently falls back to Sobel delay; consider asserting on illegal values in simulation.
+                          s_axis_video_rbg888_tvalid;
+  -- Illegal stage selectors fall back to NONE semantics (bypass timing).
+
+  P_ASSERT_VALID_DELAY_SEL: process (i_aclk)
+  begin
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
+        s_invalid_sel_warned <= '0';
+      elsif (s_axis_video_gray8_tvalid = '1') and (s_axis_video_gray8_tready = '1') then
+        if not (
+          (i_base_delay_stage_sel = C_DELAY_SEL_NONE) or
+          (i_base_delay_stage_sel = C_DELAY_SEL_SOBEL) or
+          (i_base_delay_stage_sel = C_DELAY_SEL_BLUR_SOBEL)
+        ) then
+          if s_invalid_sel_warned = '0' then
+            assert false
+              report "AXI_FrameCompositor: i_base_delay_stage_sel is illegal; only 00/01/10 are supported."
+              severity warning;
+            s_invalid_sel_warned <= '1';
+          end if;
+        else
+          s_invalid_sel_warned <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
+
   -- Merge mode can start only once delayed-base tap has valid data.
   s_prefill_done <= '1' when (s_need_rgb = '0') or (s_base_delayed_valid = '1') else
                     '0';
@@ -233,10 +269,8 @@ begin
   -- in lockstep with gray output acceptance.
   -- Once prefill is done, stop advancing RGB while gray is idle so SOF/EOL
   -- remain aligned at the selected delay tap.
-  -- FIXME: In bypass mode (s_need_rgb='0'), this keeps RGB ready high even when downstream stalls;
-  --        that can drop/overwrite base pixels if the upstream source continues streaming.
   s_axis_rbg888_tready <= '0' when i_aresetn = '0' else
-                          '1' when s_need_rgb = '0' else
+                          (s_axis_video_gray8_tvalid and m_axis_video_rbg888_tready) when s_need_rgb = '0' else
                           '1' when s_prefill_done = '0' else
                             (m_axis_video_rbg888_tready and s_axis_video_gray8_tvalid);
 
