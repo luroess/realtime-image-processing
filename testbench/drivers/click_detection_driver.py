@@ -33,7 +33,7 @@ class ClickDetectionDriver:
             1,
             1,
             expected_pass_fast=1,
-            expected_base_mode=0,
+            expected_overlay_zeros=1,
             wait_duration_ns=10,
         )
 
@@ -44,7 +44,7 @@ class ClickDetectionDriver:
         expected_pass_sobel: int,
         *,
         expected_pass_fast: int | None = None,
-        expected_base_mode: int | None = None,
+        expected_overlay_zeros: int | None = None,
         wait_duration_ns: int = 0,
         stable_duration_ns: int = 0,
     ) -> None:
@@ -75,11 +75,11 @@ class ClickDetectionDriver:
             )
 
         if (
-            expected_base_mode is not None
-            and int(self.dut.o_base_mode.value) != expected_base_mode
+            expected_overlay_zeros is not None
+            and int(self.dut.o_overlay_zeros.value) != expected_overlay_zeros
         ):
             raise AssertionError(
-                f"Base Mode is not correct! Expected {expected_base_mode:02b}, got {int(self.dut.o_base_mode.value):02b}",
+                f"Overlay zeros is not correct! Expected {expected_overlay_zeros}, got {int(self.dut.o_overlay_zeros.value)}",
             )
 
         if stable_duration_ns != 0:
@@ -88,7 +88,7 @@ class ClickDetectionDriver:
                 expected_pass_blurr_filter,
                 expected_pass_sobel,
                 expected_pass_fast=expected_pass_fast,
-                expected_base_mode=expected_base_mode,
+                expected_overlay_zeros=expected_overlay_zeros,
                 wait_duration_ns=stable_duration_ns,
             )
 
