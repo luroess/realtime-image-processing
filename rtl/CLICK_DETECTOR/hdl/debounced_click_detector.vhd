@@ -16,7 +16,7 @@ entity DebouncedClickDetector is
     o_pass_blurr_filter : out std_logic;
     o_pass_sobel        : out std_logic;
     o_pass_fast         : out std_logic;
-    o_base_mode         : out std_logic_vector(1 downto 0);
+    o_overlay_zeros     : out std_logic;
     o_led               : out std_logic_vector(3 downto 0) -- 4 LEDs
   );
 end entity;
@@ -64,7 +64,7 @@ begin
     o_pass_blurr_filter => o_pass_blurr_filter,
     o_pass_sobel        => o_pass_sobel,
     o_pass_fast         => o_pass_fast,
-    o_base_mode         => o_base_mode,
+    o_overlay_zeros     => o_overlay_zeros,
     o_led               => o_led
   );
 
