@@ -3,28 +3,28 @@ library ieee;
 
 entity AXI_Pipeline is
   generic (
-    G_CLK_FREQ_HZ                : integer                                                   := 100_000_000;
-    G_DEBOUNCE_NS                : integer                                                   := 10_000_000;
+    G_CLK_FREQ_HZ                : integer                       := 100_000_000;
+    G_DEBOUNCE_NS                : integer                       := 10_000_000;
 
-    G_PIXEL_WIDTH                : positive                                                  := 8;
-    G_LINE_WIDTH                 : positive                                                  := 1920;
-    G_NUM_ROW                    : positive                                                  := 1080;
+    G_PIXEL_WIDTH                : positive                      := 8;
+    G_LINE_WIDTH                 : positive                      := 1920;
+    G_NUM_ROW                    : positive                      := 1080;
 
-    G_BLURR_KERNEL_SIZE          : positive                                                  := 3;
-    G_BLURR_COEFF_WIDTH          : positive                                                  := 8;
+    G_BLURR_KERNEL_SIZE          : positive                      := 3;
+    G_BLURR_COEFF_WIDTH          : positive                      := 8;
     -- Default: 3x3 Gaussian [1 2 1; 2 4 2; 1 2 1], tap0 at LSB.
     G_BLURR_KERNEL_COEFFS        : std_logic_vector(
-      (G_BLURR_KERNEL_SIZE * G_BLURR_KERNEL_SIZE * G_BLURR_COEFF_WIDTH) - 1 downto 0) := x"010201020402010201";
-    G_BLURR_NORMALIZE_DIVISOR    : positive                                                  := 16;
-    G_BLURR_BIAS                 : integer                                                   := 0;
+      71 downto 0)                                        := x"010201020402010201";
+    G_BLURR_NORMALIZE_DIVISOR    : positive                      := 16;
+    G_BLURR_BIAS                 : integer                       := 0;
 
-    G_SOBEL_THRESHOLD            : natural                                                   := 150;
-    G_SOBEL_MEAN_SHIFT           : natural                                                   := 9;
-    G_SOBEL_MEAN_UPDATE_INTERVAL : positive                                                  := 1;
-    G_SOBEL_THRESHOLD_GAIN_NUM   : positive                                                  := 1;
-    G_SOBEL_THRESHOLD_GAIN_DEN   : positive                                                  := 1;
-    G_SOBEL_THRESHOLD_OFFSET     : integer                                                   := 0;
-    G_EDGE_COLOR                 : std_logic_vector(23 downto 0)                             := x"FF0000"
+    G_SOBEL_THRESHOLD            : natural                       := 150;
+    G_SOBEL_MEAN_SHIFT           : natural                       := 9;
+    G_SOBEL_MEAN_UPDATE_INTERVAL : positive                      := 1;
+    G_SOBEL_THRESHOLD_GAIN_NUM   : positive                      := 1;
+    G_SOBEL_THRESHOLD_GAIN_DEN   : positive                      := 1;
+    G_SOBEL_THRESHOLD_OFFSET     : integer                       := 0;
+    G_EDGE_COLOR                 : std_logic_vector(23 downto 0) := x"FF0000"
   );
   port (
     i_aclk                     : in  std_logic;
@@ -55,7 +55,7 @@ entity AXI_Pipeline is
   );
 end entity;
 
-architecture A_RtlStruct of AXI_RgbGrayBlurrSobelOverlayPipeline is
+architecture A_RtlStruct of AXI_Pipeline is
   constant C_OVERLAY_NONE  : std_logic_vector(1 downto 0) := "00";
   constant C_OVERLAY_FAST  : std_logic_vector(1 downto 0) := "01";
   constant C_OVERLAY_SOBEL : std_logic_vector(1 downto 0) := "10";
@@ -72,18 +72,20 @@ architecture A_RtlStruct of AXI_RgbGrayBlurrSobelOverlayPipeline is
   signal s_pass_fast         : std_logic := '1';
   signal s_overlay_zeros     : std_logic := '1';
 
+  -- FrameCompositor control plane derived from click-detector mode bits.
+  -- These signals configure overlay color family and the RGB delay tap.
   signal s_fc_overlay_mode    : std_logic_vector(1 downto 0) := C_OVERLAY_NONE;
   signal s_fc_delay_stage_sel : std_logic_vector(1 downto 0) := C_DELAY_SEL_NONE;
-  signal s_mode_pass_all      : std_logic                    := '1';
-  signal s_mode_blur_only     : std_logic                    := '0';
-  signal s_mode_overlay       : std_logic                    := '0';
-  signal s_sobel_pass_through : std_logic                    := '1';
-
-  signal s_gray_tvalid : std_logic                                    := '0';
-  signal s_gray_tready : std_logic                                    := '0';
-  signal s_gray_tdata  : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
-  signal s_gray_tuser  : std_logic                                    := '0';
-  signal s_gray_tlast  : std_logic                                    := '0';
+  -- High-level data-path mode flags used by stream mux/ready routing.
+  signal s_mode_pass_all      : std_logic                                    := '1';
+  signal s_mode_blur_only     : std_logic                                    := '0';
+  signal s_mode_overlay       : std_logic                                    := '0';
+  signal s_sobel_pass_through : std_logic                                    := '1';
+  signal s_gray_tvalid        : std_logic                                    := '0';
+  signal s_gray_tready        : std_logic                                    := '0';
+  signal s_gray_tdata         : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0) := (others => '0');
+  signal s_gray_tuser         : std_logic                                    := '0';
+  signal s_gray_tlast         : std_logic                                    := '0';
 
   signal s_rgb_stage_tvalid : std_logic                                          := '0';
   signal s_rgb_stage_tready : std_logic                                          := '0';
@@ -104,6 +106,9 @@ architecture A_RtlStruct of AXI_RgbGrayBlurrSobelOverlayPipeline is
   signal s_sobel_tlast     : std_logic                                          := '0';
   signal s_sobel_rbg_tdata : std_logic_vector((3 * G_PIXEL_WIDTH) - 1 downto 0) := (others => '0');
 
+  -- AXI_FrameCompositor input channels:
+  --   s_fc_rgb_*  = delayed-base candidate stream (from RGB branch),
+  --   s_fc_gray_* = timing/mask reference stream (from Sobel/FAST branch).
   signal s_fc_rgb_tvalid : std_logic                                          := '0';
   signal s_fc_rgb_tready : std_logic                                          := '0';
   signal s_fc_rgb_tdata  : std_logic_vector((3 * G_PIXEL_WIDTH) - 1 downto 0) := (others => '0');
@@ -156,8 +161,11 @@ begin
   o_pass_sobel        <= s_pass_sobel;
   o_pass_fast         <= s_pass_fast;
 
+  -- Sobel wrapper bypasses when both Sobel and FAST overlays are disabled.
   s_sobel_pass_through <= s_pass_sobel and s_pass_fast;
 
+  -- Overlay family selection is centralized here so downstream routing and
+  -- AXI_FrameCompositor control stay in one place.
   s_fc_overlay_mode <= C_OVERLAY_FAST  when (s_pass_fast = '0') else
                        C_OVERLAY_SOBEL when (s_pass_sobel = '0') else
                        C_OVERLAY_NONE;
@@ -169,6 +177,10 @@ begin
                           C_DELAY_SEL_SOBEL      when (s_fc_overlay_mode /= C_OVERLAY_NONE) else
                           C_DELAY_SEL_NONE;
 
+  -- Decode three exclusive output behaviors:
+  -- 1) full pass-through RGB path,
+  -- 2) blur-only grayscale-as-RGB path,
+  -- 3) overlay/compositor path.
   s_mode_pass_all <= '1' when (s_pass_blurr_filter = '1' and s_pass_sobel = '1' and s_pass_fast = '1') else
                      '0';
   s_mode_blur_only <= '1' when (s_pass_blurr_filter = '0' and s_pass_sobel = '1' and s_pass_fast = '1') else
@@ -257,6 +269,8 @@ begin
       m_axis_gray8_tlast  => s_sobel_tlast
     );
 
+  -- Feed FrameCompositor only while overlay mode is active.
+  -- Outside overlay mode the compositor channels are held idle.
   s_fc_rgb_tvalid <= s_rgb_stage_tvalid when s_mode_overlay = '1' else
                      '0';
   s_fc_rgb_tdata <= s_rgb_stage_tdata;
@@ -269,7 +283,9 @@ begin
   s_fc_gray_tuser <= s_sobel_tuser;
   s_fc_gray_tlast <= s_sobel_tlast;
 
-  -- Route upstream READY according to selected output path.
+  -- READY propagation must follow the active output path.
+  -- This keeps upstream branches from over-running the currently selected sink
+  -- and preserves lockstep when compositor merge mode is active.
   s_rgb_stage_tready <= s_fc_rgb_tready            when s_mode_overlay = '1' else
                         m_axis_video_rbg888_tready when s_mode_pass_all = '1' else
                         '1';
@@ -277,6 +293,8 @@ begin
                     m_axis_video_rbg888_tready when s_mode_blur_only = '1' else
                     '1';
 
+  -- Overlay/compositor block: merges delayed RGB base stream with Sobel/FAST
+  -- mask timing stream and emits RGB24 with gray-derived SOF/EOL.
   U_AxiFrameCompositor: entity work.AXI_FrameCompositor
     generic map (
       G_COMPONENT_WIDTH   => G_PIXEL_WIDTH,
@@ -312,8 +330,10 @@ begin
   s_overlay_tready <= m_axis_video_rbg888_tready when s_mode_overlay = '1' else
                       '1';
 
+  -- Grayscale display path uses replicated gray in RGB lanes.
   s_sobel_rbg_tdata <= s_sobel_tdata & s_sobel_tdata & s_sobel_tdata;
 
+  -- Final output mux: choose one of overlay, blur-only, or pass-all streams.
   s_selected_tvalid <= s_overlay_tvalid when s_mode_overlay = '1' else
                        s_sobel_tvalid   when s_mode_blur_only = '1' else
                        s_rgb_stage_tvalid;
@@ -330,6 +350,7 @@ begin
   m_axis_video_rbg888_tvalid <= '0' when (i_aresetn = '0') else
                                 s_selected_tvalid;
 
+  -- Drive zeroed payload/sidebands when idle to avoid stale signal leakage.
   s_output_idle            <= (i_aresetn = '0') or (s_selected_tvalid = '0');
   m_axis_video_rbg888_tdata <= (others => '0') when s_output_idle else
                               s_selected_tdata;

@@ -28,8 +28,7 @@ entity AXI_FrameCompositor is
     -- Selects which delay tap aligns the RGB base with the gray mask timing.
     i_base_delay_stage_sel     : in  std_logic_vector(1 downto 0);
 
-    -- s_axis_video_rbg888_* : optional AXI4-Stream Video base stream (RGB24 + SOF/EOL).
-    -- NOTE: "rbg" naming is preserved for interface compatibility with existing top-level wiring.
+    -- s_axis_video_rbg888: AXI4-Stream Video from RGB2GRAY, color RBG if o_pass_grayscale='1', else gray8 replicated.
     s_axis_video_rbg888_tvalid : in  std_logic;
     s_axis_video_rbg888_tready : out std_logic;
     s_axis_video_rbg888_tdata  : in  std_logic_vector((3 * G_COMPONENT_WIDTH) - 1 downto 0);
@@ -73,7 +72,7 @@ architecture A_Rtl of AXI_FrameCompositor is
   -- Beat-domain warm-up delay for an odd KxK windowing stage.
   function f_stage_delay(i_line_width : positive; i_kernel_size : positive) return positive is
   begin
-    return ((i_line_width + 1) * ((i_kernel_size - 1) / 2));
+    return (i_line_width + 1) * ((i_kernel_size - 1) / 2);
   end function;
 
   -- Select explicit override when present, otherwise use the auto-derived delay.
@@ -219,7 +218,8 @@ begin
                           s_base_valid_pipe(C_SOBEL_DELAY_EFFECTIVE);
   -- FIXME: Unknown stage select currently falls back to Sobel delay; consider asserting on illegal values in simulation.
   -- Merge mode can start only once delayed-base tap has valid data.
-  s_prefill_done <= '1' when (s_need_rgb = '0') or (s_base_delayed_valid = '1') else '0';
+  s_prefill_done <= '1' when (s_need_rgb = '0') or (s_base_delayed_valid = '1') else
+                    '0';
 
   -- Gray stream drives output timing.
   -- Keep READY high while gray TVALID='0' so upstream pipelines can prefill
