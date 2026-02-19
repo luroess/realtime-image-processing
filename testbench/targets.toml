@@ -70,8 +70,7 @@ sources     = [
   G_THRESHOLD_GAIN_NUM = 1
   G_THRESHOLD_GAIN_DEN = 1
   G_THRESHOLD_OFFSET = 0
-  G_THRESHOLD_MIN = 0
-  G_THRESHOLD_MAX = 2040
+  G_PIXEL_WIDTH = 8
 
 [targets.axi_blurr_window_module]
 description = "AXI4-Stream internal window-generator + blurr window-module checks."
@@ -111,7 +110,7 @@ sources     = [
   G_KERNEL_SIZE = 3
   G_LINE_WIDTH = 512
   G_NUM_ROW = 512
-  G_SOBEL_THRESHOLD = 200
+  G_SOBEL_THRESHOLD = 150
   G_SOBEL_MEAN_UPDATE_INTERVAL = 1
 
 [targets.axi_gray_blurr_sobel_overlay_pipeline]
@@ -147,5 +146,5 @@ sources     = [
   G_BLURR_COEFF_WIDTH = 8
   G_BLURR_NORMALIZE_DIVISOR = 16
   G_BLURR_BIAS = 0
-  G_SOBEL_THRESHOLD = 200
+  G_SOBEL_THRESHOLD = 150
   G_SOBEL_MEAN_UPDATE_INTERVAL = 1

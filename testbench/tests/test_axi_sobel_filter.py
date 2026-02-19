@@ -25,8 +25,7 @@ SOBEL_MEAN_UPDATE_INTERVAL = 1
 SOBEL_THRESHOLD_GAIN_NUM = 1
 SOBEL_THRESHOLD_GAIN_DEN = 1
 SOBEL_THRESHOLD_OFFSET = 0
-SOBEL_THRESHOLD_MIN = 0
-SOBEL_THRESHOLD_MAX = 2040
+PIXEL_WIDTH = 8
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -70,6 +69,8 @@ def _dut_generic_int(dut, generic_name: str, default: int) -> int:
 
 
 def _resolve_sobel_model_params(dut) -> dict[str, int]:
+    pixel_width = _dut_generic_int(dut, "G_PIXEL_WIDTH", PIXEL_WIDTH)
+    threshold_max_default = 8 * ((2 ** pixel_width) - 1)
     return {
         "threshold": _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD),
         "mean_shift": _dut_generic_int(dut, "G_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
@@ -81,22 +82,22 @@ def _resolve_sobel_model_params(dut) -> dict[str, int]:
         "gain_num": _dut_generic_int(dut, "G_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
         "gain_den": _dut_generic_int(dut, "G_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
         "offset": _dut_generic_int(dut, "G_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
-        "threshold_min": _dut_generic_int(dut, "G_THRESHOLD_MIN", SOBEL_THRESHOLD_MIN),
-        "threshold_max": _dut_generic_int(dut, "G_THRESHOLD_MAX", SOBEL_THRESHOLD_MAX),
+        "threshold_min": 0,
+        "threshold_max": threshold_max_default,
     }
 
 
 def _sobel_expected(
     gray_plane: np.ndarray,
     *,
-    threshold: int = SOBEL_THRESHOLD,
-    mean_shift: int = SOBEL_MEAN_SHIFT,
-    mean_update_interval: int = SOBEL_MEAN_UPDATE_INTERVAL,
-    gain_num: int = SOBEL_THRESHOLD_GAIN_NUM,
-    gain_den: int = SOBEL_THRESHOLD_GAIN_DEN,
-    offset: int = SOBEL_THRESHOLD_OFFSET,
-    threshold_min: int = SOBEL_THRESHOLD_MIN,
-    threshold_max: int = SOBEL_THRESHOLD_MAX,
+    threshold: int,
+    mean_shift: int,
+    mean_update_interval: int,
+    gain_num: int,
+    gain_den: int,
+    offset: int,
+    threshold_min: int,
+    threshold_max: int,
 ) -> np.ndarray:
     out, _, _ = _sobel_expected_with_mean(
         gray_plane,
@@ -117,14 +118,14 @@ def _sobel_expected_with_mean(
     gray_plane: np.ndarray,
     *,
     mean_start: int,
-    mean_shift: int = SOBEL_MEAN_SHIFT,
+    mean_shift: int,
     update_counter_start: int = 0,
-    mean_update_interval: int = SOBEL_MEAN_UPDATE_INTERVAL,
-    gain_num: int = SOBEL_THRESHOLD_GAIN_NUM,
-    gain_den: int = SOBEL_THRESHOLD_GAIN_DEN,
-    offset: int = SOBEL_THRESHOLD_OFFSET,
-    threshold_min: int = SOBEL_THRESHOLD_MIN,
-    threshold_max: int = SOBEL_THRESHOLD_MAX,
+    mean_update_interval: int,
+    gain_num: int,
+    gain_den: int,
+    offset: int,
+    threshold_min: int,
+    threshold_max: int,
 ) -> tuple[np.ndarray, int, int]:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
