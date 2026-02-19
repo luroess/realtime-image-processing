@@ -78,7 +78,12 @@ architecture A_Rtl of window_generator is
   ------------------------------------------------------------------
   -- functions
   ------------------------------------------------------------------
+
   -- 1D window array to flat_window (std_logic_vector)
+  --   Packs a 1D window array of G_KERNEL_SIZE*G_KERNEL_SIZE pixels into a single
+  --   std_logic_vector for the AXI Stream master output interface.
+  --   i_w : t_wndw         -> 1D window array of G_KERNEL_SIZE*G_KERNEL_SIZE pixels
+  --   return t_wndw_flat_t -> flat std_logic_vector of G_KERNEL_SIZE*G_KERNEL_SIZE*G_PIXEL_WIDTH bits representing the window pixels
   function f_pack_1d_wndw(i_w : t_wndw) return t_wndw_flat_t is
     -- returned variable
     variable v_flat : t_wndw_flat_t := (others => '0');
@@ -90,6 +95,13 @@ architecture A_Rtl of window_generator is
   end function;
 
   -- buffer to 1D window array
+  --   Extracts a G_KERNEL_SIZE x G_KERNEL_SIZE pixel window from the line buffer
+  --   around the current pixel position, applying padding for out-of-bounds access
+  --   (zero padding or edge replication as configured by G_EDGE_PADDING).
+  --   i_buf : t_buf     -> multi-line pixel buffer storing recent image rows
+  --   i_col : natural   -> current pixel column index in the frame
+  --   i_row : natural   -> current pixel row index in the frame
+  --   return t_wndw     -> 1D window array of G_KERNEL_SIZE*G_KERNEL_SIZE pixels
   function f_wndw_from_buffer(i_buf : t_buf; i_col : natural; i_row : natural) return t_wndw is
     constant C_MAX_PAD : natural := ((G_KERNEL_SIZE - 1) / 2); -- max padding needed for odd kernel sizes (e.g. 1 for 3x3, 2 for 5x5)
     -- returned variable
@@ -154,15 +166,18 @@ architecture A_Rtl of window_generator is
             -- BOTTOM and RIGHT out of range
             v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx - ((v_replicate_offset_r * G_LINE_WIDTH) + v_replicate_offset_c)); -- replicate from pixel diagonally up-left
           end if;
-        else
+        elsif G_EDGE_PADDING = 0 then
           -- zero padding for out-of-bounds pixels
           if (v_out_left = '1') then -- out of img bounds to the left
             v_wndw(v_1d_wndw_idx) := C_ZERO;
-          elsif (v_out_right = '1') then -- out of img bounds to the right
+          end if;
+          if (v_out_right = '1') then -- out of img bounds to the right
             v_wndw(v_1d_wndw_idx) := C_ZERO;
-          elsif (v_out_top = '1') then -- out of img bounds to the top
+          end if;
+          if (v_out_top = '1') then -- out of img bounds to the top
             v_wndw(v_1d_wndw_idx) := C_ZERO;
-          elsif(v_out_bottom = '1') then -- out of img bounds to the bottom
+          end if;
+          if (v_out_bottom = '1') then -- out of img bounds to the bottom
             v_wndw(v_1d_wndw_idx) := C_ZERO;
           end if;
         end if;
@@ -304,7 +319,6 @@ begin
         -- wndw(6)   wndw(7)   wndw(8)
         ------------------------------------------------------------------
 
-        --v_wndw_now := f_wndw_from_buffer(v_buf_now, v_col_out_next, v_row_out_next);
         v_wndw_now := f_wndw_from_buffer(buf_reg, v_col_out_next, v_row_out_next);
 
         ------------------------------------------------------------------
