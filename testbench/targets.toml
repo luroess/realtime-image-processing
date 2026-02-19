@@ -116,7 +116,7 @@ sources     = [
 [targets.axi_gray_blurr_sobel_overlay_pipeline]
 description = "RGB-entry full pipeline (rgb->gray->blurr->sobel->overlay) with debounced click control."
 toplevel    = "axi_rgbgrayblurrsobeloverlaypipeline"
-test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline"
+test_module = "tests.test_axi_pipeline"
 waves       = false
 sources     = [
   "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
@@ -133,7 +133,7 @@ sources     = [
   "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
   "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
   "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
-  "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
+  "rtl/PIPELINE/hdl/axi_pipeline.vhd",
 ]
 
   [targets.axi_gray_blurr_sobel_overlay_pipeline.parameters]

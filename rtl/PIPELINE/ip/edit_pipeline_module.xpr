@@ -168,7 +168,7 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
-      <File Path="$PPRDIR/../../PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd">
+      <File Path="$PPRDIR/../../PIPELINE/hdl/axi_pipeline.vhd">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
