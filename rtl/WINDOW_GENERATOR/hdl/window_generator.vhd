@@ -140,13 +140,13 @@ begin
   -- Expose input READY combinationally so upstream and internal handshake
   -- observe the same value in the same cycle.
   s_axis_gray8_tready <= '0' when i_aresetn = '0' else
-                         '1' when pxl_cnt <=C_FILL_MIN else
+                         '1' when pxl_cnt < C_FILL_MIN else
                          m_axis_window_tready;
 
   ------------------------------------------------------------------
   -- Line buffering
   ------------------------------------------------------------------
-  process(i_aclk)
+  P_WNDW_GEN_REG : process(i_aclk)
     ------------------------------------------------------------------
     -- variables
     ------------------------------------------------------------------
