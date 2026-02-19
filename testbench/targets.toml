@@ -64,9 +64,9 @@ sources     = [
 ]
 
   [targets.axi_sobel_filter.parameters]
-  G_SOBEL_THRESHOLD = 10
+  G_SOBEL_THRESHOLD = 150
   G_MEAN_SHIFT = 8
-  G_MEAN_UPDATE_INTERVAL = 4096
+  G_MEAN_UPDATE_INTERVAL = 1
   G_THRESHOLD_GAIN_NUM = 1
   G_THRESHOLD_GAIN_DEN = 1
   G_THRESHOLD_OFFSET = 0
@@ -112,6 +112,7 @@ sources     = [
   G_LINE_WIDTH = 512
   G_NUM_ROW = 512
   G_SOBEL_THRESHOLD = 200
+  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
 
 [targets.axi_gray_blurr_sobel_overlay_pipeline]
 description = "RGB-entry full pipeline (rgb->gray->blurr->sobel->overlay) with debounced click control."
@@ -147,3 +148,4 @@ sources     = [
   G_BLURR_NORMALIZE_DIVISOR = 16
   G_BLURR_BIAS = 0
   G_SOBEL_THRESHOLD = 200
+  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
