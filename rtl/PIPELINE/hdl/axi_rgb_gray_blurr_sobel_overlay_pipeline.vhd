@@ -19,7 +19,7 @@ entity AXI_RgbGrayBlurrSobelOverlayPipeline is
     G_BLURR_NORMALIZE_DIVISOR : positive := 16;
     G_BLURR_BIAS              : integer := 0;
 
-    G_SOBEL_MEAN_SHIFT : natural := 150;
+    G_SOBEL_THRESHOLD : natural := 150;
     G_SOBEL_MEAN_SHIFT : natural := 9;
     G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
     G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;

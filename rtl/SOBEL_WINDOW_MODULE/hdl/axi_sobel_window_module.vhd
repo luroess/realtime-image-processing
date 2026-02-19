@@ -4,7 +4,7 @@ library ieee;
 entity AXI_SobelWindowModule is
   generic (
     -- Sobel generic
-    G_SOBEL_MEAN_SHIFT : natural := 150;
+    G_SOBEL_THRESHOLD : natural := 150;
     G_SOBEL_MEAN_SHIFT : natural := 9;
     G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
     G_SOBEL_THRESHOLD_GAIN_NUM : positive := 1;
