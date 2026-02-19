@@ -8,18 +8,16 @@ from pathlib import Path
 import cocotb
 import numpy as np
 from cocotb.clock import Clock
-
 from common.reset import apply_reset
 from drivers.axis_gray_source import AxiGrayStreamSource
 from models.image_model import Image
-from monitors.axis_video_sink import AxiVideoStreamSink
+from monitors.axis_gray_sink import AxiGrayStreamSink
 
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
 PASS_THROUGH_SIGNAL = "i_pass_through"
 S_AXIS_PREFIX = "s_axis_gray8"
-M_AXIS_PREFIX = "m_axis_rbg888"
-PIXEL_ORDER = "rbg"
+M_AXIS_PREFIX = "m_axis_gray8"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
@@ -52,7 +50,10 @@ def _gray_from_rgb(image: Image) -> np.ndarray:
     return ((r >> 2) + (g >> 1) + (b >> 2)).astype(np.uint8)
 
 
-def _sobel_expected(gray_plane: np.ndarray, threshold: int = SOBEL_THRESHOLD) -> np.ndarray:
+def _sobel_expected(
+    gray_plane: np.ndarray,
+    threshold: int = SOBEL_THRESHOLD,
+) -> np.ndarray:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
     out = np.zeros((height, width), dtype=np.uint8)
@@ -87,21 +88,6 @@ def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
     raise AssertionError(
         f"First mismatch at (x={int(x)}, y={int(y)}): "
         f"expected={int(expected[y, x])}, received={int(received[y, x])}",
-    )
-
-
-def _assert_rgb_equal(expected: np.ndarray, received: np.ndarray) -> None:
-    if expected.shape != received.shape:
-        raise AssertionError(
-            f"Shape mismatch: expected={expected.shape}, received={received.shape}",
-        )
-    if np.array_equal(expected, received):
-        return
-
-    y, x = np.argwhere(np.any(expected != received, axis=2))[0]
-    raise AssertionError(
-        f"First mismatch at (x={int(x)}, y={int(y)}): "
-        f"expected={expected[y, x].tolist()}, received={received[y, x].tolist()}",
     )
 
 
@@ -140,19 +126,23 @@ async def run_wrapper_case(
         prefix=S_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
     )
-    sink = AxiVideoStreamSink(
+    sink = AxiGrayStreamSink(
         dut=dut,
         i_clk=i_clk,
         i_rst_n=i_rst_n,
         prefix=M_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
-        pixel_order=PIXEL_ORDER,
     )
     m_axis_tready.value = 1
 
-    expected = gray_plane if pass_through else _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
-    expected_rgb = np.stack((expected, expected, expected), axis=2)
-    flush_pixels = 0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
+    expected = (
+        gray_plane
+        if pass_through
+        else _sobel_expected(gray_plane, threshold=SOBEL_THRESHOLD)
+    )
+    flush_pixels = (
+        0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
+    )
 
     await source.send_image(
         _gray_plane_to_image(gray_plane),
@@ -161,11 +151,11 @@ async def run_wrapper_case(
 
     height, width = gray_plane.shape
     timeout_ns = max(500_000, width * height * 70)
-    received = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
-    _assert_rgb_equal(expected_rgb, received.pixels)
+    received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_plane_equal(expected, received)
 
     if output_path is not None:
-        Image(received.pixels).to_png(output_path)
+        _gray_plane_to_image(received).to_png(output_path)
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
