@@ -13,7 +13,7 @@ entity window_generator is
     -- Image row count
     G_NUM_ROW : natural := 5;
     -- Type of padding for out-of-bounds pixels (zero padding or replication)
-    G_REPLICATE_EDGE : std_logic := '0' -- '0' for zero padding, '1' for replicate edge
+    G_EDGE_PADDING : natural := 0 -- '0' for zero padding, '1' for replicate edge
   );
   port (
     i_aclk            : in  std_logic;
@@ -125,7 +125,7 @@ architecture A_Rtl of window_generator is
         -- set window pixel value
         v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx); -- normal image pixel behavior
 
-        if G_REPLICATE_EDGE = '1' then
+        if G_EDGE_PADDING = 1 then
           -- Replicate edge pixels for out-of-bounds pixels
           v_replicate_offset_r := abs(C_MAX_PAD - r);
           v_replicate_offset_c := abs(C_MAX_PAD - c);
