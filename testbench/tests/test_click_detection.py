@@ -1,4 +1,4 @@
-"""Test layer: Detect number of Button Clicks and activate different outputs based on count."""
+"""ClickDetector state-machine checks (BTN1 processing FSM + BTN2 base FSM)."""
 
 from __future__ import annotations
 
@@ -7,45 +7,48 @@ from cocotb.clock import Clock
 
 from drivers.click_detection_driver import ClickDetectionDriver
 
-# CONSTANTS
 CLK_PERIOD_NS = 10  # 100 MHz
+
 
 @cocotb.test()
 async def test_click_state_machine(dut) -> None:
-    """Test Click Detection Logic."""
+    """Verify direct ClickDetector transitions and output controls."""
     driver = ClickDetectionDriver(dut)
-
-    # --------------------------------------------------
-    # Reset
-    # --------------------------------------------------
 
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await driver.apply_reset()
 
-    # --------------------------------------------------
-    # Transition to ST_GRAYSCALE
-    # --------------------------------------------------
-    print(f"Transition to state ST_GRAYSCALE")
-    await driver.transistion_state(1)
-    await driver.check_output(0, 1, 1, 10, 50)
+    # BTN2 base FSM in ST_PASS_ALL: ZEROS -> RGB -> GRAY -> ZEROS.
+    await driver.transition_btn2_state()
+    await driver.check_output(1, 1, 1, 10, 30, expected_pass_fast=1, expected_overlay_zeros=0)
 
-    # --------------------------------------------------
-    # Transition to ST_BLURR
-    # --------------------------------------------------
-    print(f"Transition to state ST_BLURR")
-    await driver.transistion_state(1)
-    await driver.check_output(0, 0, 1, 10, 50)
+    await driver.transition_btn2_state()
+    await driver.check_output(0, 1, 1, 10, 30, expected_pass_fast=1, expected_overlay_zeros=0)
 
-    # --------------------------------------------------
-    # Transition to ST_SOBEL
-    # --------------------------------------------------
-    print(f"Transition to state ST_SOBEL")
-    await driver.transistion_state(1)
-    await driver.check_output(0, 0, 0, 10, 50)
+    await driver.transition_btn2_state()
+    await driver.check_output(0, 1, 1, 10, 30, expected_pass_fast=1, expected_overlay_zeros=1)
 
-    # --------------------------------------------------
-    # Transition to ST_PASSTHROUGH
-    # --------------------------------------------------
-    print(f"Transition to state ST_PASSTHROUGH")
-    await driver.transistion_state(1)
-    await driver.check_output(1, 1, 1, 10, 50)
+    # BTN1 processing FSM: PASS_ALL -> BLUR.
+    await driver.transition_btn1_state()
+    await driver.check_output(0, 0, 1, 10, 30, expected_pass_fast=1, expected_overlay_zeros=1)
+
+    # BTN2 is ignored in BLUR (forced ZEROS).
+    await driver.transition_btn2_state()
+    await driver.check_output(0, 0, 1, 10, 30, expected_pass_fast=1, expected_overlay_zeros=1)
+
+    # BLUR -> SOBEL, then enable RGB base via BTN2.
+    await driver.transition_btn1_state()
+    await driver.check_output(0, 1, 0, 10, 30, expected_pass_fast=1, expected_overlay_zeros=1)
+
+    await driver.transition_btn2_state()
+    await driver.check_output(1, 1, 0, 10, 30, expected_pass_fast=1, expected_overlay_zeros=0)
+
+    # SOBEL -> BLUR_SOBEL -> FAST -> PASS_ALL.
+    await driver.transition_btn1_state()
+    await driver.check_output(1, 0, 0, 10, 30, expected_pass_fast=1, expected_overlay_zeros=0)
+
+    await driver.transition_btn1_state()
+    await driver.check_output(1, 1, 1, 10, 30, expected_pass_fast=0, expected_overlay_zeros=0)
+
+    await driver.transition_btn1_state()
+    await driver.check_output(1, 1, 1, 10, 30, expected_pass_fast=1, expected_overlay_zeros=0)
