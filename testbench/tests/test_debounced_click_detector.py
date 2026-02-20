@@ -1,84 +1,108 @@
-"""Combined Debouncer + ClickDetector checks for BTN1/BTN2 behavior."""
+"""Test layer: Execute combined test for debouncer and click detection."""
 
 from __future__ import annotations
 
 import cocotb
 from cocotb.clock import Clock
-
 from drivers.click_detection_driver import ClickDetectionDriver
 from drivers.debouncing_driver import DebouncingDriver
 
-CLK_PERIOD_NS = 10   # 100 MHz
-DEBOUNCE_WAIT_NS = 130
+# CONSTANTS
+CLK_PERIOD_NS = 10  # 100 MHz
+CLK_TIMER_NS = 140  # debounce + settling margin
 
 
 @cocotb.test()
 async def test_debounced_click_detection(dut) -> None:
-    """Validate debounced BTN1/BTN2 interaction with click-detection FSMs."""
+    """Test debounced BTN1/BNT2 behavior through DebouncedClickDetector."""
     debouncing_driver = DebouncingDriver(dut)
-    click_driver = ClickDetectionDriver(dut)
+    click_detection_driver = ClickDetectionDriver(dut)
+
+    # --------------------------------------------------
+    # Reset
+    # --------------------------------------------------
 
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await debouncing_driver.apply_reset()
-
-    # Reset state: ST_PASS_ALL + ST_ZEROS.
-    await debouncing_driver.check_debounced(0, 0, output_index=0)
-    await debouncing_driver.check_debounced(0, 0, output_index=1)
-    await click_driver.check_output(
-        0,
-        1,
-        1,
-        wait_duration_ns=20,
-        expected_pass_fast=1,
-        expected_overlay_zeros=1,
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
     )
 
-    # BTN1 click: PASS_ALL -> BLUR.
-    await debouncing_driver.simulate_bouncing(0, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 1, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(1, 0, output_index=0)
-    await click_driver.check_output(0, 0, 1, 20, expected_pass_fast=1, expected_overlay_zeros=1)
+    async def click_btn0() -> None:
+        await debouncing_driver.simulate_bouncing(0)
+        await debouncing_driver.set_i_btn_value_and_wait(1, CLK_TIMER_NS)
+        await debouncing_driver.check_debounced(1, 0)
+        await debouncing_driver.set_i_btn_value_and_wait(0, CLK_TIMER_NS)
+        await debouncing_driver.check_debounced(0, 0)
 
-    await debouncing_driver.simulate_bouncing(1, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 0, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(0, 0, output_index=0)
+    async def click_btn1() -> None:
+        await debouncing_driver.set_i_btn_value_and_wait(2, CLK_TIMER_NS)
+        if int(dut.o_btn2_debounced.value) != 1:
+            raise AssertionError(
+                f"Debounced BTN2 mismatch! Expected 1, got {int(dut.o_btn2_debounced.value)}",
+            )
+        await debouncing_driver.set_i_btn_value_and_wait(0, CLK_TIMER_NS)
+        if int(dut.o_btn2_debounced.value) != 0:
+            raise AssertionError(
+                f"Debounced BTN2 mismatch! Expected 0, got {int(dut.o_btn2_debounced.value)}",
+            )
 
-    # BTN1 click: BLUR -> SOBEL.
-    await debouncing_driver.simulate_bouncing(0, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 1, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(1, 0, output_index=0)
-    await click_driver.check_output(0, 1, 0, 20, expected_pass_fast=1, expected_overlay_zeros=1)
+    # --------------------------------------------------
+    # BTN1: PASS_ALL -> BLUR -> SOBEL -> BLUR_SOBEL -> FAST -> PASS_ALL
+    # --------------------------------------------------
+    print("Transition to state ST_BLUR")
+    await click_btn0()
+    await click_detection_driver.check_output(
+        0, 0, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
-    await debouncing_driver.simulate_bouncing(1, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 0, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(0, 0, output_index=0)
+    print("Transition to state ST_SOBEL")
+    await click_btn0()
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
-    # BTN2 click in SOBEL: ZEROS -> RGB.
-    await debouncing_driver.simulate_bouncing(0, button_index=1, output_index=1)
-    await debouncing_driver.set_button_value_and_wait(1, 1, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(1, 0, output_index=1)
-    await click_driver.check_output(1, 1, 0, 20, expected_pass_fast=1, expected_overlay_zeros=0)
+    # --------------------------------------------------
+    # BTN2 in ST_SOBEL: ZEROS -> BRAM_RGB -> BRAM_GRAY -> ZEROS
+    # --------------------------------------------------
+    print("Transition base mode to ST_BRAM_RGB")
+    await click_btn1()
+    await click_detection_driver.check_output(
+        1, 1, 0, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+    )
 
-    await debouncing_driver.simulate_bouncing(1, button_index=1, output_index=1)
-    await debouncing_driver.set_button_value_and_wait(1, 0, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(0, 0, output_index=1)
+    print("Transition base mode to ST_BRAM_GRAY")
+    await click_btn1()
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+    )
 
-    # BTN1 click: SOBEL -> BLUR_SOBEL.
-    await debouncing_driver.simulate_bouncing(0, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 1, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(1, 0, output_index=0)
-    await click_driver.check_output(1, 0, 0, 20, expected_pass_fast=1, expected_overlay_zeros=0)
+    print("Transition base mode to ST_ZEROS")
+    await click_btn1()
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
-    await debouncing_driver.simulate_bouncing(1, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 0, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(0, 0, output_index=0)
+    print("Transition to state ST_BLUR_SOBEL")
+    await click_btn0()
+    await click_detection_driver.check_output(
+        0, 0, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
-    # BTN1 click: BLUR_SOBEL -> FAST.
-    await debouncing_driver.simulate_bouncing(0, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 1, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(1, 0, output_index=0)
-    await click_driver.check_output(1, 1, 1, 20, expected_pass_fast=0, expected_overlay_zeros=0)
+    print("Transition to state ST_FAST")
+    await click_btn0()
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=0, expected_overlay_zeros=1, wait_duration_ns=20
+    )
 
-    await debouncing_driver.simulate_bouncing(1, button_index=0, output_index=0)
-    await debouncing_driver.set_button_value_and_wait(0, 0, DEBOUNCE_WAIT_NS)
-    await debouncing_driver.check_debounced(0, 0, output_index=0)
+    print("Transition to state ST_PASS_ALL")
+    await click_btn0()
+    await click_detection_driver.check_output(
+        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+    )
+
+    print("BTN2 click in ST_PASS_ALL toggles to RGB mode")
+    await click_btn1()
+    await click_detection_driver.check_output(
+        1, 1, 1, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+    )
