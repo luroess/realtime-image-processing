@@ -55,6 +55,10 @@ class AxiGrayStreamSource:
         if hasattr(self._source.bus, "tuser"):
             self._source.bus.tuser.value = 0
 
+    def set_pause_generator(self, generator=None) -> None:
+        """Apply optional TVALID throttling pattern."""
+        self._source.set_pause_generator(generator)
+
     def _build_line_tuser(self, line_bytes_len: int, *, line_index: int) -> list[int]:
         if line_index != 0 or line_bytes_len == 0:
             return [0] * line_bytes_len
@@ -71,7 +75,9 @@ class AxiGrayStreamSource:
     async def send_image(self, image: Image, *, tail_padding_pixels: int = 0) -> None:
         """Send one gray image (uses channel 0) as AXI4-Video line packets."""
         for y in range(image.height):
-            line_bytes = bytearray(int(image.pixels[y, x, 0]) & 0xFF for x in range(image.width))
+            line_bytes = bytearray(
+                int(image.pixels[y, x, 0]) & 0xFF for x in range(image.width)
+            )
             tuser = self._build_line_tuser(len(line_bytes), line_index=y)
             await self._source.send(AxiStreamFrame(tdata=line_bytes, tuser=tuser))
 

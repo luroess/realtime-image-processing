@@ -36,20 +36,8 @@ This note captures the active no-FAST behavior for `FRAME_COMPOSITOR` in this br
 - `10`: Blur+Sobel delay
 - `11`: reserved (warn, alias to Sobel delay)
 
-## No-FAST Requirement
-
-FAST-related controls and delay paths are intentionally removed.
-
-- No FAST-specific generics in `FrameCompositor`, `ShiftRamChain`, or `AXI_FrameCompositor`.
-- No FAST selector mode in compositor color/mask routing.
-- Pipeline/test routing must not depend on FAST states.
-
 ## Validation Commands
 
 ```bash
-cd testbench
-uv run tb-sim --target test_debouncer
-uv run tb-sim --target test_click_detector
-uv run tb-sim --target test_debounced_click_detector
-uv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline_downscaled
+uv run tb-sim --target frame_compositor_core
 ```

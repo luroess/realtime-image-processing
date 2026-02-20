@@ -121,8 +121,10 @@ sources     = [
   "rtl/SOBEL_FILTER/sobel_core.vhd",
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
   "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
-  "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
-  "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
   "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
 ]
 
@@ -156,8 +158,10 @@ sources     = [
   "rtl/SOBEL_FILTER/sobel_core.vhd",
   "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
   "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
-  "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
-  "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
   "rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd",
 ]
 
@@ -172,3 +176,32 @@ sources     = [
   G_BLURR_NORMALIZE_DIVISOR = 16
   G_BLURR_BIAS = 0
   G_SOBEL_THRESHOLD = 200
+
+[targets.frame_compositor_core]
+description = "FrameCompositor core combinational checks."
+toplevel    = "framecompositor"
+test_module = "tests.test_frame_compositor_core"
+sources     = [
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+]
+
+[targets.shift_ram_chain]
+description = "ShiftRamChain delay chain checks for compositor alignment."
+toplevel    = "shiftramchain"
+test_module = "tests.test_shift_ram_chain"
+sources     = [
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+]
+
+[targets.axi_frame_compositor]
+description = "AXI FrameCompositor checks with Sobel/blur-sobel overlay timing."
+toplevel    = "axi_framecompositor"
+test_module = "tests.test_axi_frame_compositor"
+sources     = [
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+]

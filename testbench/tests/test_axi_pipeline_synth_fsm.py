@@ -902,7 +902,7 @@ async def _assert_no_sof_accept_until_task_done(
         cycles += 1
         if cycles > timeout_cycles:
             raise AssertionError(
-                "Timed out while waiting for monitored task to complete."
+                "Timed out while waiting for monitored task to complete.",
             )
 
         await RisingEdge(i_clk)
