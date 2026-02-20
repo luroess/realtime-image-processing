@@ -25,7 +25,7 @@ async def test_debounced_click_detection(dut) -> None:
     cocotb.start_soon(Clock(dut.i_clk, CLK_PERIOD_NS, unit="ns").start())
     await debouncing_driver.apply_reset()
     await click_detection_driver.check_output(
-        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+        1, 1, 1, expected_overlay_zeros=0, wait_duration_ns=20
     )
 
     async def click_btn0() -> None:
@@ -47,62 +47,50 @@ async def test_debounced_click_detection(dut) -> None:
                 f"Debounced BTN2 mismatch! Expected 0, got {int(dut.o_btn2_debounced.value)}",
             )
 
-    # --------------------------------------------------
-    # BTN1: PASS_ALL -> BLUR -> SOBEL -> BLUR_SOBEL -> FAST -> PASS_ALL
-    # --------------------------------------------------
-    print("Transition to state ST_BLUR")
-    await click_btn0()
-    await click_detection_driver.check_output(
-        0, 0, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
-    )
-
-    print("Transition to state ST_SOBEL")
-    await click_btn0()
-    await click_detection_driver.check_output(
-        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
-    )
-
-    # --------------------------------------------------
-    # BTN2 in ST_SOBEL: ZEROS -> BRAM_RGB -> BRAM_GRAY -> ZEROS
-    # --------------------------------------------------
-    print("Transition base mode to ST_BRAM_RGB")
+    # BTN2 base FSM in ST_PASS_ALL: RGB -> GRAY -> ZEROS.
+    print("Transition base mode to ST_GRAY")
     await click_btn1()
     await click_detection_driver.check_output(
-        1, 1, 0, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
-    )
-
-    print("Transition base mode to ST_BRAM_GRAY")
-    await click_btn1()
-    await click_detection_driver.check_output(
-        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+        0, 1, 1, expected_overlay_zeros=0, wait_duration_ns=20
     )
 
     print("Transition base mode to ST_ZEROS")
     await click_btn1()
     await click_detection_driver.check_output(
-        0, 1, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+        0, 1, 1, expected_overlay_zeros=1, wait_duration_ns=20
     )
 
+    # BTN1 processing FSM: PASS_ALL -> SOBEL.
+    print("Transition to state ST_SOBEL")
+    await click_btn0()
+    await click_detection_driver.check_output(
+        0, 1, 0, expected_overlay_zeros=1, wait_duration_ns=20
+    )
+
+    # BTN2 in ST_SOBEL: ZEROS -> RGB.
+    print("Transition base mode to ST_RGB")
+    await click_btn1()
+    await click_detection_driver.check_output(
+        1, 1, 0, expected_overlay_zeros=0, wait_duration_ns=20
+    )
+
+    # SOBEL -> BLUR_SOBEL.
     print("Transition to state ST_BLUR_SOBEL")
     await click_btn0()
     await click_detection_driver.check_output(
-        0, 0, 0, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
+        1, 0, 0, expected_overlay_zeros=0, wait_duration_ns=20
     )
 
-    print("Transition to state ST_FAST")
-    await click_btn0()
+    # BTN2 in ST_BLUR_SOBEL: RGB -> GRAY.
+    print("Transition base mode to ST_GRAY")
+    await click_btn1()
     await click_detection_driver.check_output(
-        0, 1, 1, expected_pass_fast=0, expected_overlay_zeros=1, wait_duration_ns=20
+        0, 0, 0, expected_overlay_zeros=0, wait_duration_ns=20
     )
 
+    # BLUR_SOBEL -> PASS_ALL.
     print("Transition to state ST_PASS_ALL")
     await click_btn0()
     await click_detection_driver.check_output(
-        0, 1, 1, expected_pass_fast=1, expected_overlay_zeros=1, wait_duration_ns=20
-    )
-
-    print("BTN2 click in ST_PASS_ALL toggles to RGB mode")
-    await click_btn1()
-    await click_detection_driver.check_output(
-        1, 1, 1, expected_pass_fast=1, expected_overlay_zeros=0, wait_duration_ns=20
+        0, 1, 1, expected_overlay_zeros=0, wait_duration_ns=20
     )

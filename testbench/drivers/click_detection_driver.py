@@ -26,13 +26,12 @@ class ClickDetectionDriver:
         self.i_rst_n.value = 1
         await RisingEdge(self.i_clk)
 
-        # Reset state: ST_PASS_ALL + base ST_ZEROS.
+        # Reset state: ST_PASS_ALL + base ST_RGB.
         await self.check_output(
-            expected_pass_grayscale=0,
+            expected_pass_grayscale=1,
             expected_pass_blurr_filter=1,
             expected_pass_sobel=1,
-            expected_pass_fast=1,
-            expected_overlay_zeros=1,
+            expected_overlay_zeros=0,
             wait_duration_ns=10,
         )
 
@@ -43,7 +42,6 @@ class ClickDetectionDriver:
         expected_pass_sobel: int,
         wait_duration_ns: int = 0,
         stable_duration_ns: int = 0,
-        expected_pass_fast: int = 1,
         expected_overlay_zeros: int = 1,
     ) -> None:
         """Wait and check that outputs match expected values."""
@@ -65,13 +63,6 @@ class ClickDetectionDriver:
                 f"Pass Sobel mismatch! Expected {expected_pass_sobel}, got {int(self.dut.o_pass_sobel.value)}",
             )
         if (
-            hasattr(self.dut, "o_pass_fast")
-            and int(self.dut.o_pass_fast.value) != expected_pass_fast
-        ):
-            raise AssertionError(
-                f"Pass Fast mismatch! Expected {expected_pass_fast}, got {int(self.dut.o_pass_fast.value)}",
-            )
-        if (
             hasattr(self.dut, "o_overlay_zeros")
             and int(self.dut.o_overlay_zeros.value) != expected_overlay_zeros
         ):
@@ -85,7 +76,6 @@ class ClickDetectionDriver:
                 expected_pass_blurr_filter=expected_pass_blurr_filter,
                 expected_pass_sobel=expected_pass_sobel,
                 wait_duration_ns=stable_duration_ns,
-                expected_pass_fast=expected_pass_fast,
                 expected_overlay_zeros=expected_overlay_zeros,
             )
 

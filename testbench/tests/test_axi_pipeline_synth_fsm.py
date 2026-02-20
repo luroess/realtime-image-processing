@@ -1,4 +1,4 @@
-"""Synthetic FSM/compositor checks for the current no-FAST pipeline."""
+"""Synthetic FSM/compositor checks for the current pipeline."""
 
 from __future__ import annotations
 
@@ -285,23 +285,32 @@ async def test_pipeline_synthetic_fsm_compositor_modes(dut: Any) -> None:
         pixel_order=PIXEL_ORDER,
     )
 
-    # 1) Reset default: PASS_ALL + ZEROS => black frame.
-    await _assert_controls(
-        dut,
-        exp_pass_gray=0,
-        exp_pass_blur=1,
-        exp_pass_sobel=1,
-        exp_overlay_zeros=1,
-    )
-    frame0 = _make_synthetic_frame(1)
-    out0 = await _send_and_recv_frame(source, sink, frame0, warmup_stages=0)
-    _assert_rgb_all_zero(out0, label="pass_all_zeros")
-
-    # 2) PASS_ALL + RGB base mode.
-    await _click_btn2(dut, 1)
+    # 1) Reset raw default: PASS_ALL + RGB.
     await _assert_controls(
         dut,
         exp_pass_gray=1,
+        exp_pass_blur=1,
+        exp_pass_sobel=1,
+        exp_overlay_zeros=0,
+    )
+    # Prime one frame so control latch is stable for the checked frame.
+    await _send_and_recv_frame(source, sink, _make_synthetic_frame(1), warmup_stages=0)
+    await _assert_latched_controls(
+        dut,
+        exp_pass_gray=1,
+        exp_pass_blur=1,
+        exp_pass_sobel=1,
+        exp_overlay_zeros=0,
+    )
+    frame0 = _make_synthetic_frame(2)
+    out0 = await _send_and_recv_frame(source, sink, frame0, warmup_stages=0)
+    _assert_rgb_equal(frame0.pixels, out0.pixels, label="pass_all_rgb_default")
+
+    # 2) PASS_ALL + GRAY base mode.
+    await _click_btn2(dut, 1)
+    await _assert_controls(
+        dut,
+        exp_pass_gray=0,
         exp_pass_blur=1,
         exp_pass_sobel=1,
         exp_overlay_zeros=0,
@@ -310,36 +319,36 @@ async def test_pipeline_synthetic_fsm_compositor_modes(dut: Any) -> None:
     await _send_and_recv_frame(source, sink, _make_synthetic_frame(2), warmup_stages=0)
     await _assert_latched_controls(
         dut,
-        exp_pass_gray=1,
+        exp_pass_gray=0,
         exp_pass_blur=1,
         exp_pass_sobel=1,
         exp_overlay_zeros=0,
     )
-    frame1 = _make_synthetic_frame(3)
+    frame1 = _make_synthetic_frame(4)
     out1 = await _send_and_recv_frame(source, sink, frame1, warmup_stages=0)
-    _assert_rgb_equal(frame1.pixels, out1.pixels, label="pass_all_rgb")
+    expected_gray = _gray_from_rgb(frame1)
+    _assert_rgb_equal(_rgb_from_gray(expected_gray), out1.pixels, label="pass_all_gray")
 
-    # 3) PASS_ALL + GRAY base mode.
+    # 3) PASS_ALL + ZEROS base mode.
     await _click_btn2(dut, 1)
     await _assert_controls(
         dut,
         exp_pass_gray=0,
         exp_pass_blur=1,
         exp_pass_sobel=1,
-        exp_overlay_zeros=0,
+        exp_overlay_zeros=1,
     )
-    await _send_and_recv_frame(source, sink, _make_synthetic_frame(4), warmup_stages=0)
+    await _send_and_recv_frame(source, sink, _make_synthetic_frame(5), warmup_stages=0)
     await _assert_latched_controls(
         dut,
         exp_pass_gray=0,
         exp_pass_blur=1,
         exp_pass_sobel=1,
-        exp_overlay_zeros=0,
+        exp_overlay_zeros=1,
     )
-    frame2 = _make_synthetic_frame(5)
+    frame2 = _make_synthetic_frame(6)
     out2 = await _send_and_recv_frame(source, sink, frame2, warmup_stages=0)
-    expected_gray = _gray_from_rgb(frame2)
-    _assert_rgb_equal(_rgb_from_gray(expected_gray), out2.pixels, label="pass_all_gray")
+    _assert_rgb_all_zero(out2, label="pass_all_zeros")
 
 
 @cocotb.test(timeout_time=1200, timeout_unit="ms")
@@ -386,10 +395,10 @@ async def test_pipeline_controls_stay_default_without_input_sof(dut: Any) -> Non
         int(dut.s_pass_sobel_l.value),
         int(dut.s_overlay_zeros_l.value),
     )
-    assert raw_before == (0, 1, 1, 1), (
+    assert raw_before == (1, 1, 1, 0), (
         f"Unexpected raw controls after reset: {raw_before}"
     )
-    assert latched_before == (0, 1, 1, 1), (
+    assert latched_before == (1, 1, 1, 0), (
         f"Unexpected latched controls after reset: {latched_before}"
     )
 
@@ -408,10 +417,10 @@ async def test_pipeline_controls_stay_default_without_input_sof(dut: Any) -> Non
         int(dut.s_pass_sobel_l.value),
         int(dut.s_overlay_zeros_l.value),
     )
-    assert raw_after == (1, 1, 0, 0), (
+    assert raw_after == (0, 1, 0, 0), (
         f"Unexpected raw controls after clicks: {raw_after}"
     )
-    assert latched_after == (0, 1, 1, 1), (
+    assert latched_after == (1, 1, 1, 0), (
         "Latched controls changed without input SOF acceptance.",
     )
 
@@ -428,6 +437,6 @@ async def test_pipeline_controls_stay_default_without_input_sof(dut: Any) -> Non
         int(dut.s_pass_sobel_l.value),
         int(dut.s_overlay_zeros_l.value),
     )
-    assert latched_final == (0, 1, 1, 1), (
+    assert latched_final == (1, 1, 1, 0), (
         "Latched controls changed even though no SOF was accepted.",
     )

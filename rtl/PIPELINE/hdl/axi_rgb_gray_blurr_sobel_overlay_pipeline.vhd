@@ -53,16 +53,16 @@ architecture A_RtlStruct of AXI_RgbGrayBlurrSobelOverlayPipeline is
   constant C_DELAY_SEL_SOBEL      : std_logic_vector(1 downto 0) := "01";
   constant C_DELAY_SEL_BLUR_SOBEL : std_logic_vector(1 downto 0) := "10";
 
-  signal s_pass_grayscale    : std_logic := '0';
+  signal s_pass_grayscale    : std_logic := '1';
   signal s_pass_blurr_filter : std_logic := '1';
   signal s_pass_sobel        : std_logic := '1';
-  signal s_overlay_zeros     : std_logic := '1';
+  signal s_overlay_zeros     : std_logic := '0';
 
   -- Frame-latched controls captured on accepted input SOF.
-  signal s_pass_grayscale_l    : std_logic := '0';
+  signal s_pass_grayscale_l    : std_logic := '1';
   signal s_pass_blurr_filter_l : std_logic := '1';
   signal s_pass_sobel_l        : std_logic := '1';
-  signal s_overlay_zeros_l     : std_logic := '1';
+  signal s_overlay_zeros_l     : std_logic := '0';
   signal s_input_sof_accept    : std_logic := '0';
   signal s_input_tready        : std_logic := '0';
 
@@ -146,10 +146,10 @@ begin
   begin
     if rising_edge(i_clk) then
       if i_rst_n = '0' then
-        s_pass_grayscale_l <= '0';
+        s_pass_grayscale_l <= '1';
         s_pass_blurr_filter_l <= '1';
         s_pass_sobel_l <= '1';
-        s_overlay_zeros_l <= '1';
+        s_overlay_zeros_l <= '0';
       elsif s_input_sof_accept = '1' then
         s_pass_grayscale_l <= s_pass_grayscale;
         s_pass_blurr_filter_l <= s_pass_blurr_filter;
