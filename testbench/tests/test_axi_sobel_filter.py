@@ -1,14 +1,17 @@
-"""AXI4-Stream Sobel filter cocotb tests."""
+"""AXI4-Stream Sobel filter cocotb tests (fixed-threshold model)."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 import cocotb
 import numpy as np
 from cocotb.clock import Clock
+from cocotb.triggers import FallingEdge, ReadOnly, RisingEdge
 
+from common.pause import repeating_pause
 from common.reset import apply_reset
 from drivers.axis_window_gray_source import AxiWindowGraySource
 from models.image_model import Image
@@ -20,11 +23,6 @@ S_AXIS_PREFIX = "s_axis_window"
 M_AXIS_PREFIX = "m_axis_filter8"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
-SOBEL_MEAN_SHIFT = 4
-SOBEL_MEAN_UPDATE_INTERVAL = 1
-SOBEL_THRESHOLD_GAIN_NUM = 1
-SOBEL_THRESHOLD_GAIN_DEN = 1
-SOBEL_THRESHOLD_OFFSET = 0
 PIXEL_WIDTH = 8
 TESTBENCH_ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,21 +42,7 @@ def _gray_from_rgb(image: Image) -> np.ndarray:
     return ((r >> 2) + (g >> 1) + (b >> 2)).astype(np.uint8)
 
 
-def _clamp(value: int, lo: int, hi: int) -> int:
-    if value < lo:
-        return lo
-    if value > hi:
-        return hi
-    return value
-
-
-def _trunc_div_towards_zero(numerator: int, denominator: int) -> int:
-    if numerator >= 0:
-        return numerator // denominator
-    return -((-numerator) // denominator)
-
-
-def _dut_generic_int(dut, generic_name: str, default: int) -> int:
+def _dut_generic_int(dut: Any, generic_name: str, default: int) -> int:
     handle = getattr(dut, generic_name, None)
     if handle is None:
         return int(default)
@@ -68,72 +52,17 @@ def _dut_generic_int(dut, generic_name: str, default: int) -> int:
         return int(default)
 
 
-def _resolve_sobel_model_params(dut) -> dict[str, int]:
+def _resolve_threshold(dut: Any) -> int:
+    threshold = _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD)
     pixel_width = _dut_generic_int(dut, "G_PIXEL_WIDTH", PIXEL_WIDTH)
-    threshold_max_default = 8 * ((2 ** pixel_width) - 1)
-    return {
-        "threshold": _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD),
-        "mean_shift": _dut_generic_int(dut, "G_SOBEL_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
-        "mean_update_interval": _dut_generic_int(
-            dut,
-            "G_SOBEL_MEAN_UPDATE_INTERVAL",
-            SOBEL_MEAN_UPDATE_INTERVAL,
-        ),
-        "gain_num": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
-        "gain_den": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
-        "offset": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
-        "threshold_min": 0,
-        "threshold_max": threshold_max_default,
-    }
+    threshold_max = 8 * ((2**pixel_width) - 1)
+    return max(0, min(int(threshold), int(threshold_max)))
 
 
-def _sobel_expected(
-    gray_plane: np.ndarray,
-    *,
-    threshold: int,
-    mean_shift: int,
-    mean_update_interval: int,
-    gain_num: int,
-    gain_den: int,
-    offset: int,
-    threshold_min: int,
-    threshold_max: int,
-) -> np.ndarray:
-    out, _, _ = _sobel_expected_with_mean(
-        gray_plane,
-        mean_start=threshold,
-        mean_shift=mean_shift,
-        update_counter_start=0,
-        mean_update_interval=mean_update_interval,
-        gain_num=gain_num,
-        gain_den=gain_den,
-        offset=offset,
-        threshold_min=threshold_min,
-        threshold_max=threshold_max,
-    )
-    return out
-
-
-def _sobel_expected_with_mean(
-    gray_plane: np.ndarray,
-    *,
-    mean_start: int,
-    mean_shift: int,
-    update_counter_start: int = 0,
-    mean_update_interval: int,
-    gain_num: int,
-    gain_den: int,
-    offset: int,
-    threshold_min: int,
-    threshold_max: int,
-) -> tuple[np.ndarray, int, int]:
+def _sobel_expected(gray_plane: np.ndarray, *, threshold: int) -> np.ndarray:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
     out = np.zeros((height, width), dtype=np.uint8)
-    mean = _clamp(int(mean_start), 0, int(threshold_max))
-    alpha_div = 1 << int(mean_shift)
-    update_interval = max(1, int(mean_update_interval))
-    update_counter = int(update_counter_start) % update_interval
 
     for y in range(height):
         for x in range(width):
@@ -150,43 +79,9 @@ def _sobel_expected_with_mean(
             gy = (p1 + 2 * p2 + p3) - (p7 + 2 * p8 + p9)
             mag = abs(gx) + abs(gy)
 
-            adaptive_threshold = (
-                (mean * int(gain_num)) // int(gain_den)
-            ) + int(offset)
-            adaptive_threshold = _clamp(
-                adaptive_threshold,
-                int(threshold_min),
-                int(threshold_max),
-            )
+            out[y, x] = 255 if mag >= threshold else 0
 
-            out[y, x] = 255 if mag >= adaptive_threshold else 0
-
-            if update_counter == (update_interval - 1):
-                delta = mag - mean
-                step = (
-                    _trunc_div_towards_zero(delta, alpha_div)
-                    if alpha_div > 1
-                    else delta
-                )
-                mean = _clamp(mean + step, 0, int(threshold_max))
-                update_counter = 0
-            else:
-                update_counter += 1
-
-    return out, mean, update_counter
-
-
-def _adaptive_threshold_from_mean(
-    *,
-    mean: int,
-    gain_num: int,
-    gain_den: int,
-    offset: int,
-    threshold_min: int,
-    threshold_max: int,
-) -> int:
-    threshold = ((int(mean) * int(gain_num)) // int(gain_den)) + int(offset)
-    return _clamp(threshold, int(threshold_min), int(threshold_max))
+    return out
 
 
 def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
@@ -204,10 +99,70 @@ def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
     )
 
 
+async def _monitor_output_stall_stability(
+    *,
+    dut: Any,
+    i_clk: Any,
+    i_rst_n: Any,
+    m_axis_tready: Any,
+    stop: dict[str, bool],
+    stats: dict[str, int | bool],
+) -> None:
+    m_axis_tvalid = getattr(dut, f"{M_AXIS_PREFIX}_tvalid")
+    m_axis_tdata = getattr(dut, f"{M_AXIS_PREFIX}_tdata")
+    m_axis_tuser = getattr(dut, f"{M_AXIS_PREFIX}_tuser")
+    m_axis_tlast = getattr(dut, f"{M_AXIS_PREFIX}_tlast")
+
+    ready_low_run = 0
+    prev_stall_payload: tuple[int, int, int] | None = None
+
+    while not stop["done"]:
+        await FallingEdge(i_clk)
+        await ReadOnly()
+
+        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+            ready_low_run = 0
+            prev_stall_payload = None
+            await RisingEdge(i_clk)
+            continue
+
+        valid = int(m_axis_tvalid.value)
+        ready = int(m_axis_tready.value)
+
+        if ready == 0:
+            ready_low_run += 1
+            stats["max_ready_low_run"] = max(
+                int(stats["max_ready_low_run"]),
+                ready_low_run,
+            )
+        else:
+            ready_low_run = 0
+
+        if valid == 1 and ready == 0:
+            stats["saw_stall"] = True
+            payload = (
+                int(m_axis_tdata.value),
+                int(m_axis_tuser.value),
+                int(m_axis_tlast.value),
+            )
+            if prev_stall_payload is not None:
+                assert payload == prev_stall_payload, (
+                    "Output payload changed while stalled (VALID=1, READY=0). "
+                    f"prev={prev_stall_payload}, now={payload}"
+                )
+            prev_stall_payload = payload
+        else:
+            prev_stall_payload = None
+
+        await RisingEdge(i_clk)
+
+
 async def run_sobel_case(
-    dut,
+    dut: Any,
     gray_plane: np.ndarray,
+    *,
     output_path: Path | None = None,
+    with_backpressure: bool = False,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
@@ -245,39 +200,60 @@ async def run_sobel_case(
     )
     m_axis_tready.value = 1
 
-    model = _resolve_sobel_model_params(dut)
-    expected = _sobel_expected(
-        gray_plane,
-        threshold=model["threshold"],
-        mean_shift=model["mean_shift"],
-        mean_update_interval=model["mean_update_interval"],
-        gain_num=model["gain_num"],
-        gain_den=model["gain_den"],
-        offset=model["offset"],
-        threshold_min=model["threshold_min"],
-        threshold_max=model["threshold_max"],
-    )
-    await source.send_gray_image(gray_plane)
+    monitor_task = None
+    monitor_stop = {"done": False}
+    monitor_stats: dict[str, int | bool] = {"saw_stall": False, "max_ready_low_run": 0}
 
-    height, width = gray_plane.shape
-    timeout_ns = max(200_000, width * height * 60)
-    received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
-    _assert_plane_equal(expected, received)
+    if with_backpressure:
+        sink.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1)))
+        monitor_task = cocotb.start_soon(
+            _monitor_output_stall_stability(
+                dut=dut,
+                i_clk=i_clk,
+                i_rst_n=i_rst_n,
+                m_axis_tready=m_axis_tready,
+                stop=monitor_stop,
+                stats=monitor_stats,
+            ),
+        )
 
-    if output_path is not None:
-        rgb = np.stack((received, received, received), axis=2)
-        Image(rgb).to_png(output_path)
+    try:
+        expected = _sobel_expected(gray_plane, threshold=_resolve_threshold(dut))
+        await source.send_gray_image(gray_plane)
+
+        height, width = gray_plane.shape
+        timeout_ns = max(200_000, width * height * 60)
+        received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+        _assert_plane_equal(expected, received)
+
+        if output_path is not None:
+            rgb = np.stack((received, received, received), axis=2)
+            Image(rgb).to_png(output_path)
+    finally:
+        if monitor_task is not None:
+            monitor_stop["done"] = True
+            await RisingEdge(i_clk)
+            monitor_task.cancel()
+
+    if with_backpressure:
+        assert bool(monitor_stats["saw_stall"]), (
+            "Expected at least one VALID=1, READY=0 stall cycle."
+        )
+        assert int(monitor_stats["max_ready_low_run"]) >= 1, (
+            "Backpressure READY-low run too short: "
+            f"observed={int(monitor_stats['max_ready_low_run'])}"
+        )
 
 
 @cocotb.test()
-async def test_axi_sobel_filter_gradient_gray_windows(dut) -> None:
+async def test_axi_sobel_filter_gradient_gray_windows(dut: Any) -> None:
     image = Image.gradient_gray(width=5, height=5)
     gray = image.pixels[:, :, 0]
     await run_sobel_case(dut, gray)
 
 
 @cocotb.test(timeout_time=120, timeout_unit="ms")
-async def test_axi_sobel_filter_lenna_end_to_end(dut) -> None:
+async def test_axi_sobel_filter_lenna_end_to_end(dut: Any) -> None:
     input_path = TESTBENCH_ROOT / "images" / "lenna_512_512.png"
     output_path = _sim_artifact_dir() / "lenna_512_512_out_sobel.png"
 
@@ -286,117 +262,8 @@ async def test_axi_sobel_filter_lenna_end_to_end(dut) -> None:
     await run_sobel_case(dut, gray, output_path=output_path)
 
 
-@cocotb.test(timeout_time=400, timeout_unit="ms")
-async def test_axi_sobel_filter_lenna_adaptive_10_iterations(dut) -> None:
-    input_path = TESTBENCH_ROOT / "images" / "lenna_512_512.png"
-    output_dir = _sim_artifact_dir()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    image = Image.from_png(input_path)
-    gray = _gray_from_rgb(image)
-    height, width = gray.shape
-
-    i_clk = getattr(dut, ACLK_SIGNAL)
-    i_rst_n = getattr(dut, ARESETN_SIGNAL)
-    m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
-
-    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
-    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
-    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
-    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
-    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
-    m_axis_tready.value = 0
-
-    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
-    await apply_reset(
-        dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_rst_n,
-        stream_input_prefix=S_AXIS_PREFIX,
-        reset_active_level=RESET_ACTIVE_LEVEL,
-    )
-
-    source = AxiWindowGraySource(
-        dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_rst_n,
-        prefix=S_AXIS_PREFIX,
-        reset_active_level=RESET_ACTIVE_LEVEL,
-    )
-    sink = AxiGrayStreamSink(
-        dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_rst_n,
-        prefix=M_AXIS_PREFIX,
-        reset_active_level=RESET_ACTIVE_LEVEL,
-    )
-    m_axis_tready.value = 1
-
-    model = _resolve_sobel_model_params(dut)
-    mean_model = model["threshold"]
-    update_counter_model = 0
-    timeout_ns = max(250_000, width * height * 60)
-    dut._log.info(
-        "Adaptive Sobel model params: threshold_init=%d, mean_shift=%d, update_interval=%d, gain=%d/%d, offset=%d, clamp=[%d,%d]",
-        model["threshold"],
-        model["mean_shift"],
-        model["mean_update_interval"],
-        model["gain_num"],
-        model["gain_den"],
-        model["offset"],
-        model["threshold_min"],
-        model["threshold_max"],
-    )
-
-    for iteration in range(3):
-        mean_start = mean_model
-        threshold_start = _adaptive_threshold_from_mean(
-            mean=mean_start,
-            gain_num=model["gain_num"],
-            gain_den=model["gain_den"],
-            offset=model["offset"],
-            threshold_min=model["threshold_min"],
-            threshold_max=model["threshold_max"],
-        )
-        expected, mean_model, update_counter_model = _sobel_expected_with_mean(
-            gray,
-            mean_start=mean_start,
-            mean_shift=model["mean_shift"],
-            update_counter_start=update_counter_model,
-            mean_update_interval=model["mean_update_interval"],
-            gain_num=model["gain_num"],
-            gain_den=model["gain_den"],
-            offset=model["offset"],
-            threshold_min=model["threshold_min"],
-            threshold_max=model["threshold_max"],
-        )
-        threshold_end = _adaptive_threshold_from_mean(
-            mean=mean_model,
-            gain_num=model["gain_num"],
-            gain_den=model["gain_den"],
-            offset=model["offset"],
-            threshold_min=model["threshold_min"],
-            threshold_max=model["threshold_max"],
-        )
-        await source.send_gray_image(gray)
-        received = await sink.recv_plane(
-            width=width,
-            height=height,
-            timeout_ns=timeout_ns,
-        )
-        _assert_plane_equal(expected, received)
-
-        rgb = np.stack((received, received, received), axis=2)
-        output_path = output_dir / f"lenna_512_512_out_sobel_iter_{iteration:02d}.png"
-        Image(rgb).to_png(output_path)
-        dut._log.info(
-            "Adaptive Sobel iteration %d/10 saved to %s (nonzero=%d, mean_start=%d, threshold_start=%d, mean_end=%d, threshold_end=%d, update_counter_end=%d)",
-            iteration + 1,
-            output_path,
-            int(np.count_nonzero(received)),
-            mean_start,
-            threshold_start,
-            mean_model,
-            threshold_end,
-            update_counter_model,
-        )
+@cocotb.test(timeout_time=120, timeout_unit="ms")
+async def test_axi_sobel_filter_gradient_with_backpressure(dut: Any) -> None:
+    image = Image.gradient_gray(width=64, height=64)
+    gray = image.pixels[:, :, 0]
+    await run_sobel_case(dut, gray, with_backpressure=True)

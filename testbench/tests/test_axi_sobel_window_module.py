@@ -8,18 +8,19 @@ from pathlib import Path
 import cocotb
 import numpy as np
 from cocotb.clock import Clock
+from cocotb.triggers import FallingEdge, ReadOnly, RisingEdge
 
+from common.pause import drive_sink_pause
 from common.reset import apply_reset
 from drivers.axis_gray_source import AxiGrayStreamSource
 from models.image_model import Image
-from monitors.axis_video_sink import AxiVideoStreamSink
+from monitors.axis_gray_sink import AxiGrayStreamSink
 
 ACLK_SIGNAL = "i_aclk"
 ARESETN_SIGNAL = "i_aresetn"
 PASS_THROUGH_SIGNAL = "i_pass_through"
 S_AXIS_PREFIX = "s_axis_gray8"
-M_AXIS_PREFIX = "m_axis_rbg888"
-PIXEL_ORDER = "rbg"
+M_AXIS_PREFIX = "m_axis_gray8"
 RESET_ACTIVE_LEVEL = False
 SOBEL_THRESHOLD = 200
 SOBEL_MEAN_SHIFT = 4
@@ -83,7 +84,7 @@ def _dut_generic_int(dut, generic_name: str, default: int) -> int:
 
 def _resolve_sobel_model_params(dut) -> dict[str, int]:
     pixel_width = _dut_generic_int(dut, "G_PIXEL_WIDTH", 8)
-    threshold_max_default = 8 * ((2 ** pixel_width) - 1)
+    threshold_max_default = 8 * ((2**pixel_width) - 1)
     return {
         "threshold": _dut_generic_int(dut, "G_SOBEL_THRESHOLD", SOBEL_THRESHOLD),
         "mean_shift": _dut_generic_int(dut, "G_SOBEL_MEAN_SHIFT", SOBEL_MEAN_SHIFT),
@@ -92,9 +93,21 @@ def _resolve_sobel_model_params(dut) -> dict[str, int]:
             "G_SOBEL_MEAN_UPDATE_INTERVAL",
             SOBEL_MEAN_UPDATE_INTERVAL,
         ),
-        "gain_num": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_NUM", SOBEL_THRESHOLD_GAIN_NUM),
-        "gain_den": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_GAIN_DEN", SOBEL_THRESHOLD_GAIN_DEN),
-        "offset": _dut_generic_int(dut, "G_SOBEL_THRESHOLD_OFFSET", SOBEL_THRESHOLD_OFFSET),
+        "gain_num": _dut_generic_int(
+            dut,
+            "G_SOBEL_THRESHOLD_GAIN_NUM",
+            SOBEL_THRESHOLD_GAIN_NUM,
+        ),
+        "gain_den": _dut_generic_int(
+            dut,
+            "G_SOBEL_THRESHOLD_GAIN_DEN",
+            SOBEL_THRESHOLD_GAIN_DEN,
+        ),
+        "offset": _dut_generic_int(
+            dut,
+            "G_SOBEL_THRESHOLD_OFFSET",
+            SOBEL_THRESHOLD_OFFSET,
+        ),
         "threshold_min": 0,
         "threshold_max": threshold_max_default,
     }
@@ -110,7 +123,7 @@ def _sobel_expected(
     gain_den: int = SOBEL_THRESHOLD_GAIN_DEN,
     offset: int = SOBEL_THRESHOLD_OFFSET,
     threshold_min: int = 0,
-    threshold_max: int = (8 * ((2 ** 8) - 1)),
+    threshold_max: int = (8 * ((2**8) - 1)),
 ) -> np.ndarray:
     height, width = gray_plane.shape
     padded = np.pad(gray_plane.astype(np.int16), ((1, 1), (1, 1)), mode="constant")
@@ -136,9 +149,7 @@ def _sobel_expected(
             gy = (p1 + 2 * p2 + p3) - (p7 + 2 * p8 + p9)
             mag = abs(gx) + abs(gy)
 
-            adaptive_threshold = (
-                (mean * int(gain_num)) // gain_den_safe
-            ) + int(offset)
+            adaptive_threshold = ((mean * int(gain_num)) // gain_den_safe) + int(offset)
             adaptive_threshold = _clamp(
                 adaptive_threshold,
                 int(threshold_min),
@@ -177,19 +188,59 @@ def _assert_plane_equal(expected: np.ndarray, received: np.ndarray) -> None:
     )
 
 
-def _assert_rgb_equal(expected: np.ndarray, received: np.ndarray) -> None:
-    if expected.shape != received.shape:
-        raise AssertionError(
-            f"Shape mismatch: expected={expected.shape}, received={received.shape}",
-        )
-    if np.array_equal(expected, received):
-        return
+async def _monitor_output_stall_stability(
+    *,
+    dut,
+    i_clk,
+    i_rst_n,
+    m_axis_tready,
+    stop: dict[str, bool],
+    stats: dict[str, int | bool],
+) -> None:
+    m_axis_tvalid = getattr(dut, f"{M_AXIS_PREFIX}_tvalid")
+    m_axis_tdata = getattr(dut, f"{M_AXIS_PREFIX}_tdata")
+    m_axis_tuser = getattr(dut, f"{M_AXIS_PREFIX}_tuser")
+    m_axis_tlast = getattr(dut, f"{M_AXIS_PREFIX}_tlast")
 
-    y, x = np.argwhere(np.any(expected != received, axis=2))[0]
-    raise AssertionError(
-        f"First mismatch at (x={int(x)}, y={int(y)}): "
-        f"expected={expected[y, x].tolist()}, received={received[y, x].tolist()}",
-    )
+    ready_low_run = 0
+    prev_stall_payload: tuple[int, int, int] | None = None
+
+    while not stop["done"]:
+        await FallingEdge(i_clk)
+        await ReadOnly()
+
+        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
+            ready_low_run = 0
+            prev_stall_payload = None
+            await RisingEdge(i_clk)
+            continue
+
+        valid = int(m_axis_tvalid.value)
+        ready = int(m_axis_tready.value)
+
+        if ready == 0:
+            ready_low_run += 1
+            stats["max_ready_low_run"] = max(int(stats["max_ready_low_run"]), ready_low_run)
+        else:
+            ready_low_run = 0
+
+        if valid == 1 and ready == 0:
+            stats["saw_stall"] = True
+            payload = (
+                int(m_axis_tdata.value),
+                int(m_axis_tuser.value),
+                int(m_axis_tlast.value),
+            )
+            if prev_stall_payload is not None:
+                assert payload == prev_stall_payload, (
+                    "Output payload changed while stalled (VALID=1, READY=0). "
+                    f"prev={prev_stall_payload}, now={payload}"
+                )
+            prev_stall_payload = payload
+        else:
+            prev_stall_payload = None
+
+        await RisingEdge(i_clk)
 
 
 async def run_wrapper_case(
@@ -197,6 +248,9 @@ async def run_wrapper_case(
     gray_plane: np.ndarray,
     pass_through: bool = False,
     output_path: Path | None = None,
+    with_backpressure: bool = False,
+    pause_pattern: tuple[int, ...] = (0, 1, 0, 1, 1, 0),
+    min_ready_low_run: int = 1,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
@@ -227,15 +281,35 @@ async def run_wrapper_case(
         prefix=S_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
     )
-    sink = AxiVideoStreamSink(
+    sink = AxiGrayStreamSink(
         dut=dut,
         i_clk=i_clk,
         i_rst_n=i_rst_n,
         prefix=M_AXIS_PREFIX,
         reset_active_level=RESET_ACTIVE_LEVEL,
-        pixel_order=PIXEL_ORDER,
     )
     m_axis_tready.value = 1
+    sink.set_pause(False)
+
+    pause_task = None
+    monitor_task = None
+    monitor_stop = {"done": False}
+    monitor_stats: dict[str, int | bool] = {"saw_stall": False, "max_ready_low_run": 0}
+
+    if with_backpressure:
+        pause_task = cocotb.start_soon(
+            drive_sink_pause(sink=sink, i_clk=i_clk, pattern=pause_pattern),
+        )
+        monitor_task = cocotb.start_soon(
+            _monitor_output_stall_stability(
+                dut=dut,
+                i_clk=i_clk,
+                i_rst_n=i_rst_n,
+                m_axis_tready=m_axis_tready,
+                stop=monitor_stop,
+                stats=monitor_stats,
+            ),
+        )
 
     if pass_through:
         expected = gray_plane
@@ -253,20 +327,38 @@ async def run_wrapper_case(
             threshold_max=model["threshold_max"],
         )
     expected_rgb = np.stack((expected, expected, expected), axis=2)
-    flush_pixels = 0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
-
-    await source.send_image(
-        _gray_plane_to_image(gray_plane),
-        tail_padding_pixels=flush_pixels,
+    flush_pixels = (
+        0 if pass_through else _warmup_beats(width=gray_plane.shape[1], wndw_size=3)
     )
 
-    height, width = gray_plane.shape
-    timeout_ns = max(500_000, width * height * 70)
-    received = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
-    _assert_rgb_equal(expected_rgb, received.pixels)
+    try:
+        await source.send_image(
+            _gray_plane_to_image(gray_plane),
+            tail_padding_pixels=flush_pixels,
+        )
 
-    if output_path is not None:
-        Image(received.pixels).to_png(output_path)
+        height, width = gray_plane.shape
+        timeout_ns = max(500_000, width * height * 70)
+        received = await sink.recv_plane(width=width, height=height, timeout_ns=timeout_ns)
+        _assert_plane_equal(expected, received)
+
+        if output_path is not None:
+            _gray_plane_to_image(received).to_png(output_path)
+    finally:
+        if pause_task is not None:
+            pause_task.cancel()
+            sink.set_pause(False)
+        if monitor_task is not None:
+            monitor_stop["done"] = True
+            await RisingEdge(i_clk)
+            monitor_task.cancel()
+
+    if with_backpressure:
+        assert bool(monitor_stats["saw_stall"]), "Expected at least one VALID=1, READY=0 stall cycle."
+        assert int(monitor_stats["max_ready_low_run"]) >= min_ready_low_run, (
+            "Backpressure READY-low run too short: "
+            f"observed={int(monitor_stats['max_ready_low_run'])}, required>={min_ready_low_run}"
+        )
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
@@ -291,3 +383,17 @@ async def test_axi_sobel_window_module_passthrough_gray(dut) -> None:
     image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray, pass_through=True)
+
+
+@cocotb.test(timeout_time=250, timeout_unit="ms")
+async def test_axi_sobel_window_module_passthrough_backpressure(dut) -> None:
+    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(
+        dut,
+        gray,
+        pass_through=True,
+        with_backpressure=True,
+        pause_pattern=(0, 1, 1, 0, 1, 0, 1),
+        min_ready_low_run=1,
+    )

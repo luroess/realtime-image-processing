@@ -46,113 +46,388 @@ sources     = ["rtl/CLICK_DETECTOR/hdl/*.vhd"]
 description = "Debounced Click Detector checks."
 toplevel    = "debouncedclickdetector"
 test_module = "tests.test_debounced_click_detector"
-sources     = [
-  "rtl/DEBOUNCER/hdl/*.vhd",
-  "rtl/CLICK_DETECTOR/hdl/*.vhd",
-]
+sources     = ["rtl/DEBOUNCER/hdl/*.vhd", "rtl/CLICK_DETECTOR/hdl/*.vhd"]
 
   [targets.test_debounced_click_detector.parameters]
   G_DEBOUNCE_NS = 100
 
 [targets.axi_sobel_filter]
 description = "AXI4-Stream Sobel edge detection checks."
-toplevel    = "axi_sobelfilter"
+toplevel = "axi_sobelfilter"
 test_module = "tests.test_axi_sobel_filter"
-sources     = [
-  "rtl/SOBEL_FILTER/sobel_core.vhd",
-  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+sources = [
+  "rtl/SOBEL_FILTER/hdl/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/hdl/axi_sobel_filter.vhd",
 ]
 
   [targets.axi_sobel_filter.parameters]
-  G_PIXEL_WIDTH = 8
-  G_SOBEL_THRESHOLD = 150
-  G_SOBEL_MEAN_SHIFT = 8
-  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
-  G_SOBEL_THRESHOLD_GAIN_NUM = 1
-  G_SOBEL_THRESHOLD_GAIN_DEN = 1
-  G_SOBEL_THRESHOLD_OFFSET = 0
+  G_PIXEL_WIDTH     = 8
+  G_SOBEL_THRESHOLD = 200
 
 [targets.axi_blurr_window_module]
 description = "AXI4-Stream internal window-generator + blurr window-module checks."
-toplevel    = "axi_blurrwindowmodule"
+toplevel = "axi_blurrwindowmodule"
 test_module = "tests.test_axi_blurr_window_module"
-waves       = false
-sources     = [
+waves = false
+sources = [
   "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
-  "rtl/BLURR_FILTER/blurr_core.vhd",
-  "rtl/BLURR_FILTER/axi_blurr_filter.vhd",
+  "rtl/BLURR_FILTER/hdl/blurr_core.vhd",
+  "rtl/BLURR_FILTER/hdl/axi_blurr_filter.vhd",
   "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
 ]
 
   [targets.axi_blurr_window_module.parameters]
-  G_PIXEL_WIDTH = 8
-  G_KERNEL_SIZE = 3
-  G_LINE_WIDTH = 512
-  G_NUM_ROW = 512
-  G_COEFF_WIDTH = 8
+  G_PIXEL_WIDTH       = 8
+  G_KERNEL_SIZE       = 3
+  G_LINE_WIDTH        = 512
+  G_NUM_ROW           = 512
+  G_COEFF_WIDTH       = 8
   G_NORMALIZE_DIVISOR = 16
-  G_BIAS = 0
+  G_BIAS              = 0
 
 [targets.axi_sobel_window_module]
 description = "AXI4-Stream internal window-generator + Sobel window-module checks."
-toplevel    = "axi_sobelwindowmodule"
+toplevel = "axi_sobelwindowmodule"
 test_module = "tests.test_axi_sobel_window_module"
-waves       = false
-sources     = [
+waves = false
+sources = [
   "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
-  "rtl/SOBEL_FILTER/sobel_core.vhd",
-  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/SOBEL_FILTER/hdl/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/hdl/axi_sobel_filter.vhd",
   "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
 ]
 
   [targets.axi_sobel_window_module.parameters]
-  G_PIXEL_WIDTH = 8
-  G_KERNEL_SIZE = 3
-  G_LINE_WIDTH = 512
-  G_NUM_ROW = 512
-  G_SOBEL_THRESHOLD = 150
-  G_SOBEL_MEAN_SHIFT = 8
-  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
-  G_SOBEL_THRESHOLD_GAIN_NUM = 1
-  G_SOBEL_THRESHOLD_GAIN_DEN = 1
-  G_SOBEL_THRESHOLD_OFFSET = 0
+  G_PIXEL_WIDTH     = 8
+  G_KERNEL_SIZE     = 3
+  G_LINE_WIDTH      = 512
+  G_NUM_ROW         = 512
+  G_SOBEL_THRESHOLD = 200
 
 [targets.axi_pipeline]
-description = "RGB-entry full pipeline (rgb->gray->blurr->sobel->overlay) with debounced click control."
-toplevel    = "axi_pipeline"
-test_module = "tests.test_axi_pipeline"
-waves       = false
-sources     = [
+toplevel = "axi_pipeline"
+sources = [
   "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
   "rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd",
   "rtl/DEBOUNCER/hdl/debouncing.vhd",
   "rtl/CLICK_DETECTOR/hdl/click_detection.vhd",
   "rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd",
   "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
-  "rtl/BLURR_FILTER/blurr_core.vhd",
-  "rtl/BLURR_FILTER/axi_blurr_filter.vhd",
+  "rtl/BLURR_FILTER/hdl/blurr_core.vhd",
+  "rtl/BLURR_FILTER/hdl/axi_blurr_filter.vhd",
   "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
-  "rtl/SOBEL_FILTER/sobel_core.vhd",
-  "rtl/SOBEL_FILTER/axi_sobel_filter.vhd",
+  "rtl/SOBEL_FILTER/hdl/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/hdl/axi_sobel_filter.vhd",
   "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_window_module.vhd",
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+  "rtl/PIPELINE/hdl/axi_pipeline.vhd",
   "rtl/EDGE_OVERLAY/hdl/edge_overlay.vhd",
   "rtl/EDGE_OVERLAY/hdl/axi_edge_overlay.vhd",
+]
+test_module = "tests.test_axi_pipeline"
+waves = false
+
+  [targets.axi_pipeline.parameters]
+
+  G_CLK_FREQ_HZ             = 100000000
+  G_DEBOUNCE_NS             = 100
+  G_PIXEL_WIDTH             = 8
+  G_LINE_WIDTH              = 512
+  G_NUM_ROW                 = 512
+  G_BLURR_KERNEL_SIZE       = 3
+  G_BLURR_COEFF_WIDTH       = 8
+  G_BLURR_NORMALIZE_DIVISOR = 16
+  G_BLURR_BIAS              = 0
+  G_SOBEL_THRESHOLD         = 200
+
+[targets.axi_pipeline_downscaled]
+description = "Downscaled real-image full pipeline overlay check with saved output image."
+toplevel = "axi_pipeline"
+test_module = "tests.test_axi_gray_blurr_sobel_overlay_pipeline_downscaled"
+waves = false
+sources = [
+  "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
+  "rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd",
+  "rtl/DEBOUNCER/hdl/debouncing.vhd",
+  "rtl/CLICK_DETECTOR/hdl/click_detection.vhd",
+  "rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd",
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/BLURR_FILTER/hdl/blurr_core.vhd",
+  "rtl/BLURR_FILTER/hdl/axi_blurr_filter.vhd",
+  "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
+  "rtl/SOBEL_FILTER/hdl/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/hdl/axi_sobel_filter.vhd",
+  "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_window_module.vhd",
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
   "rtl/PIPELINE/hdl/axi_pipeline.vhd",
 ]
 
-  [targets.axi_pipeline.parameters]
-  G_CLK_FREQ_HZ = 100000000
-  G_DEBOUNCE_NS = 100
-  G_PIXEL_WIDTH = 8
-  G_LINE_WIDTH = 512
-  G_NUM_ROW = 512
-  G_BLURR_KERNEL_SIZE = 3
-  G_BLURR_COEFF_WIDTH = 8
+[targets.axi_gray_blurr_sobel_overlay_pipeline_downscaled.parameters]
+G_CLK_FREQ_HZ             = 100000000
+G_DEBOUNCE_NS             = 100
+G_PIXEL_WIDTH             = 8
+G_LINE_WIDTH              = 64
+G_NUM_ROW                 = 64
+G_BLURR_KERNEL_SIZE       = 3
+G_BLURR_COEFF_WIDTH       = 8
+G_BLURR_NORMALIZE_DIVISOR = 16
+G_BLURR_BIAS              = 0
+G_SOBEL_THRESHOLD         = 200
+
+[targets.axi_pipeline_synth_fsm]
+description = "Synthetic minimal-frame full pipeline AXI/FSM/compositor synchronization checks."
+toplevel = "axi_pipeline"
+test_module = "tests.test_axi_pipeline_synth_fsm"
+waves = true
+sources = [
+  "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
+  "rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd",
+  "rtl/DEBOUNCER/hdl/debouncing.vhd",
+  "rtl/CLICK_DETECTOR/hdl/click_detection.vhd",
+  "rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd",
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/BLURR_FILTER/hdl/blurr_core.vhd",
+  "rtl/BLURR_FILTER/hdl/axi_blurr_filter.vhd",
+  "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
+  "rtl/SOBEL_FILTER/hdl/sobel_core.vhd",
+  "rtl/SOBEL_FILTER/hdl/axi_sobel_filter.vhd",
+  "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_window_module.vhd",
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+  "rtl/PIPELINE/hdl/axi_pipeline.vhd",
+]
+
+  [targets.axi_pipeline_synth_fsm.parameters]
+  G_CLK_FREQ_HZ             = 100000000
+  G_DEBOUNCE_NS             = 100
+  G_PIXEL_WIDTH             = 8
+  G_LINE_WIDTH              = 8
+  G_NUM_ROW                 = 8
+  G_BLURR_KERNEL_SIZE       = 3
+  G_BLURR_COEFF_WIDTH       = 8
   G_BLURR_NORMALIZE_DIVISOR = 16
-  G_BLURR_BIAS = 0
-  G_SOBEL_THRESHOLD = 150
-  G_SOBEL_MEAN_SHIFT = 8
-  G_SOBEL_MEAN_UPDATE_INTERVAL = 1
-  G_SOBEL_THRESHOLD_GAIN_NUM = 1
-  G_SOBEL_THRESHOLD_GAIN_DEN = 1
-  G_SOBEL_THRESHOLD_OFFSET = 0
+  G_BLURR_BIAS              = 0
+  G_SOBEL_THRESHOLD         = 200
+
+[targets.frame_compositor_core]
+description = "Isolated combinational checks for FrameCompositor."
+toplevel    = "framecompositor"
+test_module = "tests.test_frame_compositor_core"
+sources     = ["rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd"]
+
+[targets.shift_ram_chain]
+description = "Isolated delay checks for ShiftRamChain (with simulation c_shift_ram model)."
+toplevel = "shiftramchain"
+test_module = "tests.test_shift_ram_chain"
+waves = true
+sources = [
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+]
+
+[targets.axi_frame_compositor]
+description = "Isolated AXI wrapper checks for AXI_FrameCompositor."
+toplevel = "axi_framecompositor"
+test_module = "tests.test_axi_frame_compositor"
+waves = true
+sources = [
+  "testbench/tests/vhdl/c_shift_ram_0_model.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+  "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+]
+
+  [targets.axi_frame_compositor.parameters]
+  G_LINE_WIDTH                = 512
+  G_SOBEL_KERNEL_SIZE         = 3
+  G_BLURR_KERNEL_SIZE         = 3
+  G_SOBEL_DELAY_OVERRIDE      = 1027
+  G_BLUR_SOBEL_DELAY_OVERRIDE = 2054
+
+[targets.axi_frame_compositor_vivado_ip_questa]
+# export PATH=/home/jandu/altera/24.1std/questa_fse/bin:$PATH; rm -rf /tmp/questa_testlib && vlib /tmp/questa_testlib && echo OK
+description      = "Isolated AXI wrapper checks for AXI_FrameCompositor using generated Vivado c_shift_ram_0 (Questa only; requires encrypted IP libs and A[9:0]/Depth=1024 generation)."
+sim              = "questa"
+toplevel         = "axi_framecompositor"
+toplevel_library = "top"
+test_module      = "tests.test_axi_frame_compositor"
+waves            = true
+
+  [[targets.axi_frame_compositor_vivado_ip_questa.build_stages]]
+  name = "unisim"
+  hdl_library = "unisim"
+  build_args = ["-93"]
+  sources = [
+    "/mnt/c/Xilinx/2025.1/Vivado/data/vhdl/src/unisims/unisim_VPKG.vhd",
+    "/mnt/c/Xilinx/2025.1/Vivado/data/vhdl/src/unisims/unisim_VCOMP.vhd",
+  ]
+
+  [[targets.axi_frame_compositor_vivado_ip_questa.build_stages]]
+  name = "xbip_utils"
+  hdl_library = "xbip_utils_v3_0_14"
+  build_args = ["-93"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.ip_user_files/ipstatic/hdl/xbip_utils_v3_0_vh_rfs.vhd",
+  ]
+
+  [[targets.axi_frame_compositor_vivado_ip_questa.build_stages]]
+  name = "c_reg_fd"
+  hdl_library = "c_reg_fd_v12_0_10"
+  build_args = ["-93"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.ip_user_files/ipstatic/hdl/c_reg_fd_v12_0_vh_rfs.vhd",
+  ]
+
+  [[targets.axi_frame_compositor_vivado_ip_questa.build_stages]]
+  name = "c_shift_ram"
+  hdl_library = "c_shift_ram_v12_0_19"
+  build_args = ["-93"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.ip_user_files/ipstatic/hdl/c_shift_ram_v12_0_vh_rfs.vhd",
+  ]
+
+  [[targets.axi_frame_compositor_vivado_ip_questa.build_stages]]
+  name = "top"
+  hdl_library = "top"
+  build_args = ["-2008"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.gen/sources_1/ip/c_shift_ram_0/sim/c_shift_ram_0.vhd",
+    "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+    "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+    "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+  ]
+
+[targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa]
+description      = "Full pipeline checks using generated Vivado c_shift_ram_0 (Questa only; requires encrypted IP libs and A[9:0]/Depth=1024 generation)."
+sim              = "questa"
+toplevel         = "axi_pipeline"
+toplevel_library = "top"
+test_module      = "tests.test_axi_gray_blurr_sobel_overlay_pipeline"
+waves            = false
+
+  [[targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.build_stages]]
+  name = "unisim"
+  hdl_library = "unisim"
+  build_args = ["-93"]
+  sources = [
+    "/mnt/c/Xilinx/2025.1/Vivado/data/vhdl/src/unisims/unisim_VPKG.vhd",
+    "/mnt/c/Xilinx/2025.1/Vivado/data/vhdl/src/unisims/unisim_VCOMP.vhd",
+  ]
+
+  [[targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.build_stages]]
+  name = "xbip_utils"
+  hdl_library = "xbip_utils_v3_0_14"
+  build_args = ["-93"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.ip_user_files/ipstatic/hdl/xbip_utils_v3_0_vh_rfs.vhd",
+  ]
+
+  [[targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.build_stages]]
+  name = "c_reg_fd"
+  hdl_library = "c_reg_fd_v12_0_10"
+  build_args = ["-93"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.ip_user_files/ipstatic/hdl/c_reg_fd_v12_0_vh_rfs.vhd",
+  ]
+
+  [[targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.build_stages]]
+  name = "c_shift_ram"
+  hdl_library = "c_shift_ram_v12_0_19"
+  build_args = ["-93"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.ip_user_files/ipstatic/hdl/c_shift_ram_v12_0_vh_rfs.vhd",
+  ]
+
+  [[targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.build_stages]]
+  name = "top"
+  hdl_library = "top"
+  build_args = ["-2008"]
+  sources = [
+    "rtl/FRAME_COMPOSITOR/ip/edit_FrameCompositor.gen/sources_1/ip/c_shift_ram_0/sim/c_shift_ram_0.vhd",
+    "rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd",
+    "rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd",
+    "rtl/DEBOUNCER/hdl/debouncing.vhd",
+    "rtl/CLICK_DETECTOR/hdl/click_detection.vhd",
+    "rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd",
+    "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+    "rtl/BLURR_FILTER/hdl/blurr_core.vhd",
+    "rtl/BLURR_FILTER/hdl/axi_blurr_filter.vhd",
+    "rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd",
+    "rtl/SOBEL_FILTER/hdl/sobel_core.vhd",
+    "rtl/SOBEL_FILTER/hdl/axi_sobel_filter.vhd",
+    "rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd",
+    "rtl/FAST_FILTER/hdl/fast_core.vhd",
+    "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+    "rtl/FAST_FILTER/hdl/axi_fast_window_module.vhd",
+    "rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd",
+    "rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd",
+    "rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd",
+    "rtl/PIPELINE/hdl/axi_pipeline.vhd",
+  ]
+
+  [targets.axi_gray_blurr_sobel_overlay_pipeline_vivado_ip_questa.parameters]
+  G_CLK_FREQ_HZ             = 100000000
+  G_DEBOUNCE_NS             = 100
+  G_PIXEL_WIDTH             = 8
+  G_LINE_WIDTH              = 512
+  G_NUM_ROW                 = 512
+  G_BLURR_KERNEL_SIZE       = 3
+  G_BLURR_COEFF_WIDTH       = 8
+  G_BLURR_NORMALIZE_DIVISOR = 16
+  G_BLURR_BIAS              = 0
+  G_SOBEL_THRESHOLD         = 200
+
+[targets.axi_fast_filter]
+description = "AXI4-Stream FAST-9 filter checks (parallel core, no NMS)."
+toplevel = "axi_fastfilter"
+test_module = "tests.test_axi_fast_filter"
+sources = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+]
+
+  [targets.axi_fast_filter.parameters]
+  G_PIXEL_WIDTH    = 8
+  G_KERNEL_SIZE    = 7
+  G_LINE_WIDTH     = 128
+  G_NUM_ROW        = 128
+  G_FAST_THRESHOLD = 20
+  G_FAST_N         = 9
+
+[targets.axi_fast_window_module]
+description = "AXI4-Stream gray8 input -> internal 7x7 window-generator -> FAST-9 filter checks."
+toplevel = "axi_fastwindowmodule"
+test_module = "tests.test_axi_fast_window_module"
+waves = false
+sources = [
+  "rtl/WINDOW_GENERATOR/hdl/window_generator.vhd",
+  "rtl/FAST_FILTER/hdl/fast_core.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_filter.vhd",
+  "rtl/FAST_FILTER/hdl/axi_fast_window_module.vhd",
+]
+
+  [targets.axi_fast_window_module.parameters]
+  G_PIXEL_WIDTH    = 8
+  G_KERNEL_SIZE    = 7
+  G_LINE_WIDTH     = 128
+  G_NUM_ROW        = 128
+  G_FAST_THRESHOLD = 20
+  G_FAST_N         = 9

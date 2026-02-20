@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import shutil
 from typing import Any
 
 import tomllib
@@ -153,6 +154,88 @@ def _resolve_cli_args(config: dict[str, Any], field_name: str) -> list[str]:
     return list(raw_args)
 
 
+def _resolve_map(config: dict[str, Any], field_name: str) -> dict[str, object]:
+    raw = config.get(field_name, {})
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"'{field_name}' must be a table/map when provided.")
+    return dict(raw)
+
+
+def _resolve_hdl_library(config: dict[str, Any], field_name: str) -> str:
+    raw = config.get(field_name, "top")
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError(f"'{field_name}' must be a non-empty string when provided.")
+    return raw.strip()
+
+
+def _resolve_build_stages(repo_root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_stages = config.get("build_stages")
+    if raw_stages is None:
+        return [
+            {
+                "name": "default",
+                "hdl_library": _resolve_hdl_library(config=config, field_name="hdl_library"),
+                "sources": _collect_sources(repo_root=repo_root, config=config),
+                "build_args": _resolve_cli_args(config=config, field_name="build_args"),
+                "parameters": _resolve_map(config=config, field_name="build_parameters"),
+            }
+        ]
+
+    if not isinstance(raw_stages, list) or not raw_stages:
+        raise ValueError("'build_stages' must be a non-empty list when provided.")
+
+    stages: list[dict[str, Any]] = []
+    for idx, raw_stage in enumerate(raw_stages, start=1):
+        if not isinstance(raw_stage, dict):
+            raise ValueError(f"'build_stages[{idx}]' must be a table/map.")
+
+        sources_cfg = raw_stage.get("sources")
+        if not isinstance(sources_cfg, list) or not all(
+            isinstance(v, str) for v in sources_cfg
+        ):
+            raise ValueError(
+                f"'build_stages[{idx}].sources' must be a list of path/glob strings.",
+            )
+
+        stage_name = raw_stage.get("name")
+        if stage_name is None:
+            stage_name = f"stage_{idx}"
+        elif not isinstance(stage_name, str) or not stage_name.strip():
+            raise ValueError(f"'build_stages[{idx}].name' must be a non-empty string.")
+
+        stages.append(
+            {
+                "name": stage_name.strip(),
+                "hdl_library": _resolve_hdl_library(
+                    config=raw_stage,
+                    field_name="hdl_library",
+                ),
+                "sources": _collect_sources_from_entries(
+                    repo_root=repo_root,
+                    entries=sources_cfg,
+                ),
+                "build_args": _resolve_cli_args(
+                    config=raw_stage,
+                    field_name="build_args",
+                ),
+                "parameters": _resolve_map(
+                    config=raw_stage,
+                    field_name="build_parameters",
+                ),
+            }
+        )
+
+    return stages
+
+
+def _prepend_ghdl_std_arg(args: list[str]) -> list[str]:
+    if any(arg.startswith("--std=") for arg in args):
+        return list(args)
+    return ["--std=08", *args]
+
+
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run cocotb simulation target.")
     parser.add_argument(
@@ -165,7 +248,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _resolve_config(tb_root: Path, args: argparse.Namespace) -> dict[str, Any]:
+def _resolve_config(tb_root: Path, args: argparse.Namespace) -> list[dict[str, Any]]:
     defaults, targets = _load_targets(tb_root)
 
     if args.list_targets:
@@ -174,112 +257,138 @@ def _resolve_config(tb_root: Path, args: argparse.Namespace) -> dict[str, Any]:
             print(f"{name:28s} {description}")
         raise SystemExit(0)
 
-    target_name = args.target or defaults.get("target")
-    if not target_name:
-        target_name = "example_passthrough"
+    target_names: list[str]
+    if args.target:
+        target_names = [args.target]
+    else:
+        target_names = sorted(targets.keys())
 
-    if target_name not in targets:
-        valid = ", ".join(sorted(targets.keys()))
-        raise ValueError(f"Unknown target '{target_name}'. Valid targets: {valid}")
+    configs: list[dict[str, Any]] = []
+    for target_name in target_names:
+        if target_name not in targets:
+            valid = ", ".join(sorted(targets.keys()))
+            raise ValueError(
+                f"Unknown target '{target_name}'. Valid targets: {valid}",
+            )
 
-    config = dict(defaults)
-    config.update(targets[target_name])
-    config["target"] = target_name
+        config = dict(defaults)
+        config.update(targets[target_name])
+        config["target"] = target_name
 
-    if args.toplevel:
-        config["toplevel"] = args.toplevel
+        if args.toplevel:
+            config["toplevel"] = args.toplevel
 
-    required_keys = ("sim", "toplevel", "test_module")
-    missing = [k for k in required_keys if not config.get(k)]
-    if missing:
-        raise ValueError(
-            f"Target '{target_name}' is missing required fields: {', '.join(missing)}",
-        )
+        required_keys = ("sim", "toplevel", "test_module")
+        missing = [k for k in required_keys if not config.get(k)]
+        if missing:
+            raise ValueError(
+                f"Target '{target_name}' is missing required fields: {', '.join(missing)}",
+            )
 
-    config["waves"] = _parse_bool(config.get("waves", True))
-    return config
+        config["waves"] = _parse_bool(config.get("waves", True))
+        configs.append(config)
+
+    return configs
 
 
 def main() -> None:
     tb_root = Path(__file__).resolve().parents[1]
     repo_root = tb_root.parent
     args = _build_arg_parser().parse_args()
-    config = _resolve_config(tb_root=tb_root, args=args)
+    configs = _resolve_config(tb_root=tb_root, args=args)
 
-    sim = str(config["sim"])
-    component = str(config["component"]) if config.get("component") else None
-    toplevel = str(config["toplevel"])
-    test_module = str(config["test_module"])
-    waves = bool(config["waves"])
-    parameters_cfg = config.get("parameters", {})
-    if parameters_cfg is None:
-        parameters_cfg = {}
-    if not isinstance(parameters_cfg, dict):
-        raise ValueError("'parameters' must be a table/map in targets.toml when provided.")
-    parameters = dict(parameters_cfg)
-    build_args = _resolve_cli_args(config=config, field_name="build_args")
-    test_args = _resolve_cli_args(config=config, field_name="test_args")
+    for config in configs:
+        sim = str(config["sim"])
+        component = str(config["component"]) if config.get("component") else None
+        toplevel = str(config["toplevel"])
+        target_name = str(config["target"])
+        test_module = str(config["test_module"])
+        waves = bool(config["waves"])
+        parameters = _resolve_map(config=config, field_name="parameters")
+        test_args = _resolve_cli_args(config=config, field_name="test_args")
+        build_stages = _resolve_build_stages(repo_root=repo_root, config=config)
 
-    # Many entities in this repo use dependent generic expressions that require
-    # VHDL-2008 semantics with GHDL.
-    if sim == "ghdl":
-        if not any(arg.startswith("--std=") for arg in build_args):
-            build_args = ["--std=08", *build_args]
-        if not any(arg.startswith("--std=") for arg in test_args):
-            test_args = ["--std=08", *test_args]
-
-    sources = _collect_sources(repo_root=repo_root, config=config)
-
-    tb_name = _derive_tb_name(test_module)
-    if component:
-        build_key = component.lower()
-    else:
-        build_key = _sanitize_name(str(config["target"])).lower()
-    sim_root = tb_root / "sim_build" / tb_name / f"{build_key}_{toplevel}"
-    build_dir = sim_root / "build"
-    # GHDL resolves the work library from the current working directory.
-    # Run tests in build_dir to keep entity/config lookup consistent.
-    test_dir = build_dir if sim == "ghdl" else (sim_root / "run")
-    runner = get_runner(sim)
-
-    hdl_library = "top"
-
-    runner.build(
-        sources=sources,
-        hdl_toplevel=toplevel,
-        hdl_library=hdl_library,
-        parameters=parameters,
-        build_args=build_args,
-        build_dir=build_dir,
-        always=True,
-    )
-
-    runner.test(
-        hdl_toplevel=toplevel,
-        hdl_toplevel_library=hdl_library,
-        test_module=test_module,
-        parameters=parameters,
-        test_args=test_args,
-        build_dir=build_dir,
-        test_dir=test_dir,
-        waves=waves
-    )
-
-    if waves:
-        wave_name = None
-        public_waves_file = getattr(runner, "waves_file", None)
-        if callable(public_waves_file):
-            wave_name = public_waves_file()
+        toplevel_library_raw = config.get("toplevel_library")
+        if toplevel_library_raw is None:
+            hdl_toplevel_library = str(build_stages[-1]["hdl_library"])
+        elif not isinstance(toplevel_library_raw, str) or not toplevel_library_raw.strip():
+            raise ValueError("'toplevel_library' must be a non-empty string when provided.")
         else:
-            private_waves_file = getattr(runner, "_waves_file", None)
-            if callable(private_waves_file):
-                wave_name = private_waves_file()
-        if wave_name:
-            wave_path = test_dir / wave_name
-            if wave_path.exists():
-                print(f"Waveform generated: {wave_path}")
+            hdl_toplevel_library = toplevel_library_raw.strip()
+
+        # Many entities in this repo use dependent generic expressions that require
+        # VHDL-2008 semantics with GHDL.
+        if sim == "ghdl":
+            for stage in build_stages:
+                stage["build_args"] = _prepend_ghdl_std_arg(list(stage["build_args"]))
+            test_args = _prepend_ghdl_std_arg(test_args)
+
+        tb_name = _derive_tb_name(test_module)
+        if component:
+            build_key = component.lower()
+        else:
+            build_key = _sanitize_name(target_name).lower()
+        sim_root = tb_root / "sim_build" / tb_name / f"{build_key}_{toplevel}"
+        build_dir = sim_root / "build"
+        # GHDL library state in top-obj08.cf can retain stale entity/architecture
+        # mappings across target/source changes. Recreate the build directory for
+        # each GHDL run to avoid stale elaboration failures.
+        if sim == "ghdl":
+            shutil.rmtree(build_dir, ignore_errors=True)
+        build_dir.mkdir(parents=True, exist_ok=True)
+        # GHDL resolves the work library from the current working directory.
+        # Run tests in build_dir to keep entity/config lookup consistent.
+        test_dir = build_dir if sim == "ghdl" else (sim_root / "run")
+        runner = get_runner(sim)
+
+        print(f"=== running target '{target_name}' ({test_module}) ===")
+        for idx, stage in enumerate(build_stages, start=1):
+            stage_name = str(stage["name"])
+            stage_library = str(stage["hdl_library"])
+            stage_sources = stage["sources"]
+            stage_build_args = list(stage["build_args"])
+            stage_parameters = dict(stage["parameters"])
+            stage_toplevel = toplevel if idx == len(build_stages) else None
+            print(
+                f"  - build stage {idx}/{len(build_stages)}: "
+                f"name={stage_name}, library={stage_library}, sources={len(stage_sources)}",
+            )
+            runner.build(
+                sources=stage_sources,
+                hdl_toplevel=stage_toplevel,
+                hdl_library=stage_library,
+                parameters=stage_parameters,
+                build_args=stage_build_args,
+                build_dir=build_dir,
+                always=True,
+            )
+
+        runner.test(
+            hdl_toplevel=toplevel,
+            hdl_toplevel_library=hdl_toplevel_library,
+            test_module=test_module,
+            parameters=parameters,
+            test_args=test_args,
+            build_dir=build_dir,
+            test_dir=test_dir,
+            waves=waves,
+        )
+
+        if waves:
+            wave_name = None
+            public_waves_file = getattr(runner, "waves_file", None)
+            if callable(public_waves_file):
+                wave_name = public_waves_file()
             else:
-                print(f"Waveform expected at: {wave_path}")
+                private_waves_file = getattr(runner, "_waves_file", None)
+                if callable(private_waves_file):
+                    wave_name = private_waves_file()
+            if wave_name:
+                wave_path = test_dir / wave_name
+                if wave_path.exists():
+                    print(f"Waveform generated: {wave_path}")
+                else:
+                    print(f"Waveform expected at: {wave_path}")
 
 
 if __name__ == "__main__":

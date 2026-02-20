@@ -129,10 +129,29 @@ architecture A_Rtl of window_generator is
         v_1d_wndw_idx := (r * G_KERNEL_SIZE) + c;
         v_buf_idx := (r * G_LINE_WIDTH) + c;
 
-        v_out_top := '1' when (i_row < C_MAX_PAD and r < C_MAX_PAD) else '0'; -- out of img bounds to the top
-        v_out_bottom := '1' when (i_row >= G_NUM_ROW-C_MAX_PAD and r >= G_KERNEL_SIZE-C_MAX_PAD) else '0'; -- out of img bounds to the bottom
-        v_out_left := '1' when (i_col < C_MAX_PAD and c < C_MAX_PAD) else '0'; -- out of img bounds to the left
-        v_out_right := '1' when (i_col >= G_LINE_WIDTH-C_MAX_PAD and c >= G_KERNEL_SIZE-C_MAX_PAD) else '0'; -- out of img bounds to the right
+        if (i_row < C_MAX_PAD and r < C_MAX_PAD) then
+          v_out_top := '1'; -- out of img bounds to the top
+        else
+          v_out_top := '0';
+        end if;
+
+        if (i_row >= G_NUM_ROW-C_MAX_PAD and r >= G_KERNEL_SIZE-C_MAX_PAD) then
+          v_out_bottom := '1'; -- out of img bounds to the bottom
+        else
+          v_out_bottom := '0';
+        end if;
+
+        if (i_col < C_MAX_PAD and c < C_MAX_PAD) then
+          v_out_left := '1'; -- out of img bounds to the left
+        else
+          v_out_left := '0';
+        end if;
+
+        if (i_col >= G_LINE_WIDTH-C_MAX_PAD and c >= G_KERNEL_SIZE-C_MAX_PAD) then
+          v_out_right := '1'; -- out of img bounds to the right
+        else
+          v_out_right := '0';
+        end if;
 
         -- set window pixel value
         v_wndw(v_1d_wndw_idx) := i_buf(v_buf_idx); -- normal image pixel behavior
