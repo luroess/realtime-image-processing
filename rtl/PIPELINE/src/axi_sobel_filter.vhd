@@ -8,7 +8,7 @@ entity AXI_SobelFilter is
     -- Used for vector sizing only, Sobel computation is fixed to 3x3
     G_KERNEL_SIZE    : positive := 3;
     -- Threshold in range 0..2040 for 8-bit input
-    G_SOBEL_THRESHOLD : natural := 200
+    G_SOBEL_THRESHOLD : natural := 150
   );
   port (
     i_aclk              : in  std_logic;

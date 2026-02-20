@@ -4,7 +4,7 @@ library ieee;
 entity AXI_SobelWindowModule is
   generic (
     -- Sobel generic
-    G_SOBEL_THRESHOLD : natural := 200;
+    G_SOBEL_THRESHOLD : natural := 150;
 
     -- Internal window_generator generics
     G_PIXEL_WIDTH : positive := 8;

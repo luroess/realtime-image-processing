@@ -17,7 +17,7 @@ entity AXI_RgbGrayBlurrSobelOverlayPipeline is
     G_BLURR_NORMALIZE_DIVISOR : positive := 16;
     G_BLURR_BIAS              : integer := 0;
 
-    G_SOBEL_THRESHOLD : natural := 200;
+    G_SOBEL_THRESHOLD : natural := 150;
     G_EDGE_COLOR      : std_logic_vector(23 downto 0) := x"FF0000"
   );
   port (
