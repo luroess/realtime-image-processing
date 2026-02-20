@@ -42,8 +42,6 @@ end entity;
 
 architecture A_Rtl of AXI_SobelFilter is
   signal s_sobel_pixel : std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
-  signal s_tvalid      : std_logic;
-  signal s_sample_valid : std_logic;
   signal s_axis_window_tready_i : std_logic;
 begin
   assert G_KERNEL_SIZE = 3
@@ -66,9 +64,10 @@ begin
     port map (
       i_aclk         => i_aclk,
       i_aresetn      => i_aresetn,
-      i_sample_valid => s_sample_valid,
       i_window     => s_axis_window_tdata,
-      o_edge_pixel => s_sobel_pixel
+      o_edge_pixel => s_sobel_pixel,
+      m_window_tready => s_axis_window_tready_i,
+      s_filter_tvalid => s_axis_window_tvalid
     );
 
   -- AXI-stream passthrough timing
@@ -76,15 +75,8 @@ begin
                             m_axis_filter8_tready;
   s_axis_window_tready <= s_axis_window_tready_i;
 
-  s_tvalid <= '0' when (i_aresetn = '0') else
-              s_axis_window_tvalid;
-  m_axis_filter8_tvalid <= s_tvalid;
-  s_sample_valid <= s_axis_window_tvalid and s_axis_window_tready_i;
-
-  m_axis_filter8_tdata <= (others => '0') when (s_tvalid = '0') else
-                         s_sobel_pixel;
-  m_axis_filter8_tuser <= '0' when (s_tvalid = '0') else
-                         s_axis_window_tuser;
-  m_axis_filter8_tlast <= '0' when (s_tvalid = '0') else
-                         s_axis_window_tlast;
+  m_axis_filter8_tvalid <= s_axis_window_tvalid;
+  m_axis_filter8_tdata <= s_sobel_pixel;
+  m_axis_filter8_tuser <= s_axis_window_tuser;
+  m_axis_filter8_tlast <= s_axis_window_tlast;
 end architecture;

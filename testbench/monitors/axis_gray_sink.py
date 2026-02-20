@@ -34,6 +34,12 @@ class AxiGrayStreamSink:
                 f"Expected 1 byte lane for gray8 output, got {self._byte_lanes}",
             )
 
+    def set_pause_generator(self, generator=None) -> None:
+        self._sink.set_pause_generator(generator)
+
+    def set_pause(self, paused: bool) -> None:
+        self._sink.pause = bool(paused)
+
     async def recv_plane(self, width: int, height: int, timeout_ns: int = 100_000) -> np.ndarray:
         lines: list[list[int]] = []
 

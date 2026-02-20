@@ -25,8 +25,6 @@ entity E_SobelCore is
   port (
     i_aclk         : in  std_logic;
     i_aresetn      : in  std_logic;
-    -- Assert when this pixel is consumed (AXIS TVALID and TREADY high).
-    i_sample_valid : in  std_logic;
     -- 3x3 grayscale window: 9 bytes packed into 72-bit vector
     -- LSB is p1 and MSB is p9
     -- Visual pixel array:
@@ -34,7 +32,10 @@ entity E_SobelCore is
     -- p4 p5 p6
     -- p7 p8 p9
     i_window     : in  std_logic_vector((G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH) - 1 downto 0);
-    o_edge_pixel : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0)
+    o_edge_pixel : out std_logic_vector(G_PIXEL_WIDTH - 1 downto 0);
+    -- Input handshake from AXI_SobelFilter
+    m_window_tready : in std_logic;
+    s_filter_tvalid : in std_logic
   );
 end entity;
 
@@ -152,7 +153,7 @@ begin
       if i_aresetn /= '1' then
         s_running_mean <= C_MEAN_INIT;
         s_update_counter <= 0;
-      elsif i_sample_valid = '1' then
+      elsif (m_window_tready = '1') and (s_filter_tvalid = '1') then
         if s_update_counter = (G_SOBEL_MEAN_UPDATE_INTERVAL - 1) then
           s_update_counter <= 0;
 
