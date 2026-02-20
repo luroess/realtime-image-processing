@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import shutil
 from typing import Any
 
 import tomllib
@@ -329,6 +330,12 @@ def main() -> None:
             build_key = _sanitize_name(target_name).lower()
         sim_root = tb_root / "sim_build" / tb_name / f"{build_key}_{toplevel}"
         build_dir = sim_root / "build"
+        # GHDL library state in top-obj08.cf can retain stale entity/architecture
+        # mappings across target/source changes. Recreate the build directory for
+        # each GHDL run to avoid stale elaboration failures.
+        if sim == "ghdl":
+            shutil.rmtree(build_dir, ignore_errors=True)
+        build_dir.mkdir(parents=True, exist_ok=True)
         # GHDL resolves the work library from the current working directory.
         # Run tests in build_dir to keep entity/config lookup consistent.
         test_dir = build_dir if sim == "ghdl" else (sim_root / "run")

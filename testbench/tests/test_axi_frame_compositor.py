@@ -33,10 +33,12 @@ C_OVERLAY_SOBEL = 0b10
 C_DELAY_NONE = 0b00
 C_DELAY_SOBEL = 0b01
 C_DELAY_BLUR_SOBEL = 0b10
+C_DELAY_FAST = 0b11
 C_SOBEL_DELAY_CYCLES = 1027
 C_BLUR_SOBEL_DELAY_CYCLES = 2054
 C_SOBEL_DELAY_EFFECTIVE = 1028
 C_BLUR_SOBEL_DELAY_EFFECTIVE = 2057
+C_FAST_DELAY_EFFECTIVE = 1540
 
 
 def _make_rgb_frame(frame_idx: int) -> Image:
@@ -129,6 +131,10 @@ def _assert_image_equal(expected: Image, observed: Image, *, label: str) -> None
         f"{label}: first mismatch at (x={x}, y={y}), "
         f"expected={expected.pixels[y, x].tolist()}, observed={observed.pixels[y, x].tolist()}",
     )
+
+
+def _count_image_mismatches(expected: Image, observed: Image) -> int:
+    return int(np.count_nonzero(np.any(expected.pixels != observed.pixels, axis=2)))
 
 
 def _is_resolved(value) -> bool:
@@ -296,6 +302,97 @@ async def _send_gray_frame_with_initial_delay(
     for _ in range(delay_cycles):
         await RisingEdge(i_clk)
     await source.send_image(frame)
+
+
+async def _run_delay_alignment_trial(
+    dut,
+    *,
+    stage_sel: int,
+    gray_start_delay: int,
+    frame_w: int,
+    frame_h: int,
+    case_seed: int,
+) -> tuple[int, dict[str, int]]:
+    await _reset(dut)
+
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    dut.i_overlay_mode.value = C_OVERLAY_SOBEL
+    dut.i_overlay_zeros.value = 0
+    dut.i_base_delay_stage_sel.value = stage_sel
+
+    rgb_source = AxiVideoStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=getattr(dut, ARESETN_SIGNAL),
+        prefix=S_RGB_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+    gray_source = AxiGrayStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=getattr(dut, ARESETN_SIGNAL),
+        prefix=S_GRAY_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiVideoStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=getattr(dut, ARESETN_SIGNAL),
+        prefix=M_RGB_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+
+    # Keep RGB source continuous: gray_start_delay is specified in clock cycles
+    # and must match accepted-beat prefill in merge mode.
+    gray_source.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1)))
+    sink.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0)))
+
+    base = _make_rgb_frame_size(case_seed, width=frame_w, height=frame_h)
+    mask = _make_gray_mask_frame_size(case_seed + 97, width=frame_w, height=frame_h)
+    expected = _overlay_expected(base, mask)
+
+    mon_out = cocotb.start_soon(
+        _monitor_axis_video_handshake(
+            dut,
+            prefix=M_RGB_PREFIX,
+            width=frame_w,
+            height=frame_h,
+            frames=1,
+            check_stall_stability=True,
+            verbose=False,
+        ),
+    )
+
+    # Keep RGB stream advancing long enough for selected delay tap to prefill.
+    tx_rgb = cocotb.start_soon(
+        rgb_source.send_image(base, tail_padding_pixels=gray_start_delay + 32),
+    )
+    tx_gray = cocotb.start_soon(
+        _send_gray_frame_with_initial_delay(
+            dut,
+            gray_source,
+            mask,
+            gray_start_delay,
+        ),
+    )
+
+    observed = await sink.recv_image(
+        width=frame_w,
+        height=frame_h,
+        timeout_ns=3_000_000,
+    )
+
+    try:
+        await with_timeout(tx_rgb, 3_000_000, "ns")
+    except SimTimeoutError:
+        tx_rgb.cancel()
+    await with_timeout(tx_gray, 6_000_000, "ns")
+    out_stats = await with_timeout(mon_out, 8_000_000, "ns")
+
+    mismatch_count = _count_image_mismatches(expected, observed)
+    return mismatch_count, out_stats
 
 
 @cocotb.test(timeout_time=260, timeout_unit="ms")
@@ -654,7 +751,7 @@ async def test_axi_frame_compositor_delay_stage_sweep_with_backpressure(dut) -> 
     cases = (
         ("sobel_delay", C_DELAY_SOBEL, C_SOBEL_DELAY_EFFECTIVE),
         ("blur_sobel_delay", C_DELAY_BLUR_SOBEL, C_BLUR_SOBEL_DELAY_EFFECTIVE),
-        ("illegal_delay_sel_bypass", 0b11, 0),
+        ("fast_delay", C_DELAY_FAST, C_FAST_DELAY_EFFECTIVE),
     )
 
     for case_idx, (label, stage_sel, delay_cycles) in enumerate(cases):
@@ -754,6 +851,41 @@ async def test_axi_frame_compositor_delay_stage_sweep_with_backpressure(dut) -> 
             out_stats["accepted"],
             out_stats["stall_cycles"],
         )
+
+
+@cocotb.test(timeout_time=260, timeout_unit="ms")
+async def test_axi_frame_compositor_delay_alignment_multi_seed_backpressure(dut) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+
+    frame_w = 11
+    frame_h = 9
+    cases = (
+        ("sobel_delay", C_DELAY_SOBEL, C_SOBEL_DELAY_EFFECTIVE),
+        ("blur_sobel_delay", C_DELAY_BLUR_SOBEL, C_BLUR_SOBEL_DELAY_EFFECTIVE),
+    )
+
+    for case_idx, (label, stage_sel, expected_delay) in enumerate(cases):
+        for seed_idx in range(4):
+            mismatch_count, out_stats = await _run_delay_alignment_trial(
+                dut,
+                stage_sel=stage_sel,
+                gray_start_delay=expected_delay,
+                frame_w=frame_w,
+                frame_h=frame_h,
+                case_seed=(case_idx * 1000) + (seed_idx * 37) + 2000,
+            )
+            assert out_stats["accepted"] == frame_w * frame_h, (
+                f"{label} seed={seed_idx}: output accepted beats mismatch "
+                f"({out_stats['accepted']} != {frame_w * frame_h})"
+            )
+            assert mismatch_count == 0, (
+                f"{label} seed={seed_idx}: expected-delay alignment mismatch count is not zero "
+                f"({mismatch_count})"
+            )
+            assert out_stats["stall_cycles"] > 0, (
+                f"{label} seed={seed_idx}: trial did not exercise backpressure."
+            )
 
 
 @cocotb.test(timeout_time=220, timeout_unit="ms")

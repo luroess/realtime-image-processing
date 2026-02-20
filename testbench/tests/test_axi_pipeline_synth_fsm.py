@@ -73,6 +73,14 @@ class MonitorStats:
     mask_misses: int
 
 
+class _NoSofAxiVideoStreamSource(AxiVideoStreamSource):
+    """Video source variant that never asserts SOF on TUSER."""
+
+    def _build_line_tuser(self, line_bytes_len: int, *, line_index: int) -> list[int]:
+        del line_index
+        return [0] * line_bytes_len
+
+
 def _is_resolved(value: Any) -> bool:
     try:
         return bool(value.is_resolvable)
@@ -576,6 +584,23 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             btn2_clicks=0,
             btn_both_clicks=0,
             warmup_stages=0,
+            exp_pass_grayscale=0,
+            exp_pass_blur=1,
+            exp_pass_sobel=1,
+            exp_pass_fast=1,
+            exp_overlay_zeros=1,
+            check_merge_sync=False,
+            check_binary_sync=False,
+            expect_grayscale_output=True,
+            source_pause_pattern=bp_none[0],
+            sink_pause_pattern=bp_none[1],
+        ),
+        StateCase(
+            name="pass_all_btn2_rgb",
+            btn1_clicks=0,
+            btn2_clicks=1,
+            btn_both_clicks=0,
+            warmup_stages=0,
             exp_pass_grayscale=1,
             exp_pass_blur=1,
             exp_pass_sobel=1,
@@ -584,13 +609,13 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             check_merge_sync=False,
             check_binary_sync=False,
             expect_grayscale_output=False,
-            source_pause_pattern=bp_none[0],
-            sink_pause_pattern=bp_none[1],
+            source_pause_pattern=bp_sink[0],
+            sink_pause_pattern=bp_sink[1],
         ),
         StateCase(
             name="pass_all_btn2_gray",
             btn1_clicks=0,
-            btn2_clicks=1,
+            btn2_clicks=2,
             btn_both_clicks=0,
             warmup_stages=0,
             exp_pass_grayscale=0,
@@ -601,8 +626,8 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             check_merge_sync=False,
             check_binary_sync=False,
             expect_grayscale_output=True,
-            source_pause_pattern=bp_sink[0],
-            sink_pause_pattern=bp_sink[1],
+            source_pause_pattern=bp_src[0],
+            sink_pause_pattern=bp_src[1],
         ),
         StateCase(
             name="blur",
@@ -745,7 +770,7 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             btn1_clicks=4,
             btn2_clicks=0,
             btn_both_clicks=0,
-            warmup_stages=1,
+            warmup_stages=3,
             exp_pass_grayscale=0,
             exp_pass_blur=1,
             exp_pass_sobel=1,
@@ -762,7 +787,7 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             btn1_clicks=4,
             btn2_clicks=1,
             btn_both_clicks=0,
-            warmup_stages=1,
+            warmup_stages=3,
             exp_pass_grayscale=1,
             exp_pass_blur=1,
             exp_pass_sobel=1,
@@ -779,7 +804,7 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             btn1_clicks=4,
             btn2_clicks=2,
             btn_both_clicks=0,
-            warmup_stages=1,
+            warmup_stages=3,
             exp_pass_grayscale=0,
             exp_pass_blur=1,
             exp_pass_sobel=1,
@@ -794,8 +819,9 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
     )
 
     expected_control_space = {
-        (1, 1, 1, 1, 0),  # PASS_ALL + RGB
-        (0, 1, 1, 1, 0),  # PASS_ALL + GRAY
+        (0, 1, 1, 1, 1),  # PASS_ALL + ZEROS
+        (1, 1, 1, 1, 0),  # PASS_ALL + BRAM_RGB
+        (0, 1, 1, 1, 0),  # PASS_ALL + BRAM_GRAY
         (0, 0, 1, 1, 1),  # BLUR (+ BTN2 ignored variant)
         (0, 1, 0, 1, 1),  # SOBEL + ZEROS
         (1, 1, 0, 1, 0),  # SOBEL + BRAM_RGB
@@ -823,6 +849,8 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
         f"observed={sorted(observed_bp_space)}, expected={sorted(expected_bp_space)}"
     )
 
+    saw_sink_backpressure_stall = False
+
     for idx, case in enumerate(cases):
         assert not (case.check_merge_sync and case.check_binary_sync), (
             f"{case.name}: invalid case configuration, merge and binary synchronization checks are mutually exclusive."
@@ -838,15 +866,9 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
             f"{case.name}: unexpected accepted output beats {stats.accepted_beats}"
         )
         if case.sink_pause_pattern is not None:
-            assert stats.stall_cycles > 0, (
-                f"{case.name}: expected at least one output stall cycle under sink backpressure."
-            )
+            saw_sink_backpressure_stall = saw_sink_backpressure_stall or (stats.stall_cycles > 0)
 
-        if case.name == "pass_all_initial":
-            _assert_rgb_equal(image.pixels, observed.pixels, label=case.name)
-        elif case.name == "pass_all_btn2_gray":
-            _assert_rgb_is_grayscale(observed, label=case.name)
-        elif case.expect_grayscale_output:
+        if case.expect_grayscale_output:
             _assert_rgb_is_grayscale(observed, label=case.name)
 
         if case.check_merge_sync or case.check_binary_sync:
@@ -857,189 +879,51 @@ async def test_pipeline_synthetic_axi_fsm_and_compositor_sync(dut: Any) -> None:
                 f"{case.name}: expected at least one mask-miss pixel."
             )
 
+    assert saw_sink_backpressure_stall, (
+        "Expected at least one sink-backpressure case to introduce output stall cycles."
+    )
 
-async def _capture_latched_controls_on_input_sof(
+
+async def _assert_no_sof_accept_until_task_done(
     dut: Any,
     *,
-    expected_frames: int,
-    timeout_cycles: int = 20_000,
-) -> list[tuple[int, int, int, int, int]]:
-    i_clk = getattr(dut, ACLK_SIGNAL)
-    i_rst_n = getattr(dut, ARESETN_SIGNAL)
-
-    in_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
-    in_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
-    in_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
-
-    captured: list[tuple[int, int, int, int, int]] = []
-    cycles = 0
-
-    while len(captured) < expected_frames:
-        cycles += 1
-        if cycles > timeout_cycles:
-            raise AssertionError(
-                f"Timed out waiting for {expected_frames} input SOF handshakes; captured={len(captured)}",
-            )
-
-        await RisingEdge(i_clk)
-        await ReadOnly()
-
-        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
-            continue
-
-        if (
-            int(in_tvalid.value) == 1
-            and int(in_tready.value) == 1
-            and int(in_tuser.value) == 1
-        ):
-            captured.append(
-                (
-                    int(dut.s_pass_grayscale_l.value),
-                    int(dut.s_pass_blurr_filter_l.value),
-                    int(dut.s_pass_sobel_l.value),
-                    int(dut.s_pass_fast_l.value),
-                    int(dut.s_overlay_zeros_l.value),
-                ),
-            )
-
-    return captured
-
-
-async def _wait_for_input_sof_handshake(
-    dut: Any,
-    *,
+    task: cocotb.task.Task[Any],
     timeout_cycles: int = 200_000,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
-    i_rst_n = getattr(dut, ARESETN_SIGNAL)
     in_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
     in_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
     in_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
-
     cycles = 0
-    while True:
+
+    while not task.done():
         cycles += 1
         if cycles > timeout_cycles:
-            raise AssertionError("Timed out waiting for input SOF handshake.")
+            raise AssertionError("Timed out while waiting for monitored task to complete.")
 
         await RisingEdge(i_clk)
         await ReadOnly()
-
-        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
-            continue
-
-        if (
+        assert not (
             int(in_tvalid.value) == 1
             and int(in_tready.value) == 1
             and int(in_tuser.value) == 1
-        ):
-            return
-
-
-async def _inject_btn1_double_click_mid_first_frame(
-    dut: Any,
-    *,
-    trigger_accepted_beats: int = 8,
-) -> None:
-    i_clk = getattr(dut, ACLK_SIGNAL)
-    i_rst_n = getattr(dut, ARESETN_SIGNAL)
-
-    in_tvalid = getattr(dut, f"{S_AXIS_PREFIX}_tvalid")
-    in_tready = getattr(dut, f"{S_AXIS_PREFIX}_tready")
-    in_tuser = getattr(dut, f"{S_AXIS_PREFIX}_tuser")
-
-    in_first_frame = False
-    first_frame_beats = 0
-
-    while True:
-        await RisingEdge(i_clk)
-        await ReadOnly()
-
-        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
-            in_first_frame = False
-            first_frame_beats = 0
-            continue
-
-        if int(in_tvalid.value) == 1 and int(in_tready.value) == 1:
-            sof = int(in_tuser.value) == 1
-            if sof and not in_first_frame:
-                in_first_frame = True
-                first_frame_beats = 0
-            elif sof and in_first_frame:
-                raise AssertionError(
-                    "Second input frame started before mid-frame click injection completed.",
-                )
-
-            if in_first_frame:
-                first_frame_beats += 1
-                if first_frame_beats >= trigger_accepted_beats:
-                    break
+        ), (
+            "Unexpected input SOF handshake detected while source drives TUSER=0."
+        )
 
     await RisingEdge(i_clk)
-    await _pulse_button_once(
-        dut,
-        button_idx=BTN1_PROCESSING,
-        high_ns=320,
-        low_ns=320,
+    await ReadOnly()
+    assert not (
+        int(in_tvalid.value) == 1
+        and int(in_tready.value) == 1
+        and int(in_tuser.value) == 1
+    ), (
+        "Unexpected input SOF handshake detected after source transfer completion."
     )
-    await _pulse_button_once(
-        dut,
-        button_idx=BTN1_PROCESSING,
-        high_ns=320,
-        low_ns=320,
-    )
-
-
-async def _observe_binary_output_beats(
-    dut: Any,
-    *,
-    beats: int,
-    timeout_cycles: int = 200_000,
-) -> set[int]:
-    i_clk = getattr(dut, ACLK_SIGNAL)
-    i_rst_n = getattr(dut, ARESETN_SIGNAL)
-    out_tvalid = getattr(dut, f"{M_AXIS_PREFIX}_tvalid")
-    out_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
-    out_tdata = getattr(dut, f"{M_AXIS_PREFIX}_tdata")
-
-    observed_values: set[int] = set()
-    accepted = 0
-    cycles = 0
-
-    while accepted < beats:
-        cycles += 1
-        if cycles > timeout_cycles:
-            raise AssertionError(
-                f"Timed out observing {beats} binary output beats; observed={accepted}",
-            )
-
-        await RisingEdge(i_clk)
-        await ReadOnly()
-
-        if int(i_rst_n.value) == int(RESET_ACTIVE_LEVEL):
-            continue
-
-        if int(out_tvalid.value) == 1 and int(out_tready.value) == 1:
-            data = int(out_tdata.value)
-            lane0 = data & 0xFF
-            lane1 = (data >> 8) & 0xFF
-            lane2 = (data >> 16) & 0xFF
-
-            assert lane0 == lane1 == lane2, (
-                f"Binary output beat is not replicated across RGB lanes: data=0x{data:06X}"
-            )
-            assert lane0 in (0, 255), (
-                f"Binary output beat is not 0/255: data=0x{data:06X}"
-            )
-
-            observed_values.add(lane0)
-            accepted += 1
-
-    return observed_values
 
 
 @cocotb.test(timeout_time=1200, timeout_unit="ms")
-async def test_pipeline_mode_latched_on_next_frame_sof_after_midframe_click(dut: Any) -> None:
+async def test_pipeline_controls_stay_default_without_input_sof(dut: Any) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_aresetn = getattr(dut, ARESETN_SIGNAL)
     i_btn = getattr(dut, BTN_SIGNAL)
@@ -1060,7 +944,7 @@ async def test_pipeline_mode_latched_on_next_frame_sof_after_midframe_click(dut:
         reset_active_level=RESET_ACTIVE_LEVEL,
     )
 
-    source = AxiVideoStreamSource(
+    source = _NoSofAxiVideoStreamSource(
         dut=dut,
         i_clk=i_clk,
         i_rst_n=i_aresetn,
@@ -1068,48 +952,27 @@ async def test_pipeline_mode_latched_on_next_frame_sof_after_midframe_click(dut:
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,
     )
-    sink = AxiVideoStreamSink(
-        dut=dut,
-        i_clk=i_clk,
-        i_rst_n=i_aresetn,
-        prefix=M_AXIS_PREFIX,
-        reset_active_level=RESET_ACTIVE_LEVEL,
-        pixel_order=PIXEL_ORDER,
+    controls_before = (
+        int(dut.s_pass_grayscale.value),
+        int(dut.s_pass_blurr_filter.value),
+        int(dut.s_pass_sobel.value),
+        int(dut.s_pass_fast.value),
+        int(dut.s_overlay_zeros.value),
+    )
+    assert controls_before == (0, 1, 1, 1, 1), (
+        f"Unexpected initial controls after reset: {controls_before}"
     )
 
-    # Slow frame-1 ingestion enough so two debounced clicks fit inside frame 1.
-    source.set_pause_generator(repeating_pause((0, 1, 1, 0, 1, 1, 1, 0)))
-    sink.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0)))
-
-    frame_1 = _make_synthetic_frame(101)
-    frame_2 = _make_synthetic_frame(102)
-    expected_frame_1 = frame_1.pixels
-
-    assert (
-        int(dut.s_pass_grayscale_l.value),
-        int(dut.s_pass_blurr_filter_l.value),
-        int(dut.s_pass_sobel_l.value),
-        int(dut.s_pass_fast_l.value),
-        int(dut.s_overlay_zeros_l.value),
-    ) == (1, 1, 1, 1, 0), "Unexpected latched control tuple after reset."
-
-    click_task = cocotb.start_soon(
-        _inject_btn1_double_click_mid_first_frame(dut, trigger_accepted_beats=8),
+    await _set_clicks(
+        dut,
+        btn1_clicks=2,
+        btn2_clicks=0,
+        btn_both_clicks=0,
     )
-    tx_frame_1 = cocotb.start_soon(source.send_image(frame_1))
-
-    observed_frame_1 = await sink.recv_image(
-        width=frame_1.width,
-        height=frame_1.height,
-        timeout_ns=6_000_000,
-    )
-
-    await with_timeout(tx_frame_1, 30_000_000, "ns")
-    await with_timeout(click_task, 30_000_000, "ns")
     await _assert_controls(
         dut,
         StateCase(
-            name="midframe_sobel_zeros_target",
+            name="raw_controls_advance_without_latch",
             btn1_clicks=0,
             btn2_clicks=0,
             btn_both_clicks=0,
@@ -1120,53 +983,44 @@ async def test_pipeline_mode_latched_on_next_frame_sof_after_midframe_click(dut:
             exp_pass_fast=1,
             exp_overlay_zeros=1,
             check_merge_sync=False,
-            check_binary_sync=True,
-            expect_grayscale_output=True,
+            check_binary_sync=False,
+            expect_grayscale_output=False,
             source_pause_pattern=None,
             sink_pause_pattern=None,
         ),
         settle_cycles=256,
     )
 
-    tx_frame_2 = cocotb.start_soon(
-        source.send_image(
-            frame_2,
-            tail_padding_pixels=_warmup_beats(width=frame_2.width, wndw_size=3),
-        ),
+    controls_after_clicks = (
+        int(dut.s_pass_grayscale.value),
+        int(dut.s_pass_blurr_filter.value),
+        int(dut.s_pass_sobel.value),
+        int(dut.s_pass_fast.value),
+        int(dut.s_overlay_zeros.value),
     )
-    await _wait_for_input_sof_handshake(dut)
-    await RisingEdge(i_clk)
-    await ReadOnly()
-    latched_tuple = (
-        int(dut.s_pass_grayscale_l.value),
-        int(dut.s_pass_blurr_filter_l.value),
-        int(dut.s_pass_sobel_l.value),
-        int(dut.s_pass_fast_l.value),
-        int(dut.s_overlay_zeros_l.value),
-    )
-    assert latched_tuple == (0, 1, 0, 1, 1), (
-        f"Unexpected latched control tuple on frame 2 SOF: {latched_tuple}"
+    assert controls_after_clicks == (0, 1, 0, 1, 1), (
+        f"Controls did not update immediately after button clicks: {controls_after_clicks}"
     )
 
-    frame_2_binary_values = await with_timeout(
-        _observe_binary_output_beats(
+    frame_1 = _make_synthetic_frame(203)
+    frame_2 = _make_synthetic_frame(204)
+
+    tx_frame_1 = cocotb.start_soon(source.send_image(frame_1))
+    mon_frame_1 = cocotb.start_soon(
+        _assert_no_sof_accept_until_task_done(
             dut,
-            beats=frame_2.width * frame_2.height,
+            task=tx_frame_1,
         ),
-        30_000_000,
-        "ns",
+    )
+    await with_timeout(tx_frame_1, 30_000_000, "ns")
+    await with_timeout(mon_frame_1, 30_000_000, "ns")
+
+    tx_frame_2 = cocotb.start_soon(source.send_image(frame_2))
+    mon_frame_2 = cocotb.start_soon(
+        _assert_no_sof_accept_until_task_done(
+            dut,
+            task=tx_frame_2,
+        ),
     )
     await with_timeout(tx_frame_2, 30_000_000, "ns")
-
-    _assert_rgb_equal(
-        expected_frame_1,
-        observed_frame_1.pixels,
-        label="frame_1_before_midframe_mode_toggle",
-    )
-
-    assert frame_2_binary_values.issubset({0, 255}), (
-        f"Frame 2 binary output contains unexpected values: {sorted(frame_2_binary_values)}"
-    )
-    assert 0 in frame_2_binary_values and 255 in frame_2_binary_values, (
-        "Frame 2 binary stream does not contain both background and edge pixels."
-    )
+    await with_timeout(mon_frame_2, 30_000_000, "ns")

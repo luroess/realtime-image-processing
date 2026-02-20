@@ -55,7 +55,10 @@ class AxiVideoStreamSink:
         byte_lanes: int,
         pixel_order: Literal["rgb", "rbg"],
     ) -> list[tuple[int, int, int]]:
-        data = bytes(frame.tdata)
+        if isinstance(frame, (bytes, bytearray)):
+            data = bytes(frame)
+        else:
+            data = bytes(frame.tdata)
         if byte_lanes != 3:
             raise AssertionError(
                 "AxiVideoStreamSink currently supports packed RGB24 only (3 byte lanes); "
@@ -84,6 +87,25 @@ class AxiVideoStreamSink:
             pixels.append((r, g, b))
 
         return pixels
+
+    @staticmethod
+    def _first_sof_byte(frame) -> int | None:
+        """Return byte index of first asserted TUSER byte, or None if absent."""
+        tuser = getattr(frame, "tuser", None)
+        if tuser is None:
+            return None
+
+        if isinstance(tuser, int):
+            return 0 if int(tuser) != 0 else None
+
+        try:
+            for idx, value in enumerate(tuser):
+                if int(value) != 0:
+                    return idx
+        except TypeError:
+            return 0 if int(tuser) != 0 else None
+
+        return None
 
     @staticmethod
     def _decode_gray8_line(
@@ -166,6 +188,8 @@ class AxiVideoStreamSink:
         width: int,
         height: int,
         timeout_ns: int = 100_000,
+        *,
+        align_on_sof: bool = False,
         frame_type: Literal[
             "rgb888",
             "gray8",
@@ -177,18 +201,29 @@ class AxiVideoStreamSink:
         lines: list[list[tuple[int, int, int]] | list[int]] = []
 
         try:
-            for y in range(height):
+            while len(lines) < height:
                 frame = await with_timeout(
                     self._sink.recv(compact=False),
                     timeout_ns,
                     "ns",
                 )
+                frame_for_decode = frame
+
+                if frame_type == "rgb888" and align_on_sof and not lines:
+                    tuser_field = getattr(frame, "tuser", None)
+                    sof_idx = AxiVideoStreamSink._first_sof_byte(frame)
+                    if (sof_idx is None) and (tuser_field is not None):
+                        # Drop inter-frame residue until a packet carrying SOF arrives.
+                        continue
+                    if sof_idx > 0:
+                        frame_for_decode = bytes(frame.tdata)[sof_idx:]
+
                 pixels = self._decode_line(
-                    frame=frame,
+                    frame=frame_for_decode,
                     width=width,
                     byte_lanes=self._byte_lanes,
                     frame_type=frame_type,
-                    line_index=y,
+                    line_index=len(lines),
                 )
 
                 lines.append(pixels)

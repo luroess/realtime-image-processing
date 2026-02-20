@@ -233,7 +233,8 @@ async def test_pipeline_full_chain_state_progression(dut) -> None:
         warmup_stages=0,
     )
     dut._log.info("Pipeline state progression: passthrough case completed")
-    _assert_rgb_equal(image.pixels, passthrough.pixels, label="passthrough state")
+    gray_expected = _rgb_from_gray(_gray_from_rgb(image))
+    _assert_rgb_equal(gray_expected, passthrough.pixels, label="passthrough state")
 
     dut._log.info("Pipeline state progression: starting grayscale case")
     grayscale = await _run_pipeline_case(

@@ -18,8 +18,6 @@ entity AXI_Pipeline is
     G_BLURR_BIAS              : integer                       := 0;
 
     G_SOBEL_THRESHOLD         : natural                       := 200;
-    -- true: include FAST stage, false: disable FAST and fall back to Sobel-only flow.
-    G_ENABLE_FAST             : boolean                       := false;
     G_FAST_THRESHOLD          : natural                       := 20;
     G_FAST_N                  : positive                      := 9;
     G_EDGE_COLOR              : std_logic_vector(23 downto 0) := x"FF0000"
@@ -56,17 +54,14 @@ end entity;
 
 architecture A_RtlStruct of AXI_Pipeline is
   constant C_OVERLAY_NONE  : std_logic_vector(1 downto 0) := "00";
-  constant C_OVERLAY_FAST  : std_logic_vector(1 downto 0) := "01";
   constant C_OVERLAY_SOBEL : std_logic_vector(1 downto 0) := "10";
 
   constant C_DELAY_SEL_NONE       : std_logic_vector(1 downto 0) := "00";
   constant C_DELAY_SEL_SOBEL      : std_logic_vector(1 downto 0) := "01";
   constant C_DELAY_SEL_BLUR_SOBEL : std_logic_vector(1 downto 0) := "10";
-  constant C_DELAY_SEL_FAST       : std_logic_vector(1 downto 0) := "11";
 
   constant C_SOBEL_KERNEL_SIZE : positive := 3;
   constant C_FAST_KERNEL_SIZE  : positive := 7;
-  constant C_FAST_ENABLED      : boolean  := G_ENABLE_FAST;
 
   signal s_pass_grayscale    : std_logic := '1';
   signal s_pass_blurr_filter : std_logic := '1';
@@ -80,7 +75,6 @@ architecture A_RtlStruct of AXI_Pipeline is
   signal s_pass_grayscale_l    : std_logic := '0';
   signal s_pass_blurr_filter_l : std_logic := '1';
   signal s_pass_sobel_l        : std_logic := '1';
-  signal s_pass_sobel_eff_l    : std_logic := '1';
   signal s_pass_fast_l         : std_logic := '1';
   signal s_overlay_zeros_l     : std_logic := '1';
   signal s_input_sof_accept    : std_logic := '0';
@@ -203,24 +197,18 @@ begin
     end if;
   end process;
 
-  -- When FAST is disabled, FAST state falls back to Sobel behavior.
-  s_pass_sobel_eff_l <= '0' when ((not C_FAST_ENABLED) and (s_pass_fast_l = '0')) else
-                        s_pass_sobel_l;
-
-  -- Sobel wrapper is active only in Sobel processing states.
-  s_sobel_pass_through <= s_pass_sobel_eff_l;
+  -- FAST selection aliases to Sobel behavior in this pipeline variant.
+  s_sobel_pass_through <= '0' when (s_pass_fast_l = '0') else
+                          s_pass_sobel_l;
 
   -- Overlay family selection is centralized here so downstream routing and
   -- AXI_FrameCompositor control stay in one place.
-  s_fc_overlay_mode <= C_OVERLAY_FAST  when (C_FAST_ENABLED and (s_pass_fast_l = '0')) else
-                       C_OVERLAY_SOBEL when (s_pass_sobel_eff_l = '0') else
+  s_fc_overlay_mode <= C_OVERLAY_SOBEL when (s_sobel_pass_through = '0') else
                        C_OVERLAY_NONE;
 
   -- Select compositor RGB delay tap according to active mask path latency.
-  -- SOBEL uses 3x3 delay, BLUR+SOBEL uses combined blur+sobel delay,
-  -- FAST uses dedicated 7x7 delay.
-  s_fc_delay_stage_sel <= C_DELAY_SEL_BLUR_SOBEL when (s_pass_blurr_filter_l = '0' and s_pass_sobel_eff_l = '0') else
-                          C_DELAY_SEL_FAST       when (C_FAST_ENABLED and s_pass_blurr_filter_l = '1' and s_pass_sobel_l = '1' and s_pass_fast_l = '0') else
+  -- SOBEL uses 3x3 delay and BLUR+SOBEL uses combined blur+sobel delay.
+  s_fc_delay_stage_sel <= C_DELAY_SEL_BLUR_SOBEL when (s_pass_blurr_filter_l = '0' and s_sobel_pass_through = '0') else
                           C_DELAY_SEL_SOBEL      when (s_fc_overlay_mode = C_OVERLAY_SOBEL) else
                           C_DELAY_SEL_NONE;
 
@@ -313,42 +301,12 @@ begin
       m_axis_gray8_tlast  => s_sobel_tlast
     );
 
-  G_FAST_ENABLED_PIPE: if C_FAST_ENABLED generate
-  begin
-    U_AxiFastWindowModule: entity work.AXI_FastWindowModule
-      generic map (
-        G_FAST_THRESHOLD => G_FAST_THRESHOLD,
-        G_FAST_N         => G_FAST_N,
-        G_PIXEL_WIDTH    => G_PIXEL_WIDTH,
-        G_KERNEL_SIZE    => C_FAST_KERNEL_SIZE,
-        G_LINE_WIDTH     => G_LINE_WIDTH,
-        G_NUM_ROW        => G_NUM_ROW
-      )
-      port map (
-        i_aclk                => i_aclk,
-        i_aresetn             => i_aresetn,
-        i_pass_through        => s_pass_fast_l,
-        s_axis_gray8_tvalid   => s_sobel_tvalid,
-        s_axis_gray8_tready   => s_sobel_tready,
-        s_axis_gray8_tdata    => s_sobel_tdata,
-        s_axis_gray8_tuser    => s_sobel_tuser,
-        s_axis_gray8_tlast    => s_sobel_tlast,
-        m_axis_filter8_tvalid => s_fast_tvalid,
-        m_axis_filter8_tready => s_fast_tready,
-        m_axis_filter8_tdata  => s_fast_tdata,
-        m_axis_filter8_tuser  => s_fast_tuser,
-        m_axis_filter8_tlast  => s_fast_tlast
-      );
-  end generate;
-
-  G_FAST_DISABLED_PIPE: if not C_FAST_ENABLED generate
-  begin
-    s_fast_tvalid  <= s_sobel_tvalid;
-    s_fast_tdata   <= s_sobel_tdata;
-    s_fast_tuser   <= s_sobel_tuser;
-    s_fast_tlast   <= s_sobel_tlast;
-    s_sobel_tready <= s_fast_tready;
-  end generate;
+  -- FAST stage removed: Sobel stream directly feeds downstream mask path.
+  s_fast_tvalid  <= s_sobel_tvalid;
+  s_fast_tdata   <= s_sobel_tdata;
+  s_fast_tuser   <= s_sobel_tuser;
+  s_fast_tlast   <= s_sobel_tlast;
+  s_sobel_tready <= s_fast_tready;
 
   -- Feed FrameCompositor only while overlay mode is active.
   -- Outside overlay mode the compositor channels are held idle.
@@ -378,14 +336,14 @@ begin
   -- mask timing stream and emits RGB24 with gray-derived SOF/EOL.
   U_AxiFrameCompositor: entity work.AXI_FrameCompositor
     generic map (
-      G_COMPONENT_WIDTH   => G_PIXEL_WIDTH,
-      G_SOBEL_COLOR       => G_EDGE_COLOR,
-      G_FAST_COLOR        => x"0000FF",
-      G_LINE_WIDTH        => G_LINE_WIDTH,
-      G_SOBEL_KERNEL_SIZE => C_SOBEL_KERNEL_SIZE,
-      G_FAST_KERNEL_SIZE  => C_FAST_KERNEL_SIZE,
-      G_ENABLE_FAST       => C_FAST_ENABLED,
-      G_BLURR_KERNEL_SIZE => G_BLURR_KERNEL_SIZE
+      G_PIXEL_WIDTH,
+      G_EDGE_COLOR,
+      x"0000FF",
+      G_LINE_WIDTH,
+      C_SOBEL_KERNEL_SIZE,
+      C_FAST_KERNEL_SIZE,
+      false,
+      G_BLURR_KERNEL_SIZE
     )
     port map (
       i_aclk                     => i_aclk,
