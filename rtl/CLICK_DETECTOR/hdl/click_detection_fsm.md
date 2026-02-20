@@ -29,7 +29,7 @@ Transition condition in all states: rising edge (`i_btn2_debounced='1' and s_btn
 
 - `i_rst_n='0'` sets:
   - processing FSM to `ST_PASS_ALL`
-  - base FSM to `ST_ZEROS`
+  - base FSM to `ST_RGB`
   - edge-detect registers `s_btn1_prev='0'`, `s_btn2_prev='0'`
 
 ## Unit Tests

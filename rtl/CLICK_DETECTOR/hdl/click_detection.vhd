@@ -47,7 +47,7 @@ begin
     if rising_edge(i_clk) then
       if i_rst_n /= '1' then
         s_current_state <= ST_PASS_ALL;
-        s_base_current_state <= ST_ZEROS;
+        s_base_current_state <= ST_RGB;
         s_btn1_prev <= '0';
         s_btn2_prev <= '0';
       else

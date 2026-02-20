@@ -30,15 +30,6 @@ async def test_frame_compositor_all_input_combinations(dut) -> None:
                 edge_mask=edge_mask,
             )
 
-            dut._log.info(
-                "core case=%d base=0x%06X edge=%d -> out=0x%06X expected=0x%06X",
-                case_count,
-                base_rgb,
-                edge_mask,
-                observed,
-                expected,
-            )
-
             assert observed == expected, (
                 f"Mismatch at case={case_count}: "
                 f"base=0x{base_rgb:06X}, edge={edge_mask}, "
