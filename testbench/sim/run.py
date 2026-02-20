@@ -220,14 +220,6 @@ def main() -> None:
     build_args = _resolve_cli_args(config=config, field_name="build_args")
     test_args = _resolve_cli_args(config=config, field_name="test_args")
 
-    # Many entities in this repo use dependent generic expressions that require
-    # VHDL-2008 semantics with GHDL.
-    if sim == "ghdl":
-        if not any(arg.startswith("--std=") for arg in build_args):
-            build_args = ["--std=08", *build_args]
-        if not any(arg.startswith("--std=") for arg in test_args):
-            test_args = ["--std=08", *test_args]
-
     sources = _collect_sources(repo_root=repo_root, config=config)
 
     tb_name = _derive_tb_name(test_module)

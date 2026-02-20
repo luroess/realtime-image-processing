@@ -9,6 +9,7 @@ import cocotb
 import numpy as np
 from cocotb.clock import Clock
 
+from common.pause import repeating_pause
 from common.reset import apply_reset
 from drivers.axis_gray_source import AxiGrayStreamSource
 from models.image_model import Image
@@ -79,6 +80,12 @@ def _dut_generic_int(dut, generic_name: str, default: int) -> int:
         return int(handle.value)
     except Exception:
         return int(default)
+
+
+def _frame_shape_from_dut(dut) -> tuple[int, int]:
+    width = _dut_generic_int(dut, "G_LINE_WIDTH", FRAME_WIDTH)
+    height = _dut_generic_int(dut, "G_NUM_ROW", FRAME_HEIGHT)
+    return int(width), int(height)
 
 
 def _resolve_sobel_model_params(dut) -> dict[str, int]:
@@ -197,6 +204,8 @@ async def run_wrapper_case(
     gray_plane: np.ndarray,
     pass_through: bool = False,
     output_path: Path | None = None,
+    source_pause_pattern: tuple[int, ...] | None = None,
+    sink_pause_pattern: tuple[int, ...] | None = None,
 ) -> None:
     i_clk = getattr(dut, ACLK_SIGNAL)
     i_rst_n = getattr(dut, ARESETN_SIGNAL)
@@ -235,6 +244,12 @@ async def run_wrapper_case(
         reset_active_level=RESET_ACTIVE_LEVEL,
         pixel_order=PIXEL_ORDER,
     )
+
+    if source_pause_pattern is not None:
+        source.set_pause_generator(repeating_pause(source_pause_pattern))
+    if sink_pause_pattern is not None:
+        sink.set_pause_generator(repeating_pause(sink_pause_pattern))
+
     m_axis_tready.value = 1
 
     if pass_through:
@@ -261,7 +276,7 @@ async def run_wrapper_case(
     )
 
     height, width = gray_plane.shape
-    timeout_ns = max(500_000, width * height * 70)
+    timeout_ns = max(10_000_000, width * height * 250)
     received = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
     _assert_rgb_equal(expected_rgb, received.pixels)
 
@@ -271,7 +286,8 @@ async def run_wrapper_case(
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
 async def test_axi_sobel_window_module_simple_image(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray)
 
@@ -282,12 +298,201 @@ async def test_axi_sobel_window_module_lenna_end_to_end(dut) -> None:
     output_path = _sim_artifact_dir() / "lenna_512_512_out_window_module_sobel.png"
 
     image = Image.from_png(input_path)
+    width, height = _frame_shape_from_dut(dut)
+    if image.width < width or image.height < height:
+        raise AssertionError(
+            f"Input image too small for configured frame ({width}, {height}), "
+            f"got ({image.width}, {image.height})",
+        )
+    if image.width != width or image.height != height:
+        image = Image(image.pixels[:height, :width, :])
     gray = _gray_from_rgb(image)
     await run_wrapper_case(dut, gray, output_path=output_path)
 
 
 @cocotb.test(timeout_time=150, timeout_unit="ms")
 async def test_axi_sobel_window_module_passthrough_gray(dut) -> None:
-    image = Image.gradient_gray(width=FRAME_WIDTH, height=FRAME_HEIGHT)
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
     gray = image.pixels[:, :, 0]
     await run_wrapper_case(dut, gray, pass_through=True)
+
+
+@cocotb.test(timeout_time=700, timeout_unit="ms")
+async def test_axi_sobel_window_module_backpressure_filter_mode(dut) -> None:
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(
+        dut,
+        gray,
+        pass_through=False,
+        source_pause_pattern=(0, 1, 0, 0, 1, 0, 1, 0),
+        sink_pause_pattern=(0, 0, 1, 0, 1, 0, 0),
+    )
+
+
+@cocotb.test(timeout_time=700, timeout_unit="ms")
+async def test_axi_sobel_window_module_backpressure_passthrough_mode(dut) -> None:
+    width, height = _frame_shape_from_dut(dut)
+    image = Image.gradient_gray(width=width, height=height)
+    gray = image.pixels[:, :, 0]
+    await run_wrapper_case(
+        dut,
+        gray,
+        pass_through=True,
+        source_pause_pattern=(0, 1, 0, 0, 1, 0, 1, 0),
+        sink_pause_pattern=(0, 0, 1, 0, 1, 0, 0),
+    )
+
+
+@cocotb.test(timeout_time=900, timeout_unit="ms")
+async def test_axi_sobel_window_module_backpressure_mode_switch_passthrough_to_filter(dut) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    i_pass_through = getattr(dut, PASS_THROUGH_SIGNAL)
+    m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
+
+    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    i_pass_through.value = 1
+    m_axis_tready.value = 0
+
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    await apply_reset(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        stream_input_prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+
+    source = AxiGrayStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiVideoStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+    source.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0)))
+    sink.set_pause_generator(repeating_pause((0, 0, 1, 0, 1, 0, 0)))
+    m_axis_tready.value = 1
+
+    width, height = _frame_shape_from_dut(dut)
+    frame0 = Image.gradient_gray(width=width, height=height).pixels[:, :, 0]
+    frame1 = np.roll(frame0, shift=11, axis=1)
+    timeout_ns = max(12_000_000, width * height * 300)
+
+    # Frame 0: pass-through under pressure.
+    i_pass_through.value = 1
+    await source.send_image(_gray_plane_to_image(frame0), tail_padding_pixels=0)
+    received0 = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
+    expected0_rgb = np.stack((frame0, frame0, frame0), axis=2)
+    _assert_rgb_equal(expected0_rgb, received0.pixels)
+
+    # Frame 1: switch mode without reset and verify Sobel output.
+    i_pass_through.value = 0
+    model = _resolve_sobel_model_params(dut)
+    expected1 = _sobel_expected(
+        frame1,
+        threshold=model["threshold"],
+        mean_shift=model["mean_shift"],
+        mean_update_interval=model["mean_update_interval"],
+        gain_num=model["gain_num"],
+        gain_den=model["gain_den"],
+        offset=model["offset"],
+        threshold_min=model["threshold_min"],
+        threshold_max=model["threshold_max"],
+    )
+    expected1_rgb = np.stack((expected1, expected1, expected1), axis=2)
+    flush_pixels = _warmup_beats(width=width, wndw_size=3)
+    await source.send_image(_gray_plane_to_image(frame1), tail_padding_pixels=flush_pixels)
+    received1 = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_rgb_equal(expected1_rgb, received1.pixels)
+
+
+@cocotb.test(timeout_time=900, timeout_unit="ms")
+async def test_axi_sobel_window_module_backpressure_mode_switch_filter_to_passthrough(dut) -> None:
+    i_clk = getattr(dut, ACLK_SIGNAL)
+    i_rst_n = getattr(dut, ARESETN_SIGNAL)
+    i_pass_through = getattr(dut, PASS_THROUGH_SIGNAL)
+    m_axis_tready = getattr(dut, f"{M_AXIS_PREFIX}_tready")
+
+    i_rst_n.value = int(RESET_ACTIVE_LEVEL)
+    getattr(dut, f"{S_AXIS_PREFIX}_tvalid").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tdata").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tlast").value = 0
+    getattr(dut, f"{S_AXIS_PREFIX}_tuser").value = 0
+    i_pass_through.value = 0
+    m_axis_tready.value = 0
+
+    cocotb.start_soon(Clock(i_clk, 10, unit="ns").start())
+    await apply_reset(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        stream_input_prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+
+    source = AxiGrayStreamSource(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=S_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+    )
+    sink = AxiVideoStreamSink(
+        dut=dut,
+        i_clk=i_clk,
+        i_rst_n=i_rst_n,
+        prefix=M_AXIS_PREFIX,
+        reset_active_level=RESET_ACTIVE_LEVEL,
+        pixel_order=PIXEL_ORDER,
+    )
+    source.set_pause_generator(repeating_pause((0, 1, 0, 0, 1, 0, 1, 0)))
+    sink.set_pause_generator(repeating_pause((0, 0, 1, 0, 1, 0, 0)))
+    m_axis_tready.value = 1
+
+    width, height = _frame_shape_from_dut(dut)
+    frame0 = Image.gradient_gray(width=width, height=height).pixels[:, :, 0]
+    frame1 = np.roll(frame0, shift=7, axis=0)
+    timeout_ns = max(12_000_000, width * height * 300)
+
+    # Frame 0: filter branch under pressure.
+    i_pass_through.value = 0
+    model = _resolve_sobel_model_params(dut)
+    expected0 = _sobel_expected(
+        frame0,
+        threshold=model["threshold"],
+        mean_shift=model["mean_shift"],
+        mean_update_interval=model["mean_update_interval"],
+        gain_num=model["gain_num"],
+        gain_den=model["gain_den"],
+        offset=model["offset"],
+        threshold_min=model["threshold_min"],
+        threshold_max=model["threshold_max"],
+    )
+    expected0_rgb = np.stack((expected0, expected0, expected0), axis=2)
+    flush_pixels = _warmup_beats(width=width, wndw_size=3)
+    await source.send_image(_gray_plane_to_image(frame0), tail_padding_pixels=flush_pixels)
+    received0 = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
+    _assert_rgb_equal(expected0_rgb, received0.pixels)
+
+    # Frame 1: switch branch without reset; passthrough branch must stay lockstep.
+    i_pass_through.value = 1
+    await source.send_image(_gray_plane_to_image(frame1), tail_padding_pixels=0)
+    received1 = await sink.recv_image(width=width, height=height, timeout_ns=timeout_ns)
+    expected1_rgb = np.stack((frame1, frame1, frame1), axis=2)
+    _assert_rgb_equal(expected1_rgb, received1.pixels)
