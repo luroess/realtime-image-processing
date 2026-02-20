@@ -1,10 +1,8 @@
 # Normalize line endings for all text files in this repository.
 * text=auto eol=lf
-
 # Keep common Windows script formats with CRLF when needed.
 *.bat text eol=crlf
 *.cmd text eol=crlf
-
 # Treat generated waveform/object artifacts and images as binary.
 *.ghw binary
 *.cf binary
@@ -12,3 +10,4 @@
 *.jpg binary
 *.jpeg binary
 *.gif binary
+vivado.zip filter=lfs diff=lfs merge=lfs -text

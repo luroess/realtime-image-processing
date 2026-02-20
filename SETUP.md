@@ -1,5 +1,10 @@
 # Setup & Install Instructions
 
+## Git LFS
+vivado.zip is stored using Git LFS. Ensure Git LFS is installed and initialized:
+  - Install: https://git-lfs.github.com/ and run `git lfs install`
+  - After clone: run `git lfs pull` to fetch vivado.zip and other LFS objects
+
 ## Vivado & Vitis
 
 - [Digilent install instructions](https://digilent.com/reference/programmable-logic/guides/vitis-unified-installation)

@@ -49,6 +49,7 @@ work/
 *.debug
 
 # Vivado per-project generated directories
+vivado/
 *.cache/
 *.runs/
 *.sim/
