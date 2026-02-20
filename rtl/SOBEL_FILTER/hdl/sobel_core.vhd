@@ -9,7 +9,7 @@ entity E_SobelCore is
     -- Used for vector sizing onl, Sobel computation is fixed to 3x3
     G_KERNEL_SIZE     : positive := 3;
     -- Threshold in range 0..2040 for 8-bit input
-    G_SOBEL_THRESHOLD : natural  := 150
+    G_SOBEL_THRESHOLD : natural  := 200
   );
   port (
     -- 3x3 grayscale window: 9 bytes packed into 72-bit vector

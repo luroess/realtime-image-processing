@@ -6,8 +6,6 @@ entity AXI_FastWindowModule is
     -- FAST filter generics
     G_FAST_THRESHOLD       : natural  := 20;
     G_FAST_N               : positive := 9;
-    G_FAST_ENABLE_NMS      : natural  := 0;
-    G_FAST_IMPL            : positive := 1;
 
     -- Internal window_generator generics
     G_PIXEL_WIDTH          : positive := 8;
@@ -96,8 +94,8 @@ begin
       G_NUM_ROW              => G_NUM_ROW,
       G_FAST_THRESHOLD       => G_FAST_THRESHOLD,
       G_FAST_N               => G_FAST_N,
-      G_FAST_ENABLE_NMS      => G_FAST_ENABLE_NMS,
-      G_FAST_IMPL            => G_FAST_IMPL
+      G_FAST_ENABLE_NMS      => 0,
+      G_FAST_IMPL            => 1
     )
     port map (
       i_aclk                => i_aclk,

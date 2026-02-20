@@ -4,18 +4,13 @@ library ieee;
 entity AXI_SobelWindowModule is
   generic (
     -- Sobel generic
-    G_SOBEL_THRESHOLD            : natural  := 150;
-    G_SOBEL_MEAN_SHIFT           : natural  := 9;
-    G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
-    G_SOBEL_THRESHOLD_GAIN_NUM   : positive := 1;
-    G_SOBEL_THRESHOLD_GAIN_DEN   : positive := 1;
-    G_SOBEL_THRESHOLD_OFFSET     : integer  := 0;
+    G_SOBEL_THRESHOLD : natural  := 200;
 
     -- Internal window_generator generics
-    G_PIXEL_WIDTH                : positive := 8;
-    G_KERNEL_SIZE                : positive := 3;
-    G_LINE_WIDTH                 : positive := 1920;
-    G_NUM_ROW                    : positive := 1080
+    G_PIXEL_WIDTH     : positive := 8;
+    G_KERNEL_SIZE     : positive := 3;
+    G_LINE_WIDTH      : positive := 1920;
+    G_NUM_ROW         : positive := 1080
   );
   port (
     i_aclk              : in  std_logic;
@@ -42,7 +37,7 @@ end entity;
 architecture A_Rtl of AXI_SobelWindowModule is
   constant C_WINDOW_DATA_WIDTH : positive := G_KERNEL_SIZE * G_KERNEL_SIZE * G_PIXEL_WIDTH;
 
-  signal s_axis_gray8_tready_sel : std_logic := '0';
+  signal s_axis_gray8_tready_sel    : std_logic := '0';
   signal s_axis_gray8_tvalid_filter : std_logic := '0';
   signal s_axis_gray8_tready_filter : std_logic := '0';
 
@@ -67,7 +62,7 @@ begin
 
   -- In pass-through mode, keep the hidden Sobel path quiescent.
   -- This avoids consuming internal warm-up beats while output is bypassed.
-  s_axis_gray8_tready_sel <= '0' when (i_aresetn = '0') else
+  s_axis_gray8_tready_sel <= '0'                 when (i_aresetn = '0') else
                              m_axis_gray8_tready when (i_pass_through = '1') else
                              s_axis_gray8_tready_filter;
   s_axis_gray8_tready <= s_axis_gray8_tready_sel;
@@ -98,14 +93,9 @@ begin
 
   U_AxiSobelFilter: entity work.AXI_SobelFilter
     generic map (
-      G_PIXEL_WIDTH                => G_PIXEL_WIDTH,
-      G_KERNEL_SIZE                => G_KERNEL_SIZE,
-      G_SOBEL_THRESHOLD            => G_SOBEL_THRESHOLD,
-      G_SOBEL_MEAN_SHIFT           => G_SOBEL_MEAN_SHIFT,
-      G_SOBEL_MEAN_UPDATE_INTERVAL => G_SOBEL_MEAN_UPDATE_INTERVAL,
-      G_SOBEL_THRESHOLD_GAIN_NUM   => G_SOBEL_THRESHOLD_GAIN_NUM,
-      G_SOBEL_THRESHOLD_GAIN_DEN   => G_SOBEL_THRESHOLD_GAIN_DEN,
-      G_SOBEL_THRESHOLD_OFFSET     => G_SOBEL_THRESHOLD_OFFSET
+      G_PIXEL_WIDTH     => G_PIXEL_WIDTH,
+      G_KERNEL_SIZE     => G_KERNEL_SIZE,
+      G_SOBEL_THRESHOLD => G_SOBEL_THRESHOLD
     )
     port map (
       i_aclk                => i_aclk,

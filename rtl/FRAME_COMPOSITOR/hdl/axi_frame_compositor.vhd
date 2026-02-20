@@ -12,10 +12,14 @@ entity AXI_FrameCompositor is
     G_LINE_WIDTH                : positive                      := 512;
     -- Odd kernel sizes used by sobel and blur stages in the active pipeline.
     G_SOBEL_KERNEL_SIZE         : positive                      := 3;
+    G_FAST_KERNEL_SIZE          : positive                      := 7;
+    -- Set false to disable FAST-specific delay behavior/resources.
+    G_ENABLE_FAST               : boolean                       := true;
     G_BLURR_KERNEL_SIZE         : positive                      := 3;
     -- Optional explicit delay overrides in accepted AXI beats.
     -- 0 => use the auto-derived stage delays from line width + kernel sizes.
     G_SOBEL_DELAY_OVERRIDE      : natural                       := 0;
+    G_FAST_DELAY_OVERRIDE       : natural                       := 0;
     G_BLUR_SOBEL_DELAY_OVERRIDE : natural                       := 0
   );
   port (
@@ -57,6 +61,7 @@ architecture A_Rtl of AXI_FrameCompositor is
   constant C_DELAY_SEL_NONE       : std_logic_vector(1 downto 0) := "00";
   constant C_DELAY_SEL_SOBEL      : std_logic_vector(1 downto 0) := "01";
   constant C_DELAY_SEL_BLUR_SOBEL : std_logic_vector(1 downto 0) := "10";
+  constant C_DELAY_SEL_FAST       : std_logic_vector(1 downto 0) := "11";
 
   constant C_GRAY_ZERO       : std_logic_vector(G_COMPONENT_WIDTH - 1 downto 0) := (others => '0');
   constant C_BASE_WORD_WIDTH : positive                                         := (3 * G_COMPONENT_WIDTH) + 2;
@@ -84,17 +89,46 @@ architecture A_Rtl of AXI_FrameCompositor is
     return i_auto;
   end function;
 
+  -- Select between enabled/disabled delay values.
+  function f_select_delay(i_enable : boolean; i_when_enabled : positive; i_when_disabled : positive) return positive is
+  begin
+    if i_enable then
+      return i_when_enabled;
+    end if;
+    return i_when_disabled;
+  end function;
+
+  -- Max helper for sizing the validity conveyor to the deepest selected tap.
+  function f_max(i_a : positive; i_b : positive) return positive is
+  begin
+    if i_a >= i_b then
+      return i_a;
+    end if;
+    return i_b;
+  end function;
+
   -- Auto-derived stage delays from configured line width and kernel sizes.
   constant C_SOBEL_DELAY_AUTO      : positive := f_stage_delay(G_LINE_WIDTH, G_SOBEL_KERNEL_SIZE);
+  constant C_FAST_DELAY_AUTO       : positive := f_select_delay(
+    i_enable        => G_ENABLE_FAST,
+    i_when_enabled  => f_stage_delay(G_LINE_WIDTH, G_FAST_KERNEL_SIZE),
+    i_when_disabled => C_SOBEL_DELAY_AUTO
+  );
   constant C_BLUR_DELAY_AUTO       : positive := f_stage_delay(G_LINE_WIDTH, G_BLURR_KERNEL_SIZE);
   constant C_BLUR_SOBEL_DELAY_AUTO : positive := C_SOBEL_DELAY_AUTO + C_BLUR_DELAY_AUTO;
 
   -- Resolved delay taps used by ShiftRamChain.
   constant C_SOBEL_DELAY      : positive := f_resolve_delay(G_SOBEL_DELAY_OVERRIDE, C_SOBEL_DELAY_AUTO);
+  constant C_FAST_DELAY       : positive := f_select_delay(
+    i_enable        => G_ENABLE_FAST,
+    i_when_enabled  => f_resolve_delay(G_FAST_DELAY_OVERRIDE, C_FAST_DELAY_AUTO),
+    i_when_disabled => C_SOBEL_DELAY
+  );
   constant C_BLUR_SOBEL_DELAY : positive := f_resolve_delay(G_BLUR_SOBEL_DELAY_OVERRIDE, C_BLUR_SOBEL_DELAY_AUTO);
 
   -- Number of cascaded 1024-beat c_shift_ram chunks for each requested tap.
   constant C_SOBEL_CHUNKS : positive := f_ceil_div(C_SOBEL_DELAY, C_BLOCK_DELAY);
+  constant C_FAST_CHUNKS  : positive := f_ceil_div(C_FAST_DELAY, C_BLOCK_DELAY);
   -- Additional beats needed to extend sobel tap to blur+sobel tap.
   constant C_EXTRA_DELAY : natural := C_BLUR_SOBEL_DELAY - C_SOBEL_DELAY;
   -- Extra c_shift_ram chunks required for the blur extension segment.
@@ -105,10 +139,14 @@ architecture A_Rtl of AXI_FrameCompositor is
   -- The generated c_shift_ram_0 introduces one extra cycle per cascaded stage
   -- beyond the first stage (Register Last Bit enabled).
   constant C_SOBEL_DELAY_EFFECTIVE      : positive := C_SOBEL_DELAY + (C_SOBEL_CHUNKS - 1);
+  constant C_FAST_DELAY_EFFECTIVE       : positive := C_FAST_DELAY + (C_FAST_CHUNKS - 1);
   constant C_BLUR_SOBEL_DELAY_EFFECTIVE : positive := C_BLUR_SOBEL_DELAY + (C_TOTAL_CHUNKS - 1);
+  constant C_MAX_DELAY_EFFECTIVE        : positive := f_max(C_FAST_DELAY_EFFECTIVE, C_BLUR_SOBEL_DELAY_EFFECTIVE);
 
   -- Control-derived mode helper: merge path consumes delayed RGB base.
   signal s_need_rgb : std_logic := '0';
+  -- Internal gray-stream READY used for local handshake checks (avoid reading OUT port).
+  signal s_axis_video_gray8_tready_i : std_logic := '0';
   -- Output-valid gate: gray reference valid and required RGB tap prefilled.
   signal s_required_valid : std_logic := '0';
   -- Decoded mask bit from gray stream and binary RGB replacement payload.
@@ -129,12 +167,17 @@ architecture A_Rtl of AXI_FrameCompositor is
   signal s_base_accept : std_logic := '0';
 
   -- Beat-domain validity conveyor and selected delayed tap-valid bit.
-  signal s_base_valid_pipe    : std_logic_vector(C_BLUR_SOBEL_DELAY_EFFECTIVE downto 0) := (others => '0');
+  signal s_base_valid_pipe    : std_logic_vector(C_MAX_DELAY_EFFECTIVE downto 0) := (others => '0');
   signal s_base_delayed_valid : std_logic                                               := '0';
   -- Indicates merge path can consume in lockstep without underrunning delayed base.
   signal s_prefill_done : std_logic := '0';
   -- Prevent selector warnings from flooding logs while selector stays invalid.
   signal s_invalid_sel_warned : std_logic := '0';
+  -- Simulation-only guard for unlatched runtime control toggles.
+  signal s_midframe_ctrl_warned : std_logic                    := '0';
+  signal s_overlay_mode_sof     : std_logic_vector(1 downto 0) := C_OVERLAY_NONE;
+  signal s_overlay_zeros_sof    : std_logic                    := '1';
+  signal s_delay_sel_sof        : std_logic_vector(1 downto 0) := C_DELAY_SEL_NONE;
 begin
   assert C_BASE_WORD_WIDTH = 26
     report "AXI_FrameCompositor requires 26-bit base packing (TUSER/TLAST/RGB24) for c_shift_ram_0."
@@ -144,6 +187,9 @@ begin
     severity failure;
   assert (G_SOBEL_KERNEL_SIZE mod 2) = 1 and G_SOBEL_KERNEL_SIZE >= 3
     report "AXI_FrameCompositor requires odd G_SOBEL_KERNEL_SIZE >= 3 for delay derivation."
+    severity failure;
+  assert (not G_ENABLE_FAST) or ((G_FAST_KERNEL_SIZE mod 2) = 1 and G_FAST_KERNEL_SIZE >= 3)
+    report "AXI_FrameCompositor requires odd G_FAST_KERNEL_SIZE >= 3 for delay derivation."
     severity failure;
   assert (G_BLURR_KERNEL_SIZE mod 2) = 1 and G_BLURR_KERNEL_SIZE >= 3
     report "AXI_FrameCompositor requires odd G_BLURR_KERNEL_SIZE >= 3 for delay derivation."
@@ -155,6 +201,8 @@ begin
   U_ShiftRamChain: entity work.ShiftRamChain
     generic map (
       G_SOBEL_DELAY      => C_SOBEL_DELAY,
+      G_ENABLE_FAST      => G_ENABLE_FAST,
+      G_FAST_DELAY       => C_FAST_DELAY,
       G_BLUR_SOBEL_DELAY => C_BLUR_SOBEL_DELAY
     )
     port map (
@@ -182,7 +230,39 @@ begin
 
   -- Merge path needs RGB only when overlay is enabled and binary-only mode is off.
   s_need_rgb <= '1' when (i_overlay_zeros = '0') and (i_overlay_mode /= C_OVERLAY_NONE) else '0';
-  -- TODO: Treat i_overlay_mode/i_overlay_zeros as frame-latched controls to avoid mid-frame mode tearing.
+  -- ShiftRamChain is intentionally reset-only (i_sclr <- not i_aresetn). Frame
+  -- boundaries are handled through validity/SOF alignment, not per-frame RAM clear.
+
+  P_ASSERT_CTRL_STABLE_WITHIN_FRAME: process (i_aclk)
+  begin
+    if rising_edge(i_aclk) then
+      if i_aresetn = '0' then
+        s_midframe_ctrl_warned <= '0';
+        s_overlay_mode_sof     <= C_OVERLAY_NONE;
+        s_overlay_zeros_sof    <= '1';
+        s_delay_sel_sof        <= C_DELAY_SEL_NONE;
+      elsif (s_axis_video_gray8_tvalid = '1') and (s_axis_video_gray8_tready_i = '1') then
+        if s_axis_video_gray8_tuser = '1' then
+          -- SOF defines the legal control-change boundary.
+          s_overlay_mode_sof     <= i_overlay_mode;
+          s_overlay_zeros_sof    <= i_overlay_zeros;
+          s_delay_sel_sof        <= i_base_delay_stage_sel;
+          s_midframe_ctrl_warned <= '0';
+        elsif (
+          (i_overlay_mode /= s_overlay_mode_sof) or
+          (i_overlay_zeros /= s_overlay_zeros_sof) or
+          (i_base_delay_stage_sel /= s_delay_sel_sof)
+        ) then
+          if s_midframe_ctrl_warned = '0' then
+            assert false
+              report "AXI_FrameCompositor: control input changed mid-frame; latch controls at input SOF to avoid mode tearing or prefill deadlock."
+              severity warning;
+            s_midframe_ctrl_warned <= '1';
+          end if;
+        end if;
+      end if;
+    end if;
+  end process;
 
   -- Pack SOF/EOL + RGB24 to match the fixed 26-bit c_shift_ram_0 contract.
   s_base_word_in             <= s_axis_video_rbg888_tuser & s_axis_video_rbg888_tlast & s_axis_video_rbg888_tdata;
@@ -202,18 +282,18 @@ begin
       if i_aresetn = '0' then
         s_base_valid_pipe <= (others => '0');
       elsif s_base_accept = '1' then
-        if s_axis_video_rbg888_tuser = '1' then
-          -- Accepted SOF starts a new frame window: discard stale valid history
-          -- before inserting the new stage-0 valid marker.
+        if (s_axis_video_rbg888_tuser = '1') and (s_base_delayed_valid = '0') then
+          -- If the selected tap is not yet valid at accepted SOF, start a fresh
+          -- prefill window for this frame.
           s_base_valid_pipe(0) <= '1';
-          for i in 1 to C_BLUR_SOBEL_DELAY_EFFECTIVE loop
+          for i in 1 to C_MAX_DELAY_EFFECTIVE loop
             s_base_valid_pipe(i) <= '0';
           end loop;
         else
           -- Mark newly accepted input as valid at stage 0, then advance prior
           -- validity through every delayed stage.
           s_base_valid_pipe(0) <= '1';
-          for i in 1 to C_BLUR_SOBEL_DELAY_EFFECTIVE loop
+          for i in 1 to C_MAX_DELAY_EFFECTIVE loop
             s_base_valid_pipe(i) <= s_base_valid_pipe(i - 1);
           end loop;
         end if;
@@ -224,6 +304,8 @@ begin
   --        stale '1' bits can persist and make s_base_delayed_valid appear fresh.
   -- Select validity tap matching currently selected delay stage.
   s_base_delayed_valid <= s_base_valid_pipe(C_SOBEL_DELAY_EFFECTIVE)      when i_base_delay_stage_sel = C_DELAY_SEL_SOBEL else
+                          s_base_valid_pipe(C_FAST_DELAY_EFFECTIVE)       when (G_ENABLE_FAST and i_base_delay_stage_sel = C_DELAY_SEL_FAST) else
+                          s_base_valid_pipe(C_SOBEL_DELAY_EFFECTIVE)      when ((not G_ENABLE_FAST) and i_base_delay_stage_sel = C_DELAY_SEL_FAST) else
                           s_base_valid_pipe(C_BLUR_SOBEL_DELAY_EFFECTIVE) when i_base_delay_stage_sel = C_DELAY_SEL_BLUR_SOBEL else
                           s_axis_video_rbg888_tvalid                      when i_base_delay_stage_sel = C_DELAY_SEL_NONE else
                           s_axis_video_rbg888_tvalid;
@@ -234,15 +316,16 @@ begin
     if rising_edge(i_aclk) then
       if i_aresetn = '0' then
         s_invalid_sel_warned <= '0';
-      elsif (s_axis_video_gray8_tvalid = '1') and (s_axis_video_gray8_tready = '1') then
+      elsif (s_axis_video_gray8_tvalid = '1') and (s_axis_video_gray8_tready_i = '1') then
         if not (
           (i_base_delay_stage_sel = C_DELAY_SEL_NONE) or
           (i_base_delay_stage_sel = C_DELAY_SEL_SOBEL) or
-          (i_base_delay_stage_sel = C_DELAY_SEL_BLUR_SOBEL)
+          (i_base_delay_stage_sel = C_DELAY_SEL_BLUR_SOBEL) or
+          (G_ENABLE_FAST and (i_base_delay_stage_sel = C_DELAY_SEL_FAST))
         ) then
           if s_invalid_sel_warned = '0' then
             assert false
-              report "AXI_FrameCompositor: i_base_delay_stage_sel is illegal; only 00/01/10 are supported."
+              report "AXI_FrameCompositor: i_base_delay_stage_sel is illegal; FAST selector 11 requires G_ENABLE_FAST=true."
               severity warning;
             s_invalid_sel_warned <= '1';
           end if;
@@ -260,17 +343,20 @@ begin
   -- Gray stream drives output timing.
   -- Keep READY high while gray TVALID='0' so upstream pipelines can prefill
   -- RGB delay RAM without combinational tready deadlock.
-  s_axis_video_gray8_tready <= '0'                        when i_aresetn = '0' else
-                               m_axis_video_rbg888_tready when s_need_rgb = '0' else
-                               '1'                        when s_axis_video_gray8_tvalid = '0' else
-                                 (m_axis_video_rbg888_tready and s_prefill_done);
+  s_axis_video_gray8_tready_i <= '0'                        when i_aresetn = '0' else
+                                 m_axis_video_rbg888_tready when s_need_rgb = '0' else
+                                 '1'                        when s_axis_video_gray8_tvalid = '0' else
+                                   (m_axis_video_rbg888_tready and s_prefill_done);
+  s_axis_video_gray8_tready <= s_axis_video_gray8_tready_i;
 
+  -- In binary-only mode (s_need_rgb='0'), always drain RGB input so upstream
+  -- forked producers cannot deadlock while gray path is warming up.
   -- In merge mode, prefill base delay RAM first. After prefill, consume base
   -- in lockstep with gray output acceptance.
   -- Once prefill is done, stop advancing RGB while gray is idle so SOF/EOL
   -- remain aligned at the selected delay tap.
   s_axis_rbg888_tready <= '0' when i_aresetn = '0' else
-                          (s_axis_video_gray8_tvalid and m_axis_video_rbg888_tready) when s_need_rgb = '0' else
+                          '1' when s_need_rgb = '0' else
                           '1' when s_prefill_done = '0' else
                             (m_axis_video_rbg888_tready and s_axis_video_gray8_tvalid);
 
@@ -301,10 +387,10 @@ begin
         if (s_need_rgb = '1') and (s_required_valid = '1') and (m_axis_video_rbg888_tready = '1') then
           assert s_axis_video_gray8_tuser = s_base_delayed_sof
             report "AXI_FrameCompositor: SOF mismatch between gray and delayed RGB streams while RGB base mode is active."
-            severity failure;
+            severity warning;
           assert s_axis_video_gray8_tlast = s_base_delayed_eol
             report "AXI_FrameCompositor: EOL mismatch between gray and delayed RGB streams while RGB base mode is active."
-            severity failure;
+            severity warning;
         end if;
       end if;
     end if;

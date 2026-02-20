@@ -21,14 +21,22 @@ end entity;
 architecture A_Rtl of ClickDetector is
 
   -- BTN1 processing state machine
+  -- ST_PASS_ALL : All processing stages disabled (full color or gray RGB passthrough).
+  -- ST_BLUR     : Blur output is final output.
+  -- ST_SOBEL    : Sobel output as binary or overlay (depending on base image state).
+  -- ST_BLUR_SOBEL: Sobel output is final output, blur is active as a preprocessor.
+  -- ST_FAST     : FAST path is enabled; if FAST is compiled out, behavior stays compatible with overlay logic disable.
   type state_t is (ST_PASS_ALL, ST_BLUR, ST_SOBEL, ST_BLUR_SOBEL, ST_FAST);
   signal s_current_state : state_t := ST_PASS_ALL;
   signal s_next_state    : state_t := ST_PASS_ALL;
 
   -- BTN2 base-image state machine
-  type base_state_t is (ST_BRAM_RGB, ST_BRAM_GRAY, ST_ZEROS);
-  signal s_base_current_state : base_state_t := ST_ZEROS;
-  signal s_base_next_state    : base_state_t := ST_ZEROS;
+  -- ST_RGB  : Base stream drives RGB (from AXI_RgbToGrayscale pass-through branch); If overlay is required RGB is buffered through BRAM FIFO, if ST_PASS_ALL then RGB comes directly from AXI_RgbToGrayscale pass-through branch.
+  -- ST_GRAY : Base stream drives grayscale-as-RGB, equivalent behavior to ST_RGB but with grayscale data replicated in R/G/B channels for easier visualization of Sobel/FAST edges.
+  -- ST_ZEROS     : Base plane is masked/disabled; output can show only overlay/processed signal.
+  type base_state_t is (ST_RGB, ST_GRAY, ST_ZEROS);
+  signal s_base_current_state : base_state_t := ST_RGB;
+  signal s_base_next_state    : base_state_t := ST_RGB;
 
   -- Button edge detection registers
   signal s_btn1_prev : std_logic := '0';
@@ -68,35 +76,42 @@ begin
 
     case s_current_state is
       when ST_PASS_ALL =>
+        -- Full-color pass-all path: all filter blocks are bypassed.
+        o_led(0) <= '1';
         if i_btn_debounced = '1' and s_btn1_prev = '0' then
           s_next_state <= ST_BLUR;
         end if;
 
       when ST_BLUR =>
+        -- Blur-only mode: blur kernel is inserted into the chain.
         o_pass_blurr_filter <= '0';
-        o_led(0) <= '1';
+        o_led(1) <= '1';
         if i_btn_debounced = '1' and s_btn1_prev = '0' then
           s_next_state <= ST_SOBEL;
         end if;
 
       when ST_SOBEL =>
+        -- Sobel-only mode: Sobel is active on grayscale stream, blur remains pass-through.
         o_pass_sobel <= '0';
+        o_led(0) <= '1';
         o_led(1) <= '1';
         if i_btn_debounced = '1' and s_btn1_prev = '0' then
           s_next_state <= ST_BLUR_SOBEL;
         end if;
 
       when ST_BLUR_SOBEL =>
+        -- Blur+Sobel mode: blur then sobel path.
         o_pass_blurr_filter <= '0';
         o_pass_sobel <= '0';
-        o_led(0) <= '1';
-        o_led(1) <= '1';
+        o_led(2) <= '1';
         if i_btn_debounced = '1' and s_btn1_prev = '0' then
           s_next_state <= ST_FAST;
         end if;
 
       when ST_FAST =>
+        -- FAST path mode: FAST module is enabled as the final edge detector.
         o_pass_fast <= '0';
+        o_led(1) <= '1';
         o_led(2) <= '1';
         if i_btn_debounced = '1' and s_btn1_prev = '0' then
           s_next_state <= ST_PASS_ALL;
@@ -108,43 +123,29 @@ begin
   begin
     s_base_next_state <= s_base_current_state;
     o_overlay_zeros <= '0';
-    o_pass_grayscale <= '1';
+    o_pass_grayscale <= '0';
     o_led(3) <= '0';
 
-    -- ST_PASS_ALL: BTN2 toggles only RGB passthrough <-> gray-as-RGB.
-    -- No binary-zeros mode is exposed in this state.
-    if s_current_state = ST_PASS_ALL then
-      o_overlay_zeros <= '0';
-      if s_base_current_state = ST_BRAM_GRAY then
-        o_led(3) <= '1';
-        o_pass_grayscale <= '0';
-        if i_btn2_debounced = '1' and s_btn2_prev = '0' then
-          s_base_next_state <= ST_BRAM_RGB;
-        end if;
-      else
-        -- Treat ST_ZEROS as RGB in ST_PASS_ALL and converge the internal
-        -- base state to ST_BRAM_RGB.
-        o_pass_grayscale <= '1';
-        if s_base_current_state = ST_ZEROS then
-          s_base_next_state <= ST_BRAM_RGB;
-        end if;
-        if i_btn2_debounced = '1' and s_btn2_prev = '0' then
-          s_base_next_state <= ST_BRAM_GRAY;
-        end if;
-      end if;
-    elsif s_current_state = ST_BLUR then
+    -- For ST_BLUR the base image is not used.
+    -- Keep base mode fixed to ZEROS in blur-only mode.
+    -- In ST_PASS_ALL, BTN2 can cycle BRAM_RGB/BRAM_GRAY/ZEROS so users can
+    -- toggle between color and grayscale display without overlay processing.
+    if (s_current_state = ST_BLUR) then
       s_base_next_state <= ST_ZEROS;
       o_overlay_zeros <= '1';
       o_pass_grayscale <= '0';
     else
       case s_base_current_state is
-        when ST_BRAM_RGB =>
+        when ST_RGB =>
+
+          -- Show RGB base-image stream when overlay mode is active (no base-channel conversion).
           o_overlay_zeros <= '0';
           o_pass_grayscale <= '1';
           if i_btn2_debounced = '1' and s_btn2_prev = '0' then
-            s_base_next_state <= ST_BRAM_GRAY;
+            s_base_next_state <= ST_GRAY;
           end if;
-        when ST_BRAM_GRAY =>
+        when ST_GRAY =>
+          -- Show grayscale image replicated in R/B/G lanes for overlay/debug inspection.
           o_led(3) <= '1';
           o_overlay_zeros <= '0';
           o_pass_grayscale <= '0';
@@ -152,10 +153,11 @@ begin
             s_base_next_state <= ST_ZEROS;
           end if;
         when ST_ZEROS =>
+          -- Hide base image completely (overlay / effects only).
           o_overlay_zeros <= '1';
           o_pass_grayscale <= '0';
           if i_btn2_debounced = '1' and s_btn2_prev = '0' then
-            s_base_next_state <= ST_BRAM_RGB;
+            s_base_next_state <= ST_RGB;
           end if;
       end case;
     end if;

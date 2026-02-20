@@ -3,22 +3,12 @@ library ieee;
 
 entity AXI_SobelFilter is
   generic (
-    -- Pixel width in bits (default: 8-bit gray)
-    G_PIXEL_WIDTH                : positive := 8;
+    -- Pixel width in bits (default 8-bit grayscale)
+    G_PIXEL_WIDTH     : positive := 8;
     -- Used for vector sizing only, Sobel computation is fixed to 3x3
-    G_KERNEL_SIZE                : positive := 3;
-    -- Initial threshold for running-mean
-    G_SOBEL_THRESHOLD            : natural  := 150;
-    -- Running-mean update factor: mean += (mag - mean) / 2^G_SOBEL_MEAN_SHIFT
-    G_SOBEL_MEAN_SHIFT           : natural  := 9;
-    -- Update running mean once every N accepted pixels (demo purpose of adaptation)
-    G_SOBEL_MEAN_UPDATE_INTERVAL : positive := 1;
-    -- Adaptive threshold = clamp((mean * NUM / DEN) + OFFSET))
-    G_SOBEL_THRESHOLD_GAIN_NUM   : positive := 1;
-    G_SOBEL_THRESHOLD_GAIN_DEN   : positive := 1;
-    G_SOBEL_THRESHOLD_OFFSET     : integer  := 0;
-    G_THRESHOLD_MIN              : natural  := 0;
-    G_THRESHOLD_MAX              : natural  := 2040
+    G_KERNEL_SIZE     : positive := 3;
+    -- Threshold in range 0..2040 for 8-bit input
+    G_SOBEL_THRESHOLD : natural  := 200
   );
   port (
     i_aclk                : in  std_logic;
