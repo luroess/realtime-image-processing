@@ -10,7 +10,7 @@ entity Debouncer is
   port (
     i_rst_n         : in std_logic;
     i_clk           : in std_logic;
-    i_btn           : in std_logic_vector (3 downto 0);
+    i_btn           : in std_logic;
     o_btn_debounced : out std_logic
   );
 end entity;
@@ -34,7 +34,7 @@ begin
         s_sync1 <= '0';
         s_sync2 <= '0';
       else
-        s_sync1 <= i_btn(0);
+        s_sync1 <= i_btn;
         s_sync2 <= s_sync1;
       end if;
     end if;
