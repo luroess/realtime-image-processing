@@ -314,7 +314,6 @@ begin
 
         if m_axis_window_tvalid_reg = '1' and m_axis_window_tready = '1' then
           if m_axis_window_tuser_reg = '1' then
-            v_row_out_next := 0;
             v_col_out_next := 0;
           end if;
 
@@ -327,6 +326,10 @@ begin
             if v_col_out_next < G_LINE_WIDTH+1 then
               v_col_out_next := v_col_out_next + 1;
             end if;
+          end if;
+
+          if sof_reg(sof_reg'high) = '1' then
+            v_row_out_next := 0;
           end if;
         end if;
 
