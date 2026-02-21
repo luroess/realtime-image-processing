@@ -1,0 +1,24 @@
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Trebuchet MS, Verdana, Arial','lineColor':'#334155','signalColor':'#0f172a'}}}%%
+sequenceDiagram
+    participant SRC as AXI Source
+    participant DUT as DUT
+    participant SNK as AXI Sink
+    participant CHK as Protocol Checker
+
+    Note over SRC,SNK: Transfer occurs only on ACLK edge when TVALID=1 and TREADY=1
+
+    SRC->>DUT: Drive TVALID=1 with TDATA/TUSER/TLAST
+    DUT->>SNK: Present output TVALID=1
+    SNK-->>DUT: TREADY=0 (backpressure)
+    CHK->>DUT: Assert payload stability while stalled
+
+    SNK-->>DUT: TREADY=1
+    DUT-->>SNK: Accepted beat
+    CHK->>SNK: Count accepted beat
+
+    loop width*height beats
+        SRC->>DUT: Next pixel beat
+        DUT-->>SNK: Handshake transfer
+    end
+
+    CHK->>CHK: Verify SOF first beat and TLAST line end

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="600" fill="url(#g)"/>
+  <rect x="24" y="24" width="852" height="552" fill="none" stroke="#0f172a" stroke-width="4"/>
+  <text x="40" y="78" font-family="Trebuchet MS, Verdana, Arial" font-size="36" fill="#0f172a">Grayscale Output Placeholder</text>
+  <text x="40" y="116" font-family="Trebuchet MS, Verdana, Arial" font-size="22" fill="#1e293b">Replace with generated gray result image</text>
+  <text x="40" y="548" font-family="Trebuchet MS, Verdana, Arial" font-size="20" fill="#0f172a">Expected file example: sim_build/.../lenna_512_512_out_gray_rgb.png</text>
+</svg>

@@ -1,0 +1,43 @@
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Trebuchet MS, Verdana, Arial','primaryColor':'#e8f1ff','primaryBorderColor':'#2d4f8b','lineColor':'#334155','secondaryColor':'#f6f7fb','tertiaryColor':'#ffffff'}}}%%
+flowchart LR
+    subgraph Stimulus["Test Stimulus"]
+      IMG["images/*.png"]
+      TC["tests/*.py<br/>(cocotb test case)"]
+    end
+
+    subgraph Harness["Verification Harness"]
+      SRC["AxiVideoStreamSource<br/>(drivers/axis_video_source.py)"]
+      SNK["AxiVideoStreamSink<br/>(monitors/axis_video_sink.py)"]
+      SB["Scoreboard<br/>(verification/scoreboard.py)"]
+      RST["Reset + Backpressure<br/>(common/reset.py, common/pause.py)"]
+    end
+
+    subgraph DUT["RTL Under Test"]
+      RTL["AXI video DUT<br/>(e.g. axi_rgb_to_grayscale.vhd)"]
+    end
+
+    subgraph Build["Simulation Orchestration"]
+      RUN["tb-sim<br/>(testbench/sim/run.py)"]
+      TARGETS["targets.toml"]
+      GHDL["GHDL + cocotb runner"]
+    end
+
+    subgraph Artifacts["Outputs"]
+      RES["results.xml"]
+      GHW["*.ghw waveform"]
+      IMG_OUT["sim_build/*_out_*.png"]
+    end
+
+    IMG --> TC
+    TC --> SRC
+    SRC --> RTL
+    RTL --> SNK
+    SNK --> SB
+    IMG --> SB
+    RST -. controls .-> SRC
+    RST -. controls .-> SNK
+    TARGETS --> RUN --> GHDL
+    GHDL --> TC
+    SB --> RES
+    GHDL --> GHW
+    SNK --> IMG_OUT

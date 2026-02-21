@@ -1,0 +1,76 @@
+---
+title:
+config:
+  htmlLabels: false
+  flowchart:
+    htmlLabels: false
+---
+
+flowchart LR
+  subgraph CTRL["Control"]
+    direction TB
+    C1["i_overlay_zeros"]
+    C2["i_base_delay_stage_sel"]
+    M1("Mode decode\ns_need_rgb + delay tap")
+    C1 --> M1
+    C2 --> M1
+  end
+
+  subgraph IN["Inputs"]
+    direction TB
+    R0["Base RGB AXI\ns_axis_video_rbg888"]
+    G0["Gray AXI\ns_axis_video_gray8"]
+  end
+
+  subgraph PRE["Alignment + Prefill"]
+    direction TB
+    A1("RGB delay alignment\nShiftRamChain + unpack")
+    A2("Tap validity + prefill\nselected delay ready")
+    A3("READY/VALID gate\nlockstep + backpressure")
+    R0 --> A1 --> A2 --> A3
+    G0 --> A3
+    M1 --> A3
+  end
+
+  subgraph COMP["Compose"]
+    direction TB
+    E1("Edge mask decode\nedge = gray != 0")
+    F1("FrameCompositor\nedge ? EDGE_COLOR : delayed RGB")
+    O1("Output select\noverlay_zeros ? binary : compositor")
+    G0 --> E1 --> F1
+    A1 --> F1
+    F1 --> O1
+  end
+
+  subgraph OUT["Output AXI"]
+    direction TB
+    D0["tdata"]
+    V0["tvalid"]
+    U0["tuser = gray_tuser"]
+    L0["tlast = gray_tlast"]
+    O1 --> D0
+    A3 --> V0
+    G0 --> U0
+    G0 --> L0
+  end
+
+  subgraph SIM["Runtime Guards"]
+    direction TB
+    N1{{"Mid-frame control-change guard"}}
+    N2{{"SOF/EOL alignment guard"}}
+  end
+
+  C1 -. monitor .-> N1
+  C2 -. monitor .-> N1
+  A1 -. align check .-> N2
+  G0 -. align check .-> N2
+
+  classDef compute fill:#eef8ff,stroke:#4b8fd6,stroke-width:1.5px;
+  class M1,A1,A2,A3,E1,F1,O1 compute;
+
+  style CTRL fill:#f0f6ff,stroke:#9db9ff,stroke-width:2px,rx:12,ry:12
+  style IN fill:#f0fbff,stroke:#8fd0ff,stroke-width:2px,rx:12,ry:12
+  style PRE fill:#f7f3ff,stroke:#cdb2ff,stroke-width:2px,rx:12,ry:12
+  style COMP fill:#fff7ef,stroke:#ffbe7a,stroke-width:2px,rx:12,ry:12
+  style OUT fill:#fff4fb,stroke:#e9a9d6,stroke-width:2px,rx:12,ry:12
+  style SIM fill:#ffffff,stroke:#c0c7d4,stroke-width:2px,rx:12,ry:12

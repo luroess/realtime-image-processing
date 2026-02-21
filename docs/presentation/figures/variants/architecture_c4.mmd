@@ -1,0 +1,19 @@
+C4Container
+title Verification Container View
+
+Person(dev, "Developer", "Runs simulation targets")
+
+Container_Boundary(tb, "testbench") {
+    Container(run, "tb-sim runner", "Python", "Builds and launches cocotb simulations")
+    Container(test, "cocotb tests", "Python", "Drives streams and checks behavior")
+    Container(srcsink, "AXI Source/Sink", "cocotbext-axi", "AXI4-Stream video stimulus + capture")
+}
+
+Container(dut, "DUT RTL", "VHDL", "AXI4-Stream video processing IP")
+ContainerDb(art, "Artifacts", "XML/GHW/PNG", "Results, waveforms, generated images")
+
+Rel(dev, run, "Invokes")
+Rel(run, test, "Launches")
+Rel(test, srcsink, "Uses")
+Rel(srcsink, dut, "Streams pixels")
+Rel(test, art, "Writes")

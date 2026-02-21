@@ -1,0 +1,19 @@
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Trebuchet MS, Verdana, Arial'}}}%%
+timeline
+    title RGB2GRAY Verification Progress
+
+    section Protocol foundation
+      AXI4-Stream framing aligned : SOF on TUSER[0], EOL on TLAST
+      Handshake checks stabilized : VALID/READY transfer semantics
+
+    section Testbench evolution
+      Source/Sink abstractions available : cocotb + cocotbext-axi
+      OO testbench structure in place : reusable setup, run, checks
+
+    section Current state
+      AXI RGB2GRAY test active : gray output image artifact generation
+      Presentation assets prepared : Mermaid diagrams + IP figure
+
+    section Next actions
+      Extend image coverage : more resolutions and corner cases
+      Pipeline integration : RGB->Gray->Window->Sobel->Threshold
