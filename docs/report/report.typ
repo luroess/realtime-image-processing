@@ -21,7 +21,7 @@
   #linebreak()
   Embedded Systems, Academic Year 2025-2026
   #linebreak()
-  Revision date: 2026-02-21
+  Revision date: 2026-02-22
 ]
 
 #v(1.1em)
@@ -77,10 +77,48 @@ $ Y approx (R/4) + (G/2) + (B/4) $ <eq-gray>
 == FRAME_COMPOSITOR
 `AXI_FrameCompositor` is the active output-composition owner. It aligns delayed RGB base data with gray timing/mask streams using selectable delay stages (`NONE`, `SOBEL`, `BLUR_SOBEL`) and an internal validity conveyor.
 
-The compositor includes:
-- control-stability assertions across frame boundaries,
-- guarded fallback for reserved delay selector values,
-- prefill-aware ready logic to avoid deadlock during delay warm-up.
+The compositor combines frame-boundary control assertions, guarded fallback semantics for reserved delay-selector values, and prefill-aware ready gating to avoid deadlock during delay warm-up. This behavior is implemented with an explicit delay chain in `ShiftRamChain` and a beat-domain validity conveyor in `AXI_FrameCompositor`.
+
+=== ShiftRamChain delay model and selector contract
+The delay model follows the same odd-kernel warm-up relationship used by the AXI wrapper. For a line width $W$ and kernel size $K$, the stage delay in accepted beats is defined by @eq-stage-delay-model. The Sobel tap and Blur+Sobel tap are then derived from the corresponding stage combinations in @eq-stage-delay-model.
+
+$ D_"stage"(W, K) &= (W + 1) ((K - 1) / 2) \\
+  D_"sobel" &= D_"stage"(W, K_"sobel") \\
+  D_"blur+sobel" &= D_"stage"(W, K_"blur") + D_"stage"(W, K_"sobel") $ <eq-stage-delay-model>
+
+`ShiftRamChain` realizes each requested tap by splitting the delay into 1024-beat chunks, matching the 10-bit address space of the packaged `c_shift_ram_0` primitive. Because cascaded stages introduce an additional boundary-cycle effect in this configuration, the wrapper tracks an effective delay as shown in @eq-effective-delay and aligns output validity to that value.
+
+$ D_"effective" = D_"requested" + (N_"chunks" - 1) $ <eq-effective-delay>
+
+#figure(
+  table(
+    columns: 3,
+    table.header([Selector], [Tap selected], [Behavioral contract]),
+    [`00`], [Bypass], [`o_dout` forwards `i_din` directly.],
+    [`01`], [Sobel tap], [`o_dout` uses the first delay-chain tail.],
+    [`10`], [Blur+Sobel tap], [`o_dout` uses the extended delay-chain tail.],
+    [`11`], [Reserved alias], [Warning is emitted and Sobel tap is selected.],
+  ),
+  caption: [ShiftRamChain stage-selector semantics used by AXI_FrameCompositor.],
+) <tab-shiftram-selector>
+
+=== Waveform-backed timing interpretation
+To keep waveform inspection interpretable, the dedicated `shift_ram_chain` target is configured with compact generics (`G_SOBEL_DELAY=3`, `G_BLUR_SOBEL_DELAY=5`). Under this configuration, the measured effective taps are three accepted beats for Sobel and six accepted beats for Blur+Sobel, consistent with @eq-effective-delay. The command `uv run tb-sim --target shift_ram_chain` reports `PASS 2/2` in the current workspace.
+
+The resulting `.ghw` trace confirms both throughput and control behavior in a short window. During initial prefill, delayed outputs remain zero until the selected tap is filled; after prefill, one delayed packet is emitted on every accepted beat (`i_ce=1`). When `i_ce` is deasserted, the delayed output holds steady, showing that delay progress is beat-gated rather than clock-gated. The reserved selector alias (`11`) produces the same output as selector `01`, and synchronous clear flushes both chains before refill starts.
+
+#figure(
+  table(
+    columns: 4,
+    table.header([Time (ns)], [Condition], [Observed output], [Interpretation]),
+    [95], [`sel=01`, `i_ce=1`], [First non-zero delayed word], [Sobel prefill completed after three accepted beats.],
+    [135-145], [`sel=01`, `i_ce=0`], [Output remains constant], [Delay state is frozen while beat acceptance is disabled.],
+    [205 and 215], [`sel=11` then `sel=01`], [Same delayed word], [Reserved selector aliases to Sobel tap.],
+    [225], [`i_sclr=1`], [`o_dout=0`], [Delay storage is synchronously cleared.],
+    [305], [`sel=10`, refill active], [First Blur+Sobel delayed word], [Blur+Sobel effective tap appears after six accepted beats.],
+  ),
+  caption: [Representative checkpoints from the compact `shift_ram_chain` waveform.],
+) <tab-shiftram-wave-checkpoints>
 
 #figure(
   image("figures/frame_compositor_architecture_trimmed.png", width: 84%),
@@ -106,13 +144,13 @@ Important project-specific wire-order note used consistently in tests:
 - AXI wire order: `TDATA[23:0] = R|B|G`.
 - Python-side tuples and scoreboards: `(R, G, B)` after decode.
 
-= Validation Snapshot (2026-02-21)
+= Validation Snapshot (2026-02-22)
 Command evidence from this revision session:
 
 - `uv run tb-sim --list-targets`: 16 registered targets.
 - `uv run tb-sim --target axi_rgb_to_grayscale`: `PASS 3/3`.
 - `uv run tb-sim --target frame_compositor_core`: `PASS 1/1`.
-- `uv run tb-sim --target shift_ram_chain`: `PASS 4/4`.
+- `uv run tb-sim --target shift_ram_chain`: `PASS 2/2`.
 - `uv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline_downscaled`: `PASS 2/2`.
 
 #figure(
