@@ -4,7 +4,7 @@ Open issues tracked in `.codex/ISSUES.md` that still impact closure quality:
 - runtime sensitivity for full-size pipeline regressions,
 - potential prefill deadlock scenarios requiring dedicated non-passthrough stress tests,
 - synthesis portability sensitivity from `ShiftRamChain` dependency on packaged `c_shift_ram_0`,
-- process bootstrap gaps (missing `.codex/Questions.md` and missing local `fpga-vivado-vitis-structure` skill manifest/script assets).
+- process bootstrap gap (missing `.codex/Questions.md`).
 
 These are closure and reproducibility risks; they do not invalidate the passing focused evidence in this revision, but they should be resolved before final publication.
 

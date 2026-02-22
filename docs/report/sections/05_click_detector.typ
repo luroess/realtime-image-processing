@@ -37,17 +37,43 @@ Both FSM partitions in `ClickDetector` are Moore-style with respect to output be
   caption: [BTN1 processing-state FSM with output mode mapping and BTN2 independence note.],
 ) <fig-click-state>
 
+== Sequence of transitions and output changes
 #figure(
-  academic_table(
-    columns: (0.95fr, 1.1fr, 0.95fr, 0.9fr, 2.5fr),
-    align: (left, left, center, center, left),
-    table.header([FSM], [State], [`o_pass_blurr_filter`], [`o_pass_sobel`], [Base/overlay outcome]),
-    [processing], [`ST_PASS_ALL`], [`1`], [`1`], [Bypass blur and sobel; upstream grayscale stage remains available.],
-    [processing], [`ST_SOBEL`], [`1`], [`0`], [Sobel active without blur pre-stage.],
-    [processing], [`ST_BLUR_SOBEL`], [`0`], [`0`], [Blur + Sobel cascade active.],
-    [base], [`ST_RGB`], [`-`], [`-`], [`o_pass_grayscale=1`, `o_overlay_zeros=0`: RGB base shown.],
-    [base], [`ST_GRAY`], [`-`], [`-`], [`o_pass_grayscale=0`, `o_overlay_zeros=0`: gray-replicated base shown.],
-    [base], [`ST_ZEROS`], [`-`], [`-`], [`o_pass_grayscale=0`, `o_overlay_zeros=1`: base suppressed, binary overlay-only view.],
+  image("../figures/generated/seq_click_detector_control.png", width: 82%),
+  caption: [Representative BTN1-driven state transitions and corresponding processing output updates; BTN2 base FSM cycles independently.],
+) <fig-click-seq>
+
+The sequence in @fig-click-seq matches the implemented edge-driven transition pattern in #repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 66) and output decode in #repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 148).
+
+== Interface state/output matrix
+#figure(
+  academic_grouped_table(
+    columns: (0.9fr, 1.2fr, 0.75fr, 0.75fr, 0.75fr, 0.75fr, 2.0fr),
+    align: (left, left, center, center, center, center, left),
+    group_header: table.header(
+      [FSM],
+      [State],
+      table.cell(colspan: 2)[Processing outputs],
+      table.cell(colspan: 2)[Base/overlay outputs],
+      [Effect],
+    ),
+    sub_header: table.header(
+      [],
+      [],
+      [`o_pass_blurr_filter`],
+      [`o_pass_sobel`],
+      [`o_pass_grayscale`],
+      [`o_overlay_zeros`],
+      [],
+    ),
+    cmid_start: 3,
+    cmid_end: 6,
+    [processing], [`ST_PASS_ALL`], [`1`], [`1`], [`-`], [`-`], [Bypass blur and sobel; upstream grayscale stage remains available.],
+    [processing], [`ST_SOBEL`], [`1`], [`0`], [`-`], [`-`], [Sobel active without blur pre-stage.],
+    [processing], [`ST_BLUR_SOBEL`], [`0`], [`0`], [`-`], [`-`], [Blur + Sobel cascade active.],
+    [base], [`ST_RGB`], [`-`], [`-`], [`1`], [`0`], [RGB base shown.],
+    [base], [`ST_GRAY`], [`-`], [`-`], [`0`], [`0`], [Gray-replicated base shown.],
+    [base], [`ST_ZEROS`], [`-`], [`-`], [`0`], [`1`], [Base suppressed; binary overlay-only view.],
   ),
-  caption: [State/output matrix for processing and base-image FSM partitions.],
+  caption: [State/output matrix for processing and base-image FSM partitions in `ClickDetector`.],
 ) <tab-click-states>

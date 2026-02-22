@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant BTN1 as BTN1 edge
+  participant FSM as ClickDetector processing FSM
+  participant OUT as Control outputs
+
+  BTN1->>FSM: rising edge #1
+  FSM->>OUT: ST_PASS_ALL -> ST_SOBEL<br/>o_pass_blurr_filter=1<br/>o_pass_sobel=0
+
+  BTN1->>FSM: rising edge #2
+  FSM->>OUT: ST_SOBEL -> ST_BLUR_SOBEL<br/>o_pass_blurr_filter=0<br/>o_pass_sobel=0
+
+  BTN1->>FSM: rising edge #3
+  FSM->>OUT: ST_BLUR_SOBEL -> ST_PASS_ALL<br/>o_pass_blurr_filter=1<br/>o_pass_sobel=1
+
+  Note over FSM,OUT: BTN2 base FSM runs independently<br/>ST_RGB -> ST_GRAY -> ST_ZEROS -> ST_RGB<br/>on each BTN2 rising edge.
