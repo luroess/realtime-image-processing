@@ -1,0 +1,34 @@
+[
+  {
+    "module": "rgb_to_grayscale_axi_ooc",
+    "report_path": "docs/report/data/vivado_ooc/rgb_to_grayscale/rgb_to_grayscale_ooc_utilization_synth.rpt",
+    "lut": 48.0,
+    "ff": 30.0,
+    "bram": 0.0,
+    "dsp": 0.0
+  },
+  {
+    "module": "frame_compositor_core_ooc",
+    "report_path": "docs/report/data/vivado_ooc/frame_compositor_core/frame_compositor_core_ooc_utilization_synth.rpt",
+    "lut": 24.0,
+    "ff": 0.0,
+    "bram": 0.0,
+    "dsp": 0.0
+  },
+  {
+    "module": "pl_pipeline_ip_ooc",
+    "report_path": "vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/hw.runs/system_AXI_RgbGrayBlurrSobe_0_0_synth_1/system_AXI_RgbGrayBlurrSobe_0_0_utilization_synth.rpt",
+    "lut": 4189.0,
+    "ff": 4439.0,
+    "bram": 0.0,
+    "dsp": 0.0
+  },
+  {
+    "module": "system_wrapper_placed",
+    "report_path": "vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/hw.runs/impl_1/system_wrapper_utilization_placed.rpt",
+    "lut": 11944.0,
+    "ff": 15406.0,
+    "bram": 10.5,
+    "dsp": 0.0
+  }
+]

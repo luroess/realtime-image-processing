@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  participant RGB as Delayed RGB/Base Stream
+  participant GRAY as Gray8/Mask Stream
+  participant DUT as AXI_FrameCompositor
+  participant OUT as Output AXI Stream
+
+  GRAY->>DUT: mask beat (gray8 + SOF/EOL)
+  RGB->>DUT: base beat (RGB + SOF/EOL)
+
+  alt overlay_zeros = 1
+    DUT->>OUT: emit binary mask color (edge->white, else black)
+  else overlay_zeros = 0
+    DUT->>OUT: emit base RGB with edge overlay color
+  end
+
+  alt selected delay tap not prefilling yet
+    DUT-->>GRAY: gray READY gated until selected base tap valid
+    DUT-->>RGB: base READY asserted for prefill progression
+  else tap valid
+    DUT->>OUT: lockstep output on accepted gray beat
+  end
+
+  Note over DUT,OUT: In merge mode, SOF/EOL follow gray timing while delayed base alignment is enforced.

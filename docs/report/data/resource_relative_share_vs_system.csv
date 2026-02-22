@@ -1,0 +1,4 @@
+module,vs_system_lut_pct,vs_system_ff_pct,vs_system_bram_pct,vs_system_dsp_pct
+rgb_to_grayscale_axi_ooc,0.402,0.195,0.0,0.0
+frame_compositor_core_ooc,0.201,0.0,0.0,0.0
+pl_pipeline_ip_ooc,35.072,28.813,0.0,0.0

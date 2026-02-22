@@ -1,0 +1,5 @@
+module,report_path,lut,ff,bram,dsp
+rgb_to_grayscale_axi_ooc,docs/report/data/vivado_ooc/rgb_to_grayscale/rgb_to_grayscale_ooc_utilization_synth.rpt,48.0,30.0,0.0,0.0
+frame_compositor_core_ooc,docs/report/data/vivado_ooc/frame_compositor_core/frame_compositor_core_ooc_utilization_synth.rpt,24.0,0.0,0.0,0.0
+pl_pipeline_ip_ooc,vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/hw.runs/system_AXI_RgbGrayBlurrSobe_0_0_synth_1/system_AXI_RgbGrayBlurrSobe_0_0_utilization_synth.rpt,4189.0,4439.0,0.0,0.0
+system_wrapper_placed,vivado/Zybo-Z7-10-Pcam-5C-hw.xpr/hw/hw.runs/impl_1/system_wrapper_utilization_placed.rpt,11944.0,15406.0,10.5,0.0

@@ -1,0 +1,23 @@
+sequenceDiagram
+  autonumber
+  participant SRC as AXI Source
+  participant DUT as AXI_RgbToGrayscale
+  participant RGB as RGB Output Branch
+  participant GRAY as Gray8 Output Branch
+  participant SNK as AXI Sink
+
+  SRC->>DUT: TVALID=1, TDATA(R|B|G), TUSER/TLAST
+  DUT-->>SRC: TREADY=1 when pending slot free
+  DUT->>RGB: m_axis_rbg888_tvalid + data
+  DUT->>GRAY: m_axis_gray8_tvalid + data
+
+  alt downstream backpressure on RGB
+    SNK-->>RGB: m_axis_rbg888_tready=0
+    DUT->>GRAY: gray branch may still fire
+    DUT-->>SRC: s_axis_video_tready=0 until both branches ack
+  else no backpressure
+    SNK-->>RGB: m_axis_rbg888_tready=1
+    DUT-->>SRC: accept next beat
+  end
+
+  Note over DUT: SOF/EOL sidebands are kept beat-aligned on both branches.

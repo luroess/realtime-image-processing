@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600">
+<rect x="0" y="0" width="100%" height="100%" fill="white"/>
+<text x="24" y="30" font-family="Libertinus Serif" font-size="20" font-weight="bold">RGB_TO_GRAYSCALE AXI Handshake Timing (from testbench VCD/GHW run)</text>
+<line x1="287.06" y1="42" x2="287.06" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="275.06" y="590" font-family="monospace" font-size="12">100ns</text>
+<line x1="441.18" y1="42" x2="441.18" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="429.18" y="590" font-family="monospace" font-size="12">120ns</text>
+<line x1="595.29" y1="42" x2="595.29" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="583.29" y="590" font-family="monospace" font-size="12">140ns</text>
+<line x1="749.41" y1="42" x2="749.41" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="737.41" y="590" font-family="monospace" font-size="12">160ns</text>
+<line x1="903.53" y1="42" x2="903.53" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="891.53" y="590" font-family="monospace" font-size="12">180ns</text>
+<line x1="1057.65" y1="42" x2="1057.65" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="1045.65" y="590" font-family="monospace" font-size="12">200ns</text>
+<line x1="1211.76" y1="42" x2="1211.76" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="1199.76" y="590" font-family="monospace" font-size="12">220ns</text>
+<line x1="1365.88" y1="42" x2="1365.88" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="1353.88" y="590" font-family="monospace" font-size="12">240ns</text>
+<line x1="1520.00" y1="42" x2="1520.00" y2="570" stroke="#d8d8d8" stroke-width="1"/>
+<text x="1508.00" y="590" font-family="monospace" font-size="12">260ns</text>
+<text x="20" y="70" font-family="monospace" font-size="14">i_aresetn</text>
+<line x1="210" y1="69" x2="1560" y2="69" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 58.00 L 1520.00 58.00 L 1520.00 58.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="122" font-family="monospace" font-size="14">s_axis_video_tvalid</text>
+<line x1="210" y1="121" x2="1560" y2="121" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 132.00 L 287.06 132.00 L 287.06 110.00 L 1520.00 110.00 L 1520.00 110.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="174" font-family="monospace" font-size="14">s_axis_video_tready</text>
+<line x1="210" y1="173" x2="1560" y2="173" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 162.00 L 364.12 162.00 L 364.12 184.00 L 518.24 184.00 L 518.24 162.00 L 826.47 162.00 L 826.47 184.00 L 980.59 184.00 L 980.59 162.00 L 1288.82 162.00 L 1288.82 184.00 L 1442.94 184.00 L 1442.94 162.00 L 1520.00 162.00 L 1520.00 162.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="226" font-family="monospace" font-size="14">m_axis_rbg888_tvalid</text>
+<line x1="210" y1="225" x2="1560" y2="225" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 236.00 L 364.12 236.00 L 364.12 214.00 L 1520.00 214.00 L 1520.00 214.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="278" font-family="monospace" font-size="14">m_axis_rbg888_tready</text>
+<line x1="210" y1="277" x2="1560" y2="277" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 266.00 L 287.06 266.00 L 287.06 288.00 L 518.24 288.00 L 518.24 266.00 L 826.47 266.00 L 826.47 288.00 L 980.59 288.00 L 980.59 266.00 L 1288.82 266.00 L 1288.82 288.00 L 1442.94 288.00 L 1442.94 266.00 L 1520.00 266.00 L 1520.00 266.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="330" font-family="monospace" font-size="14">m_axis_gray8_tvalid</text>
+<line x1="210" y1="329" x2="1560" y2="329" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 340.00 L 364.12 340.00 L 364.12 318.00 L 441.18 318.00 L 441.18 340.00 L 595.29 340.00 L 595.29 318.00 L 903.53 318.00 L 903.53 340.00 L 1057.65 340.00 L 1057.65 318.00 L 1365.88 318.00 L 1365.88 340.00 L 1520.00 340.00 L 1520.00 318.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="382" font-family="monospace" font-size="14">m_axis_gray8_tready</text>
+<line x1="210" y1="381" x2="1560" y2="381" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 370.00 L 1520.00 370.00 L 1520.00 370.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="434" font-family="monospace" font-size="14">s_axis_video_tuser</text>
+<line x1="210" y1="433" x2="1560" y2="433" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 444.00 L 287.06 444.00 L 287.06 422.00 L 364.12 422.00 L 364.12 444.00 L 1520.00 444.00 L 1520.00 444.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+<text x="20" y="486" font-family="monospace" font-size="14">s_axis_video_tlast</text>
+<line x1="210" y1="485" x2="1560" y2="485" stroke="#f1f1f1" stroke-width="1"/>
+<path d="M 210.00 496.00 L 1134.71 496.00 L 1134.71 474.00 L 1211.76 474.00 L 1211.76 496.00 L 1520.00 496.00 L 1520.00 496.00" fill="none" stroke="#004b8d" stroke-width="2"/>
+</svg>

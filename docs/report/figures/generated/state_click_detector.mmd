@@ -1,0 +1,24 @@
+stateDiagram-v2
+  [*] --> ST_PASS_ALL
+  ST_PASS_ALL --> ST_SOBEL: BTN1 rising edge
+  ST_SOBEL --> ST_BLUR_SOBEL: BTN1 rising edge
+  ST_BLUR_SOBEL --> ST_PASS_ALL: BTN1 rising edge
+
+  state ST_PASS_ALL {
+    [*] --> pass
+    pass: o_pass_blurr_filter=1\no_pass_sobel=1
+  }
+  state ST_SOBEL {
+    [*] --> sobel
+    sobel: o_pass_blurr_filter=1\no_pass_sobel=0
+  }
+  state ST_BLUR_SOBEL {
+    [*] --> blur_sobel
+    blur_sobel: o_pass_blurr_filter=0\no_pass_sobel=0
+  }
+
+  note right of ST_PASS_ALL
+    BTN2 base FSM cycles independently:
+    ST_RGB -> ST_GRAY -> ST_ZEROS -> ST_RGB
+    on each BTN2 rising edge
+  end note

@@ -10,6 +10,11 @@
 - The report must be structured into multiple sections, each being defined in report/sections/*.typ, and then included in the main report file.
 -
 
+Each component should section must start with a brief conceptual introduction, followed by a figure of the component's interfaces as vivado ip block and a table giving an overview of the interface ports and generics.
+
+![Minimal example of the structure of a component section](../../.codex/image.png)
+
+
 ## Include more theoretical background and imp
 
 - [ ] AXI4 Video Stream protocol
