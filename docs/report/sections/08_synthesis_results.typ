@@ -1,4 +1,8 @@
+#import "../shared/macros.typ": *
+
 = Synthesis and Implementation Results
+#component_owner("Engineering review")
+
 This section uses Typst file I/O (`csv(...)`) over cleaned artifacts generated from Vivado reports in `docs/report/data/`.
 
 #let resource_rows = csv("../data/resource_utilization.csv", row-type: dictionary)
@@ -32,8 +36,9 @@ This section uses Typst file I/O (`csv(...)`) over cleaned artifacts generated f
 }
 
 #figure(
-  table(
-    columns: 6,
+  academic_table(
+    columns: (1.75fr, 0.55fr, 0.55fr, 0.55fr, 0.55fr, 2.2fr),
+    align: (left, center, center, center, center, left),
     table.header([Module], [LUT], [FF], [BRAM], [DSP], [Evidence source]),
     ..resource_rows.map(row => (
       [#module_name(row.module)],
@@ -48,8 +53,9 @@ This section uses Typst file I/O (`csv(...)`) over cleaned artifacts generated f
 ) <tab-resource-abs>
 
 #figure(
-  table(
-    columns: 3,
+  academic_table(
+    columns: (1.75fr, 1.5fr, 1.5fr),
+    align: (left, left, left),
     table.header([Module], [LUT share vs system], [FF share vs system]),
     ..share_rows.map(row => (
       [#module_name(row.module)],

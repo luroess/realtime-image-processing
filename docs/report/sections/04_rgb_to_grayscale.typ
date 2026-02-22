@@ -1,16 +1,22 @@
-#import "../shared/macros.typ": repo_link
+#import "../shared/macros.typ": *
 
 = Component Deep Dive: RGB_TO_GRAYSCALE
+#component_owner("Jan Duchscherer")
+
+== Conceptual introduction
 `AXI_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4)) wraps the grayscale core `E_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5)) and emits two synchronized output branches: a grayscale stream (`gray8`) and an RGB stream (`rbg888`) that can either forward the original pixel or replicate grayscale data, depending on `i_pass_through`.
 
+== Vivado interface view
 #figure(
   image("../../figures/AXI_Bayer2RGB_Gamma_Corr2Gray.png", width: 95%),
   caption: [Vivado block context showing AXI_RgbToGrayscale insertion and interfaces.],
 ) <fig-rgb2gray-vivado>
 
+== Interface ports and generics
 #figure(
-  table(
-    columns: 4,
+  academic_table(
+    columns: (1.65fr, 0.65fr, 0.85fr, 2.5fr),
+    align: (left, left, left, left),
     table.header([Signal/group], [Dir.], [Width], [Purpose]),
     [`G_COMPONENT_WIDTH`], [generic], [default `8`], [Per-channel component width.],
     [`i_aclk`, `i_aresetn`], [in], [1], [Clock/reset for AXI stream logic.],

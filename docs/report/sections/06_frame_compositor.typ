@@ -1,16 +1,22 @@
-#import "../shared/macros.typ": repo_link
+#import "../shared/macros.typ": *
 
 = Component Deep Dive: FRAME_COMPOSITOR
+#component_owner("Valentin Bumeder, Justin Loeber")
+
+== Conceptual introduction
 `AXI_FrameCompositor` (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4)) is the output owner for final RGB888 stream selection. It synchronizes delayed base RGB data with gray/mask timing and decides between binary-mask output or overlay compositing through `FrameCompositor` (#repo_link("rtl/FRAME_COMPOSITOR/hdl/frame_compositor.vhd", line: 5)).
 
+== Vivado interface view
 #figure(
   image("../figures/frame_compositor_architecture_trimmed.png", width: 90%),
   caption: [Frame compositor architecture and signal path used for delayed-base alignment and output ownership.],
 ) <fig-frame-arch>
 
+== Interface ports and generics
 #figure(
-  table(
-    columns: 4,
+  academic_table(
+    columns: (1.8fr, 0.65fr, 0.85fr, 2.4fr),
+    align: (left, left, left, left),
     table.header([Signal/group], [Dir.], [Width], [Purpose]),
     [`G_LINE_WIDTH`, `G_SOBEL_KERNEL_SIZE`, `G_BLUR_KERNEL_SIZE`], [generic], [positive], [Delay derivation parameters.],
     [`G_SOBEL_DELAY_OVERRIDE`, `G_BLUR_SOBEL_DELAY_OVERRIDE`], [generic], [natural], [Optional manual tap override.],

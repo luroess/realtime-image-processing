@@ -1,3 +1,5 @@
+#import "../shared/macros.typ": *
+
 = AXI4-Stream Video Protocol Background
 The stream contract used by RTL and cocotb scoreboards is:
 $ "transfer"_k = "tvalid"_k and "tready"_k $
@@ -9,8 +11,9 @@ For AXI4-Stream Video, UG934 imposes project-critical rules for active video bea
 - Only active pixels are transferred on the AXI stream.
 
 #figure(
-  table(
-    columns: 3,
+  academic_table(
+    columns: (1.25fr, 1.15fr, 2.35fr),
+    align: (left, left, left),
     table.header([Signal/Rule], [Meaning], [Project consequence]),
     [`TUSER[0]`], [SOF marker], [Control/state latching is performed at frame boundaries.],
     [`TLAST`], [EOL marker], [Line-level alignment is preserved across RGB and grayscale branches.],

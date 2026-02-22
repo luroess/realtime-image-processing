@@ -1,63 +1,33 @@
-#import "shared/macros.typ": repo_link
+#import "@preview/booktabs:0.0.4": booktabs-default-table-style
+#import "shared/macros.typ": *
 
-#set page(
-  paper: "a4",
-  margin: (x: 1.8cm, y: 1.6cm),
-  numbering: "1",
-)
-#set text(font: "Libertinus Serif", size: 10.3pt)
-#set heading(numbering: "1.")
+#set text(lang: "en")
+#set math.equation(numbering: "(1)", supplement: [Eq.])
 #set par(justify: true)
-#set math.equation(numbering: "(1)")
+#set heading(numbering: "1.")
+#set page(paper: "a4", margin: (x: 2.1cm, y: 1.9cm), numbering: "1")
+#show: booktabs-default-table-style
+#show table.cell: set text(size: 8.7pt)
+#show table.cell.where(y: 0): set text(weight: "semibold")
 #show bibliography: set text(size: 9pt)
 
-#let project = [Realtime Streaming Image Processing on FPGA]
-#let subtitle = [Implementation Report Revision: AXI4-Stream Pipeline, Control FSM, and Verification]
-#let team = [Lukas Roess, Valentin Bumeder, Jan Duchscherer, Justin Loeber]
-
-#let resource_rows = csv("data/resource_utilization.csv")
-#let share_rows = csv("data/resource_relative_share_vs_system.csv")
-
-#let module_name(module) = {
-  if module == "rgb_to_grayscale_axi_ooc" {
-    [RGB_TO_GRAYSCALE (AXI OOC)]
-  } else if module == "frame_compositor_core_ooc" {
-    [FRAME_COMPOSITOR core (OOC)]
-  } else if module == "pl_pipeline_ip_ooc" {
-    [Integrated pipeline IP (OOC)]
-  } else if module == "system_wrapper_placed" {
-    [Entire system (placed)]
-  } else {
-    [#module]
-  }
-}
-
-#let pct_bar(value, color: rgb("#1f77b4")) = {
-  let v = float(value)
-  let clamped = calc.min(v, 100.0)
-  box(
-    width: clamped * 0.06cm,
-    height: 0.28cm,
-    fill: color,
-    stroke: none,
-    radius: 1.5pt,
-    inset: 0pt,
-  )
-}
-
 #align(center)[
-  #text(size: 18pt, weight: "bold")[#project]
-  #v(0.3em)
-  #text(size: 11pt)[#subtitle]
-  #v(0.9em)
-  #team
+  #text(size: 19pt, weight: "bold")[Realtime Streaming Image Processing on FPGA]
   #linebreak()
-  Embedded Systems, Academic Year 2025-2026
+  #text(size: 11pt, fill: rgb("#334155"))[
+    Implementation Report Revision: AXI4-Stream Pipeline, Control FSM, and Verification
+  ]
+  #v(6pt)
+  #image("../figures/hm-logo.svg", width: 2.8cm)
+  #v(6pt)
+  #text(size: 10pt)[Lukas Roess, Valentin Bumeder, Jan Duchscherer, Justin Loeber]
   #linebreak()
-  Revision date: 2026-02-22
+  #text(size: 9pt, fill: rgb("#64748b"))[Embedded Systems, Academic Year 2025-2026]
+  #linebreak()
+  #text(size: 9pt, fill: rgb("#64748b"))[Revision date: 2026-02-22]
 ]
 
-#v(1.1em)
+#v(0.8cm)
 
 #include "sections/01_abstract.typ"
 #include "sections/02_scope_revision.typ"
@@ -69,4 +39,5 @@
 #include "sections/08_synthesis_results.typ"
 #include "sections/09_risks_next_steps.typ"
 
+#pagebreak()
 #bibliography("references.bib", title: [References])

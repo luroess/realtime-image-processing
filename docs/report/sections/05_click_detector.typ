@@ -1,16 +1,22 @@
-#import "../shared/macros.typ": repo_link
+#import "../shared/macros.typ": *
 
 = Component Deep Dive: CLICK_DETECTOR Control FSM
+#component_owner("Valentin Bumeder, Jan Duchscherer")
+
+== Conceptual introduction
 The control path consists of `DebouncedClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4)) and `ClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5)). BTN1 cycles processing stages, while BTN2 cycles base-image behavior.
 
+== Vivado interface view
 #figure(
   image("../../figures/vivado_block_wiring.png", width: 76%),
   caption: [Vivado integration view showing debounced click-detector control IP in the processing system context.],
 ) <fig-click-vivado>
 
+== Interface ports and generics
 #figure(
-  table(
-    columns: 4,
+  academic_table(
+    columns: (1.7fr, 0.65fr, 0.85fr, 2.45fr),
+    align: (left, left, left, left),
     table.header([Signal/group], [Dir.], [Width], [Purpose]),
     [`G_CLK_FREQ_HZ`, `G_DEBOUNCE_NS`], [generic], [integer], [Debounce timing configuration in `DebouncedClickDetector`.],
     [`i_btn[3:0]`], [in], [4], [Physical button inputs before debounce.],
@@ -32,8 +38,9 @@ Both FSM partitions in `ClickDetector` are Moore-style with respect to output be
 ) <fig-click-state>
 
 #figure(
-  table(
-    columns: 5,
+  academic_table(
+    columns: (0.95fr, 1.1fr, 0.95fr, 0.9fr, 2.5fr),
+    align: (left, left, center, center, left),
     table.header([FSM], [State], [`o_pass_blurr_filter`], [`o_pass_sobel`], [Base/overlay outcome]),
     [processing], [`ST_PASS_ALL`], [`1`], [`1`], [Bypass blur and sobel; upstream grayscale stage remains available.],
     [processing], [`ST_SOBEL`], [`1`], [`0`], [Sobel active without blur pre-stage.],

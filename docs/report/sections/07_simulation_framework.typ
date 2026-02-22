@@ -1,11 +1,14 @@
-#import "../shared/macros.typ": repo_link
+#import "../shared/macros.typ": *
 
 = Simulation Framework using cocotb and cocotbext-axi
+#component_owner("Lukas Roess, Jan Duchscherer, Valentin Bumeder, Justin Loeber")
+
 The verification stack is organized as reusable source/sink/model/scoreboard layers in `testbench/` and executed through target registration in #repo_link("testbench/targets.toml", line: 1), with runner entrypoint #repo_link("testbench/sim/run.py", body: raw("testbench/sim/run.py"), line: 194).
 
 #figure(
-  table(
-    columns: 3,
+  academic_table(
+    columns: (1.55fr, 1.75fr, 1.9fr),
+    align: (left, left, left),
     table.header([Stimulus], [DUT], [Checks]),
     [`drivers/axis_*_source.py`], [RTL toplevel under `tb-sim --target ...`], [`monitors/axis_*_sink.py` + `verification/scoreboard.py`],
     [custom serialization to project AXI wire order], [AXI4-Stream video handshake + control], [golden reference comparison and protocol assertions],
