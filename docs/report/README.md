@@ -46,6 +46,18 @@ pdftocairo -png docs/report/build/report_revised.pdf docs/report/build/report_re
 python3 docs/report/analysis/extract_resource_data.py
 ```
 
+- Export synthesized AXI pipeline utilization reports (flat + hierarchical) from checkpoint:
+
+```bash
+cmd.exe /c "C:\Xilinx\2025.1\Vivado\bin\vivado.bat -mode batch -source docs\report\analysis\run_pipeline_hier_utilization.tcl -nojournal -nolog"
+```
+
+- Build minimal Plotly resource-utilization figures and split CSVs:
+
+```bash
+python3 docs/report/analysis/build_resource_plots.py
+```
+
 - Produce timing SVG from VCD:
 
 ```bash

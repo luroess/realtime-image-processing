@@ -1,0 +1,35 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.1 (win64) Build 6140274 Thu May 22 00:12:29 MDT 2025
+| Date         : Mon Feb 23 16:02:21 2026
+| Host         : JanPC running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -hierarchical_depth 2 -file C:/Users/jandu/repos/clean/realtime-image-processing/docs/report/data/vivado_ooc/pipeline_ip/pipeline_ip_hier_utilization_synth.rpt
+| Design       : system_AXI_RgbGrayBlurrSobe_0_0
+| Device       : xc7z010clg400-1
+| Speed File   : -1
+| Design State : Synthesized
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++-------------------------------------+----------------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+|               Instance              |                                Module                                | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++-------------------------------------+----------------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+| system_AXI_RgbGrayBlurrSobe_0_0     |                                                                (top) |       4189 |        618 |       0 | 3571 | 4439 |      0 |      0 |          0 |
+|   (system_AXI_RgbGrayBlurrSobe_0_0) |                                                                (top) |          0 |          0 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   U0                                | system_AXI_RgbGrayBlurrSobe_0_0_AXI_RgbGrayBlurrSobelOverlayPipeline |       4189 |        618 |       0 | 3571 | 4439 |      0 |      0 |          0 |
+|     U_DebouncedClickDetector        |               system_AXI_RgbGrayBlurrSobe_0_0_DebouncedClickDetector |         35 |         35 |       0 |    0 |   54 |      0 |      0 |          0 |
+|     U_AxiBlurrWindowModule          |                system_AXI_RgbGrayBlurrSobe_0_0_AXI_BlurrWindowModule |        954 |        193 |       0 |  761 | 1488 |      0 |      0 |          0 |
+|     U_AxiFrameCompositor            |                  system_AXI_RgbGrayBlurrSobe_0_0_AXI_FrameCompositor |       2105 |         56 |       0 | 2049 | 1383 |      0 |      0 |          0 |
+|     U_AxiRgbToGrayscale             |                   system_AXI_RgbGrayBlurrSobe_0_0_AXI_RgbToGrayscale |         56 |         56 |       0 |    0 |   30 |      0 |      0 |          0 |
+|     U_AxiSobelWindowModule          |                system_AXI_RgbGrayBlurrSobe_0_0_AXI_SobelWindowModule |       1039 |        278 |       0 |  761 | 1480 |      0 |      0 |          0 |
++-------------------------------------+----------------------------------------------------------------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

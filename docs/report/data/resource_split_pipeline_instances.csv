@@ -1,0 +1,6 @@
+instance,component,lut,lutram,srl,ff,bram,dsp
+U_DebouncedClickDetector,DebouncedClickDetector,35.0,0.0,0.0,54.0,0.0,0.0
+U_AxiRgbToGrayscale,AxiRgbToGrayscale,56.0,0.0,0.0,30.0,0.0,0.0
+U_AxiBlurrWindowModule,AxiBlurrWindowModule,954.0,761.0,761.0,1488.0,0.0,0.0
+U_AxiSobelWindowModule,AxiSobelWindowModule,1039.0,761.0,761.0,1480.0,0.0,0.0
+U_AxiFrameCompositor,AxiFrameCompositor,2105.0,2049.0,2049.0,1383.0,0.0,0.0
