@@ -1,79 +1,70 @@
 #import "../shared/macros.typ": *
 
-= Component Deep Dive: CLICK_DETECTOR Control FSM
+= Component: Control FSM \~ CLICK_DETECTOR
 #component_owner("Valentin Bumeder, Jan Duchscherer")
 
 == Conceptual introduction
 The control path consists of `DebouncedClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4)) and `ClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5)). BTN1 cycles processing stages, while BTN2 cycles base-image behavior.
 
-== Vivado interface view
 #figure(
-  image("../../figures/vivado_block_wiring.png", width: 76%),
-  caption: [Vivado integration view showing debounced click-detector control IP in the processing system context.],
+  image("../../figures/ip-cores/DebouncedClickDet.png", width: 35%),
+  caption: [DebouncedClickDetector top-level control IP with button-debounce inputs and runtime mode-control outputs.],
 ) <fig-click-vivado>
 
 == Interface ports and generics
 #figure(
-  academic_table(
-    columns: (1.7fr, 0.65fr, 0.85fr, 2.45fr),
-    align: (left, left, left, left),
-    table.header([Signal/group], [Dir.], [Width], [Purpose]),
-    [`G_CLK_FREQ_HZ`, `G_DEBOUNCE_NS`], [generic], [integer], [Debounce timing configuration in `DebouncedClickDetector`.],
-    [`i_btn[3:0]`], [in], [4], [Physical button inputs before debounce.],
-    [`o_btn_debounced`, `o_btn2_debounced`], [out], [1 each], [Edge-detected FSM trigger sources after debounce.],
-    [`o_pass_grayscale`], [out], [1], [Base-stream selection: RGB passthrough vs gray replication.],
-    [`o_pass_blurr_filter`, `o_pass_sobel`], [out], [1 each], [Processing-mode bypass controls.],
-    [`o_overlay_zeros`], [out], [1], [Force binary-only overlay output mode.],
-    [`o_led[3:0]`], [out], [4], [Runtime mode indicators.],
+  interface_table(
+    generics: (
+      [`G_CLK_FREQ_HZ`, `G_DEBOUNCE_NS`],
+      [generic],
+      [integer],
+      [Debounce timing configuration in `DebouncedClickDetector`.],
+    ),
+    ports: (
+      [`i_btn[3:0]`],
+      [in],
+      [4],
+      [Physical button inputs before debounce.],
+      [`o_btn_debounced`, `o_btn2_debounced`],
+      [out],
+      [1 each],
+      [Edge-detected FSM trigger sources after debounce.],
+      [`o_pass_grayscale`],
+      [out],
+      [1],
+      [Base-stream selection: RGB passthrough vs gray replication.],
+      [`o_pass_blurr_filter`, `o_pass_sobel`],
+      [out],
+      [1 each],
+      [Processing-mode bypass controls.],
+      [`o_overlay_zeros`],
+      [out],
+      [1],
+      [Force binary-only overlay output mode.],
+      [`o_led[3:0]`],
+      [out],
+      [4],
+      [Runtime mode indicators.],
+    ),
   ),
   caption: [Click-detector control interfaces from #repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", body: raw("debounced_click_detector.vhd"), line: 4) and #repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", body: raw("click_detection.vhd"), line: 5).],
 ) <tab-click-if>
 
-== FSM style classification (Mealy vs Moore)
+== Control FSM structure and state encoding
 Both FSM partitions in `ClickDetector` are Moore-style with respect to output behavior: output controls are derived from current state registers (`s_current_state`, `s_base_current_state`), while button edges only affect next-state transitions.
 
 #figure(
-  image("../figures/generated/state_click_detector.png", width: 74%),
-  caption: [BTN1 processing-state FSM with output mode mapping and BTN2 independence note.],
+  image("../figures/generated/state_click_detector_current_processing_colored.svg", width: 95%),
+  caption: [Current workspace BTN1 Moore FSM (`ClickDetector` processing partition). State labels include output decode values.],
 ) <fig-click-state>
 
-== Sequence of transitions and output changes
 #figure(
-  image("../figures/generated/seq_click_detector_control.png", width: 82%),
-  caption: [Representative BTN1-driven state transitions and corresponding processing output updates; BTN2 base FSM cycles independently.],
-) <fig-click-seq>
+  image("../figures/generated/state_click_detector_current_base_colored.svg", width: 95%),
+  caption: [Current workspace BTN2 Moore FSM (`ClickDetector` base-image partition). In `ST_PASS_ALL`, the base-mode cycle is restricted to `ST_RGB` and `ST_GRAY` as indicated by the guarded transition labels.],
+) <fig-click-state-base-current>
 
-The sequence in @fig-click-seq matches the implemented edge-driven transition pattern in #repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 66) and output decode in #repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 148).
+The control logic is split into two orthogonal Moore partitions. The BTN1 processing FSM in @fig-click-state advances deterministically through `ST_PASS_ALL`, `ST_SOBEL`, and `ST_BLUR_SOBEL`, while `o_pass_blurr_filter`, `o_pass_sobel`, and `o_led[2:0]` are decoded solely from the active state register. This makes each button edge a pure mode step: transition conditions depend on debounced rising-edge detection, and output changes occur only after the next registered state is committed.
 
-== Interface state/output matrix
-#figure(
-  academic_grouped_table(
-    columns: (0.9fr, 1.2fr, 0.75fr, 0.75fr, 0.75fr, 0.75fr, 2.0fr),
-    align: (left, left, center, center, center, center, left),
-    group_header: table.header(
-      [FSM],
-      [State],
-      table.cell(colspan: 2)[Processing outputs],
-      table.cell(colspan: 2)[Base/overlay outputs],
-      [Effect],
-    ),
-    sub_header: table.header(
-      [],
-      [],
-      [`o_pass_blurr_filter`],
-      [`o_pass_sobel`],
-      [`o_pass_grayscale`],
-      [`o_overlay_zeros`],
-      [],
-    ),
-    cmid_start: 3,
-    cmid_end: 6,
-    [processing], [`ST_PASS_ALL`], [`1`], [`1`], [`-`], [`-`], [Bypass blur and sobel; upstream grayscale stage remains available.],
-    [processing], [`ST_SOBEL`], [`1`], [`0`], [`-`], [`-`], [Sobel active without blur pre-stage.],
-    [processing], [`ST_BLUR_SOBEL`], [`0`], [`0`], [`-`], [`-`], [Blur + Sobel cascade active.],
-    [base], [`ST_RGB`], [`-`], [`-`], [`1`], [`0`], [RGB base shown.],
-    [base], [`ST_GRAY`], [`-`], [`-`], [`0`], [`0`], [Gray-replicated base shown.],
-    [base], [`ST_ZEROS`], [`-`], [`-`], [`0`], [`1`], [Base suppressed; binary overlay-only view.],
-  ),
-  caption: [State/output matrix for processing and base-image FSM partitions in `ClickDetector`.],
-) <tab-click-states>
+The BTN2 base-image FSM in @fig-click-state-base-current applies guarded transitions that depend on the processing mode context. When `proc = ST_PASS_ALL`, BTN2 cycles between `ST_RGB` and `ST_GRAY` to toggle the displayed base stream without forcing overlay-only output. When `proc != ST_PASS_ALL`, BTN2 transitions are directed toward `ST_ZEROS`, ensuring that processed binary features are shown without base-image blending. This coupling keeps each FSM locally Moore while enforcing a globally coherent user-visible mode behavior.
+
+For completeness, the extended `origin/feat/frame-compositor` variants that add FAST support and the `ST_BLUR`-dependent base-force behavior are documented in Appendix @fig-app-click-state-processing-fc and @fig-app-click-state-base-fc.

@@ -38,6 +38,7 @@
 #include "sections/07_simulation_framework.typ"
 #include "sections/08_synthesis_results.typ"
 #include "sections/09_risks_next_steps.typ"
+#include "sections/10_appendix.typ"
 
 #pagebreak()
 #bibliography("references.bib", title: [References])
