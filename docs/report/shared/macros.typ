@@ -85,6 +85,43 @@
   )
 }
 
+#let interface_group_row(
+  label,
+  fill: luma(240),
+  text_fill: rgb("#475569"),
+) = {
+  table.cell(
+    colspan: 4,
+    fill: fill,
+    inset: (x: 4pt, y: 2pt),
+    align: left,
+  )[#text(size: 9pt, weight: "bold", fill: text_fill)[#label]]
+}
+
+#let interface_table(
+  generics: (),
+  ports: (),
+  columns: (auto, auto, auto, auto),
+  align: (left, left, left, left),
+  header: ([Name/Group], [Class], [Type/size], [Description]),
+  group_fill: luma(240),
+  group_text_fill: rgb("#475569"),
+  group_sep_stroke: 0.3pt + rgb("#cbd5e1"),
+) = {
+  let generic_block = (interface_group_row("Generics", fill: group_fill, text_fill: group_text_fill),) + generics
+  let port_block = if ports.len() > 0 {
+    (table.hline(stroke: group_sep_stroke), interface_group_row("Ports", fill: group_fill, text_fill: group_text_fill),) + ports
+  } else {
+    ()
+  }
+  academic_table(
+    columns: columns,
+    align: align,
+    table.header(..header),
+    ..(generic_block + port_block),
+  )
+}
+
 #let academic_grouped_table(
   columns: (),
   align: auto,

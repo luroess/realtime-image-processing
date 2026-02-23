@@ -7,13 +7,17 @@ The verification stack is organized as reusable source/sink/model/scoreboard lay
 
 #figure(
   academic_table(
-    columns: (1.55fr, 1.75fr, 1.9fr),
+    columns: (auto, auto, auto),
     align: (left, left, left),
     table.header([Stimulus], [DUT], [Checks]),
-    [`drivers/axis_*_source.py`], [RTL toplevel under `tb-sim --target ...`], [`monitors/axis_*_sink.py` + `verification/scoreboard.py`],
-    [custom serialization to project AXI wire order], [AXI4-Stream video handshake + control], [golden reference comparison and protocol assertions],
+    [`drivers/axis_*_source.py`],
+    [RTL toplevel under `tb-sim --target ...`],
+    [`monitors/axis_*_sink.py` + `verification/scoreboard.py`],
+    [custom serialization to project AXI wire order],
+    [AXI4-Stream video handshake + control],
+    [golden reference comparison and protocol assertions],
   ),
-  caption: [Testbench structure: Source (+ serialization) -> UUT -> Sink (+ deserialization) with scoreboard checks.],
+  caption: [Testbench structure: Source (+ serialization) #sym.arrow UUT #sym.arrow Sink (+ deserialization) with scoreboard checks.],
 ) <tab-tb-architecture>
 
 Framework elements aligned with cocotb timing/writing guidance:@cocotb-writing @cocotb-timing @cocotbext-axi
@@ -32,14 +36,24 @@ Stress dimensions covered by active targets include:
 == Active target snapshot and purpose
 #figure(
   academic_table(
-    columns: (1.25fr, 1.2fr, 2.1fr),
+    columns: (auto, auto, auto),
     align: (left, left, left),
     table.header([Target key], [Primary DUT], [Purpose / stress focus]),
-    [axi_rgb_to_grayscale], [AXI_RgbToGrayscale], [Dual-branch handshake correctness and SOF/EOL alignment under branch backpressure.],
-    [test_click_detector], [ClickDetector], [BTN-edge FSM sequencing and output decode checks for processing/base mode controls.],
-    [shift_ram_chain], [ShiftRamChain], [Delay-tap progression and accepted-beat accounting across chunked shift-RAM stages.],
-    [axi_frame_compositor], [AXI_FrameCompositor], [Prefill gating, merge-mode lockstep behavior, and gray-timed output ownership.],
-    [axi_gray_blurr_sobel_ #linebreak() overlay_pipeline_ #linebreak() downscaled], [AXI_RgbGrayBlurrSobel #linebreak() OverlayPipeline], [Integrated reset/mode/backpressure regression on a bounded 64x64 frame workload.],
+    [axi_rgb_to_grayscale],
+    [AXI_RgbToGrayscale],
+    [Dual-branch handshake correctness and SOF/EOL alignment under branch backpressure.],
+    [test_click_detector],
+    [ClickDetector],
+    [BTN-edge FSM sequencing and output decode checks for processing/base mode controls.],
+    [shift_ram_chain],
+    [ShiftRamChain],
+    [Delay-tap progression and accepted-beat accounting across chunked shift-RAM stages.],
+    [axi_frame_compositor],
+    [AXI_FrameCompositor],
+    [Prefill gating, merge-mode lockstep behavior, and gray-timed output ownership.],
+    [axi_gray_blurr_sobel_ #linebreak() overlay_pipeline_ #linebreak() downscaled],
+    [AXI_RgbGrayBlurrSobel #linebreak() OverlayPipeline],
+    [Integrated reset/mode/backpressure regression on a bounded 64x64 frame workload.],
   ),
   caption: [Representative target mapping from #repo_link("testbench/targets.toml", line: 1); the full target registry remains source-of-truth in `targets.toml`.],
 ) <tab-target-overview>
