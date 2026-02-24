@@ -57,7 +57,7 @@ To avoid deadlock during delay-line warm-up, READY generation is intentionally a
       [in/out],
       [AXIS video],
       [Gray/mask stream; timing reference for output `tvalid`, `tuser`, and `tlast`.],
-      [`m_axis_video_rbg888_*`],
+      [`m_axis_rbg888_*`],
       [out/in],
       [AXIS video],
       [Final RGB output (binary mask or composed delayed-base image).],
@@ -103,7 +103,7 @@ The intentionally unusual case `gray8_tready = 1` while `gray8_tvalid = 0` does 
         Assign[s_axis_rbg888_tready][0]
       })
       ElseIf([i_overlay_zeros], {
-        Assign[s_axis_gray8_tready][m_axis_video_rbg888_tready]
+        Assign[s_axis_gray8_tready][m_axis_rbg888_tready]
         Assign[s_axis_rbg888_tready][1]
       })
       Else({
@@ -111,14 +111,14 @@ The intentionally unusual case `gray8_tready = 1` while `gray8_tvalid = 0` does 
           Assign[s_axis_gray8_tready][1]
         })
         Else({
-          Assign[s_axis_gray8_tready][m_axis_video_rbg888_tready $and$ s_prefill_done]
+          Assign[s_axis_gray8_tready][m_axis_rbg888_tready $and$ s_prefill_done]
         })
 
         If([$not$ s_prefill_done], {
           Assign[s_axis_rbg888_tready][1]
         })
         Else({
-          Assign[s_axis_rbg888_tready][m_axis_video_rbg888_tready $and$ s_axis_gray8_tvalid]
+          Assign[s_axis_rbg888_tready][m_axis_rbg888_tready $and$ s_axis_gray8_tvalid]
         })
       })
     },
@@ -162,7 +162,7 @@ The per-beat muxing behavior is summarized below; it describes only pixel select
   )))
 }
 
-Conceptually, the wrapper first selects the delay-aligned base pixel, then applies the edge-color overwrite. Binary-only output is handled as a final output selection: when `i_overlay_zeros=1`, the wrapper drives a black/white mask RGB payload instead of the composed pixel (`m_axis_video_rbg888_tdata` selection in #repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 335)). The RTL also includes simulation guards for mid-frame control changes, reserved selector usage, and SOF/EOL mismatches between gray timing and delayed-base timing.
+Conceptually, the wrapper first selects the delay-aligned base pixel, then applies the edge-color overwrite. Binary-only output is handled as a final output selection: when `i_overlay_zeros=1`, the wrapper drives a black/white mask RGB payload instead of the composed pixel (`m_axis_rbg888_tdata` selection in #repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 335)). The RTL also includes simulation guards for mid-frame control changes, reserved selector usage, and SOF/EOL mismatches between gray timing and delayed-base timing.
 
 // #figure(
 //   academic_test_table(
