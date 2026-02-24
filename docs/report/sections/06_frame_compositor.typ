@@ -239,12 +239,12 @@ $
    D_"effective" & = D_"requested" + (N_"chunks" - 1)
 $
 
-Table @tab-shiftram-sel-map lists the configured FIFO length and Shift-RAM stage count per selector/tap. In simulation, these stage counts map to a custom `c_shift_ram_0_model` behavioral replacement because using the official behavioral model would require `vsim`. The effective delay used by prefill gating is derived from FIFO length via the stage-overhead term in the equation above: each additional cascaded shift-RAM stage beyond the first contributes +1 beat, i.e. $D_"effective" = D_"requested" + (N_"stages" - 1)$ where $D_"requested"$ is the table's FIFO length. Therefore, paths with one stage (or bypass) show no discrepancy, while multi-stage paths are longer by exactly `N_stages - 1` beats (for example, Sim `10`: `5 -> 6`, Synthesis `01`: `1281 -> 1282`, Synthesis `10`: `2562 -> 2565`). These effective taps are used by the wrapper's prefill gating (`s_base_valid_pipe` / `s_base_delayed_valid`) to prevent underrun at frame start (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 238)).
+Table @tab-shiftram-sel-map lists the configured FIFO length and Shift-RAM stage count per selector/tap. In simulation, these stage counts map to a custom `c_shift_ram_0_model` behavioral replacement because using the official behavioral model would require `vsim`. The effective delay used by prefill gating is derived from FIFO length via the stage-overhead term in the equation above: each additional cascaded shift-RAM stage beyond the first contributes +1 beat, i.e. $D_"effective" = D_"requested" + (N_"stages" - 1)$ where $D_"requested"$ is the table's FIFO length. Therefore, paths with one stage (or bypass) show no discrepancy, while multi-stage paths are longer by exactly $N_"stages" - 1$ beats (for example, Sim $10: 5 -> 6$, Synthesis $01: 1281 -> 1282$, Synthesis $10: 2562 -> 2565$). These effective taps are used by the wrapper's prefill gating (`s_base_valid_pipe` / `s_base_delayed_valid`) to prevent underrun at frame start (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 238)).
 
 #figure(
   academic_table(
     columns: (auto, auto, auto, auto, auto),
-    align: (left, center, left, center, left),
+    align: (left, center, left, center, center),
     table.header(
       [Context],
       [`sel`],

@@ -1,7 +1,12 @@
 #import "../shared/macros.typ": *
 
 = Component: Control FSM \~ CLICK_DETECTOR
-#component_owner("Valentin Bumeder, Jan Duchscherer")
+#component_owner(
+  "Valentin Bumeder"
+    + text(fill: gray)[ (debouncing, initial FSM) ]
+    + ", Jan Duchscherer"
+    + text(fill: gray)[ (revision, orthogonal FSMs) ],
+)
 
 == Conceptual introduction
 The control path consists of `DebouncedClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4)) and `ClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5)). BTN1 cycles processing stages, while BTN2 cycles base-image behavior.
@@ -63,7 +68,7 @@ Both FSM partitions in `ClickDetector` are Moore-style with respect to output be
   caption: [Current workspace BTN2 Moore FSM (`ClickDetector` base-image partition). In `ST_PASS_ALL`, the base-mode cycle is restricted to `ST_RGB` and `ST_GRAY` as indicated by the guarded transition labels.],
 ) <fig-click-state-base-current>
 
-The control logic is split into two orthogonal Moore partitions. The BTN1 processing FSM in @fig-click-state advances deterministically through `ST_PASS_ALL`, `ST_SOBEL`, and `ST_BLUR_SOBEL`, while `o_pass_blurr_filter`, `o_pass_sobel`, and `o_led[2:0]` are decoded solely from the active state register. This makes each button edge a pure mode step: transition conditions depend on debounced rising-edge detection, and output changes occur only after the next registered state is committed.
+The control logic is split into two orthogonal Moore partitions. The BTN1 processing FSM in @fig-click-state advances deterministically through `ST_PASS_ALL`, `ST_SOBEL`, and `ST_BLUR_SOBEL`, while `o_pass_blurr_filter`, `o_pass_sobel`, and `o_led[1:0]` are decoded solely from the active state register. This makes each button edge a pure mode step: transition conditions depend on debounced rising-edge detection, and output changes occur only after the next registered state is committed.
 
 The BTN2 base-image FSM in @fig-click-state-base-current applies guarded transitions that depend on the processing mode context. When `proc = ST_PASS_ALL`, BTN2 cycles between `ST_RGB` and `ST_GRAY` to toggle the displayed base stream without forcing overlay-only output. When `proc != ST_PASS_ALL`, BTN2 transitions are directed toward `ST_ZEROS`, ensuring that processed binary features are shown without base-image blending. This coupling keeps each FSM locally Moore while enforcing a globally coherent user-visible mode behavior.
 
