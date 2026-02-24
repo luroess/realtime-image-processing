@@ -1,0 +1,39 @@
+%%{init: {'theme':'base','htmlLabels': false,'themeVariables': {
+  'fontFamily':'DejaVu Sans Mono, monospace',
+  'fontSize':'15px',
+  'background':'#f7fcfa',
+  'primaryColor':'#e8fff4',
+  'primaryBorderColor':'#0f766e',
+  'primaryTextColor':'#052e2b',
+  'lineColor':'#334155',
+  'tertiaryColor':'#ecfeff'
+}}}%%
+stateDiagram-v2
+  direction LR
+
+  state "ST_PASS_ALL
+o_pass_blurr_filter=1
+o_pass_sobel=1
+o_led[1:0]=10" as ST_PASS_ALL
+
+  state "ST_SOBEL
+o_pass_blurr_filter=1
+o_pass_sobel=0
+o_led[1:0]=01" as ST_SOBEL
+
+  state "ST_BLUR_SOBEL
+o_pass_blurr_filter=0
+o_pass_sobel=0
+o_led[1:0]=11" as ST_BLUR_SOBEL
+
+  [*] --> ST_PASS_ALL: reset<br/>(i_rst_n = 0)
+  ST_PASS_ALL --> ST_SOBEL: BTN1↑<br/>rising edge
+  ST_SOBEL --> ST_BLUR_SOBEL: BTN1↑<br/>rising edge
+  ST_BLUR_SOBEL --> ST_PASS_ALL: BTN1↑<br/>rising edge
+
+  classDef pass_all fill:#d1fae5,stroke:#047857,color:#052e16,stroke-width:2px
+  classDef sobel fill:#a7f3d0,stroke:#047857,color:#052e16,stroke-width:2px
+  classDef blur_sobel fill:#6ee7b7,stroke:#047857,color:#052e16,stroke-width:2px
+  class ST_PASS_ALL pass_all
+  class ST_SOBEL sobel
+  class ST_BLUR_SOBEL blur_sobel

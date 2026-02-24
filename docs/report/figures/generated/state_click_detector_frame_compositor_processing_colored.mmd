@@ -1,0 +1,60 @@
+%%{init: {'theme':'base','htmlLabels': false,'themeVariables': {
+  'fontFamily':'DejaVu Sans Mono, monospace',
+  'fontSize':'16px',
+  'background':'#f7fcfa',
+  'primaryColor':'#e8fff4',
+  'primaryBorderColor':'#0f766e',
+  'primaryTextColor':'#052e2b',
+  'lineColor':'#334155',
+  'tertiaryColor':'#ecfeff'
+}}}%%
+stateDiagram-v2
+  direction LR
+
+  state "ST_PASS_ALL
+o_pass_blurr_filter = 1
+o_pass_sobel = 1
+o_pass_fast = 1
+o_led[2:0] = 100" as ST_PASS_ALL
+
+  state "ST_BLUR
+o_pass_blurr_filter = 0
+o_pass_sobel = 1
+o_pass_fast = 1
+o_led[2:0] = 010" as ST_BLUR
+
+  state "ST_SOBEL
+o_pass_blurr_filter = 1
+o_pass_sobel = 0
+o_pass_fast = 1
+o_led[2:0] = 110" as ST_SOBEL
+
+  state "ST_BLUR_SOBEL
+o_pass_blurr_filter = 0
+o_pass_sobel = 0
+o_pass_fast = 1
+o_led[2:0] = 001" as ST_BLUR_SOBEL
+
+  state "ST_FAST
+o_pass_blurr_filter = 1
+o_pass_sobel = 1
+o_pass_fast = 0
+o_led[2:0] = 011" as ST_FAST
+
+  [*] --> ST_PASS_ALL: reset<br/>(i_rst_n = 0)
+  ST_PASS_ALL --> ST_BLUR: BTN1↑<br/>rising edge
+  ST_BLUR --> ST_SOBEL: BTN1↑<br/>rising edge
+  ST_SOBEL --> ST_BLUR_SOBEL: BTN1↑<br/>rising edge
+  ST_BLUR_SOBEL --> ST_FAST: BTN1↑<br/>rising edge
+  ST_FAST --> ST_PASS_ALL: BTN1↑<br/>rising edge
+
+  classDef pass_all fill:#d1fae5,stroke:#047857,color:#052e16,stroke-width:2px
+  classDef sobel fill:#a7f3d0,stroke:#047857,color:#052e16,stroke-width:2px
+  classDef blur_sobel fill:#6ee7b7,stroke:#047857,color:#052e16,stroke-width:2px
+  classDef blur_only fill:#ccfbf1,stroke:#0f766e,color:#134e4a,stroke-width:2px
+  classDef fast_only fill:#fef3c7,stroke:#b45309,color:#451a03,stroke-width:2px
+  class ST_PASS_ALL pass_all
+  class ST_SOBEL sobel
+  class ST_BLUR_SOBEL blur_sobel
+  class ST_BLUR blur_only
+  class ST_FAST fast_only

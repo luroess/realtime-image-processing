@@ -1,0 +1,41 @@
+%%{init: {'theme':'base','htmlLabels': false,'flowchart': {'nodeSpacing': 10, 'rankSpacing': 14}, 'themeVariables': {
+  'fontFamily':'DejaVu Sans Mono, monospace',
+  'fontSize':'15px',
+  'background':'#f7fcfa',
+  'primaryColor':'#e8fff4',
+  'primaryBorderColor':'#0f766e',
+  'primaryTextColor':'#052e2b',
+  'lineColor':'#334155',
+  'tertiaryColor':'#ecfeff'
+}}}%%
+flowchart TB
+  din["i_din[25:0]<br/>{SOF,EOL,RGB24}"]:::io
+  dout["o_dout[25:0]"]:::io
+
+  ce("i_ce = base_accept<br/>(TVALID and TREADY)"):::ctrl
+  sclr("i_sclr = not i_aresetn<br/>(sync clear)"):::ctrl
+
+  sobel_chain("Sobel chain<br/>c_shift_ram_0 x N<br/>A_i = delay_i - 1"):::block
+  sobel_tap["sobel_tap"]:::tap
+  extra_chain("Extra chain<br/>c_shift_ram_0 x M<br/>A_i = delay_i - 1"):::block
+  blur_tap["blur_sobel_tap"]:::tap
+
+  mux{{"tap mux<br/>sel"}}:::mux
+
+  din ==> sobel_chain ==> sobel_tap ==> extra_chain ==> blur_tap
+
+  din -->|sel=00| mux
+  sobel_tap -->|sel=01/11| mux
+  blur_tap -->|sel=10| mux
+  mux --> dout
+
+  ce -.-> sobel_chain
+  ce -.-> extra_chain
+  sclr -.-> sobel_chain
+  sclr -.-> extra_chain
+
+  classDef io fill:#ffffff,stroke:#475569,color:#0f172a,stroke-width:1.2px
+  classDef block fill:#e8fff4,stroke:#0f766e,color:#052e2b,stroke-width:1.5px
+  classDef tap fill:#ecfeff,stroke:#0f766e,color:#052e2b,stroke-width:1.5px
+  classDef mux fill:#fff7ed,stroke:#c2410c,color:#7c2d12,stroke-width:1.5px
+  classDef ctrl fill:#f1f5f9,stroke:#64748b,color:#0f172a,stroke-width:1.2px
