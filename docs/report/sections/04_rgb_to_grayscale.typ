@@ -7,20 +7,18 @@
 
 == Overview
 
-RGB_TO_GRAYSCALE is the initial conversion stage that reduces the camera-side RGB24 stream to an 8-bit luminance signal for subsequent window-based filters (blur/Sobel), while still providing an RGB-compatible stream for display and frame buffering. In the active block design, it is placed after Bayer reconstruction. The wrapper is implemented as a synchronized two-consumer AXI4-Stream Video fan-out, so the `gray8` and `rbg888` outputs remain frame- and line-aligned even under asymmetric backpressure.
+The IP core RGB_TO_GRAYSCALE is the initial conversion stage. It reduces the incoming RGB24 pixel stream to an 8-bit luminance (`gray8`) for subsequent image processing modules, while still providing a synchronized RGB stream (`rbg888`) for downstream blocks that require color. In the active block design, it is placed after Bayer reconstruction and gamma correction (provided in the employed demo project by Digilent @digilent-pcam-demo). The wrapper is implemented as a synchronized two-consumer AXI4-Stream Video fan-out, so the `gray8` and `rbg888` outputs remain frame- and line-aligned even under asymmetric backpressure.
 
 #figure(
-  image("../../figures/ip-cores/AxiRGBToGrayscale.png", width: 55%),
+  image("../../figures/ip-cores/AxiRGBToGrayscale.png", width: 45%),
   caption: [AXI_RgbToGrayscale top-level IP-core wrapper view and external stream/control interface.],
 ) <fig-rgb2gray-vivado>
 
-The component is split into a combinational pixel core `E_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5)) and an AXI4-Stream video wrapper `AXI_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4)). The core computes per-pixel luminance `Y`, while the wrapper provides one AXI4-Stream slave input and two master outputs (gray8 and rbg888). A runtime control bit `i_pass_through` selects whether the RGB output forwards the incoming pixel or a grayscale-replicated RGB value.
+The component is split into a combinational pixel core `E_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5, branch: "feat/rollback")) and an AXI4-Stream video wrapper `AXI_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4, branch: "feat/rollback")). The core computes per-pixel luminance `Y`, while the wrapper implements the synchronized dual-output AXI4-Stream Video interface.
 
 
 == Interface ports and generics
-The external ports implement AXI4-Stream Video semantics with a single slave input and two master outputs. Following AMD's documentation on AXI4-Stream Video IP and system design, frame boundaries are transported via `TUSER[0]` (`SOF`) and line boundaries via `TLAST` (`EOL`), while payload beats are accepted only on valid handshakes.@UG934 The wrapper has no explicit `ACLKEN`, so acceptance is evaluated on each rising edge of `i_aclk` under `i_aresetn = 1`.
-
-The input payload `s_axis_video_tdata` is treated as 24-bit `R|B|G` (MSB to LSB). This repository uses the name `rbg888` to make the wire-level byte order explicit; consumers that assume conventional RGB24 must therefore interpret the stream as `R|B|G` rather than `R|G|B`.
+Table @tab-rgb2gray-if summarizes the external interface. Payload beats are accepted only on valid handshakes (`TVALID && TREADY`). The input payload `s_axis_video_tdata` consists of 24-bit `R|B|G` (MSB to LSB).
 
 #figure(
   interface_table(
@@ -38,64 +36,37 @@ The input payload `s_axis_video_tdata` is treated as 24-bit `R|B|G` (MSB to LSB)
       [`i_pass_through`],
       [in],
       [1],
-      [Selects original RGB forwarding versus grayscale-replicated RGB.],
+      [Selects original RGB forwarding versus gray-replicated RGB.],
       [`s_axis_video_*`],
       [*in* / out],
       [AXI4S Video],
-      [Input pixel stream; `TUSER=SOF`, `TLAST=EOL`, payload order `R|B|G`.],
+      [Input pixel stream; `TUSER=SOF`, `TLAST=EOL`.],
       [`m_axis_rbg888_*`],
       [*out* / in],
       [AXI4S Video],
-      [RGB branch (legacy RTL name `rbg888`); forwards source RGB or grayscale-replicated RGB.],
+      [RGB branch (original color or grayscale-replicated).],
       [`m_axis_gray8_*`],
       [*out* / in],
       [AXI4S Video],
-      [Gray8 branch for filter pipeline; keeps SOF/EOL aligned with RGB branch.],
+      [Gray8 branch for filter pipeline],
     ),
   ),
-  caption: [AXI_RgbToGrayscale interface overview from #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4).],
+  caption: [AXI_RgbToGrayscale interface overview from #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4, branch: "feat/rollback").],
 ) <tab-rgb2gray-if>
 
-== AXI4-Stream fan-out implementation and synchronization
-`AXI_RgbToGrayscale` broadcasts one AXI4-Stream Video slave input into two master outputs that may apply asymmetric backpressure. To preserve pixel-index and `SOF`/`EOL` alignment across both branches, the wrapper acts as a one-beat broadcast buffer. When an input beat is accepted, the wrapper stores `{TDATA, SOF, EOL, i_pass_through}` into a staging slot (`s_pixel_reg`, `s_sof_reg`, `s_eol_reg`, `s_pass_mode_reg`) and holds it stable until both masters have completed a handshake for that beat. Only then can a new input beat be admitted. This behavior is implemented in `P_REG_STREAM` and enforced by a pending-beat flag `s_valid_reg` and per-branch completion flags `s_rgb_sent_reg` / `s_gray_sent_reg` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 81)).
+== AXI4-Stream implementation and synchronization
+`AXI_RgbToGrayscale` broadcasts one AXI4-Stream Video slave input into two master outputs that may apply asymmetric backpressure. To preserve pixel-index and `SOF`/`EOL` alignment across both branches, the wrapper buffers exactly one accepted beat `{TDATA, SOF, EOL, i_pass_through}` and holds it stable until both masters have completed a handshake for that beat. This behavior is implemented in `P_REG_STREAM` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 81, branch: "feat/rollback")).
 
-While `s_valid_reg = 1`, the staged payload and sidebands remain stable. `SOF`/`EOL` are therefore replicated beat-aligned to both masters, and both outputs observe identical framing positions. Latching `i_pass_through` into `s_pass_mode_reg` makes the RGB output selection beat-stable under stalls. The branch valids `s_rgb_tvalid` and `s_gray_tvalid` stay asserted until their corresponding handshake fires (tracked via `*_sent_reg`), and `TUSER`/`TLAST` are forced low whenever `*_tvalid = 0` to avoid spurious markers. Because `*_tvalid` is derived only from registered state, there is no combinational `TVALID`/`TREADY` loop between the two masters (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 39)).
+`SOF`/`EOL` are beat-aligned to both masters, to enforce identical framing positions. The branch respective valid signals `s_rgb_tvalid` and `s_gray_tvalid` are held until their corresponding handshake fires, and `TUSER`/`TLAST` are forced low whenever `*_tvalid = 0` to avoid spurious markers.
 
 For readability, we write `rst_n = i_aresetn`, `valid = s_valid_reg`, `rgb_sent = s_rgb_sent_reg`, `gray_sent = s_gray_sent_reg`, `s_tvalid = s_axis_video_tvalid`, `s_tready = s_axis_video_tready`, `rgb_tready = m_axis_rbg888_tready`, and `gray_tready = m_axis_gray8_tready`. The key ready/valid relations are then:
 $ "rgb_tvalid" = "rst_n" and "valid" and (not "rgb_sent") $
 $ "gray_tvalid" = "rst_n" and "valid" and (not "gray_sent") $
 $ "s_tready" = "rst_n" and ((not "valid") or (("rgb_sent" or "rgb_tready") and ("gray_sent" or "gray_tready"))) $
 
-In the RTL, the `s_tready` predicate is implemented by `s_input_slot_free` and drives `s_axis_video_tready`. If the slot is empty, a new beat can be admitted. If a beat is pending, admission is allowed only when the pending beat is guaranteed to drain to both outputs in the same cycle. This couples input progress to the slowest outstanding branch and guarantees that both outputs advance through the same sequence of accepted pixels.
+In the RTL, the `s_tready` conditional signal is implemented by `s_input_slot_free` and drives `s_axis_video_tready`. It signals input readiness only when the slot is empty or guaranteed to drain to both outputs in the same cycle, coupling input progress to the slowest branch and guaranteeing synchronicity between the two output streams.
 
-// #figure(
-//   academic_table(
-//     columns: (auto, auto, auto),
-//     align: (left, left, left),
-//     table.header([Internal signal], [Role], [Implementation consequence]),
-//     [`s_valid_reg`],
-//     [pending beat flag],
-//     [Holds one buffered input transaction until both outputs consume it.],
-//     [`s_rgb_sent_reg`, `s_gray_sent_reg`],
-//     [per-branch completion],
-//     [Allow independent output handshakes without dropping sideband alignment.],
-//     [`s_input_slot_free`],
-//     [admission gate],
-//     [Asserts `s_axis_video_tready` only when the slot is empty or fully drainable.],
-//     [`s_rgb_tvalid`, `s_gray_tvalid`],
-//     [branch TVALID],
-//     [Remain high until matching branch handshake occurs.],
-//     [`s_sof_reg`, `s_eol_reg`],
-//     [framing sidebands],
-//     [Replicated to both outputs; guarantees identical SOF/EOL positions.],
-//     [`s_pass_mode_reg`],
-//     [mode latch],
-//     [Prevents intra-beat output mode changes during stalls.],
-//   ),
-//   caption: [Internal control signals implementing dual-output AXI fan-out in #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 39).],
-// ) <tab-rgb2gray-internal>
-
-The complete per-cycle update in `P_REG_STREAM` (including reset, beat latching, and slot release) is summarized by the following acceptance-accurate pseudocode.
+The complete per-cycle update in `P_REG_STREAM` is summarized by the following pseudocode.
 
 #{
   show: style-algorithm.with(
@@ -104,7 +75,7 @@ The complete per-cycle update in `P_REG_STREAM` (including reset, beat latching,
     breakable: true,
   )
   align(center, box(width: 92%, algorithm-figure(
-    [Synchronized dual-output AXI4-Stream fan-out update in `P_REG_STREAM`.],
+    [Synchronized dual-output AXI4-Stream in `P_REG_STREAM`.],
     line-numbers: false,
     {
       import algorithmic: *
@@ -114,7 +85,7 @@ The complete per-cycle update in `P_REG_STREAM` (including reset, beat latching,
       let Else = Else.with(kw3: "")
       let While = While.with(kw3: "")
       let For = For.with(kw3: "")
-      Comment[Combinational handshake and admission]
+      Comment[Combinational handshake]
       Assign[$"rgb_fire"$][$"valid" and (not "rgb_sent") and "rgb_tready"$]
       Assign[$"gray_fire"$][$"valid" and (not "gray_sent") and "gray_tready"$]
       Assign[$"rgb_sent_next"$][$"rgb_sent" or "rgb_fire"$]
@@ -148,25 +119,25 @@ The complete per-cycle update in `P_REG_STREAM` (including reset, beat latching,
 }
 
 == RGB-to-grayscale core: algorithm and tradeoff
-`E_RgbToGrayscale` is purely combinational. It decodes the incoming pixel word as `R|B|G`, computes an 8-bit luminance `Y`, and emits both the scalar luminance (`o_gray8 = Y`) and a grayscale RGB view (`o_rbg888 = {Y,Y,Y}` in `R|B|G` order).
+`E_RgbToGrayscale` is purely combinational. It decodes the incoming pixel word, computes an 8-bit luminance `Y`, and emits both the scalar luminance (`o_gray8 = Y`) and a grayscale RGB view (`o_rbg888 = {Y,Y,Y}`).
 
 A common luminance-weighted floating-point model is described in OpenCV's color conversion reference.@opencv-color-conversions
-$ Y_"float" = 0.299 R + 0.587 G + 0.114 B $
+$ Y_"fp" = 0.299 R + 0.587 G + 0.114 B $
 
 A fixed-point integer approximation suitable for 8-bit hardware is:
-$ Y_"fix8" = (77R + 150G + 29B + 128) / 256 $
+$ Y_"i8" = (77R + 150G + 29B + 128) / 256 $
 
 The implemented RTL uses a shift/add approximation:
 $ Y_"rtl" approx (R/4) + (G/2) + (B/4) $
 
-Across the full 8-bit RGB space ($256^3$ colors), the error relative to $Y_"float"$ is $e = Y_"rtl" - Y_"float"$ with mean absolute error $10.30$ LSB, RMSE $12.52$ LSB, and worst-case magnitude $abs(e)_"max" = 36.27$ LSB (at $R = 255$, $G = 255$, $B = 3$).
+Across the full 8-bit RGB space ($256^3$ colors), the error relative to $Y_"fp"$ is $e = Y_"rtl" - Y_"fp"$. Using exhaustive enumeration (and the actual truncating shifts from the RTL), we obtain a mean absolute error of $10.30$ LSB and a worst-case magnitude $abs(e)_"max" = 36.27$ LSB (at $R = 255$, $G = 255$, $B = 3$).
 
-The approximation is still chosen here because it uses only shifts and adds (no multipliers/DSP blocks), keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over photometric accuracy.
+The approximation is still chosen here because it uses a minimal number of HW primitives (no multipliers/DSP blocks), keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over photometric accuracy. However, we acknowledge that a fixed-point shift/add approximation would have improved the luminance fidelity without a major resource increase.
 
 
-== Minimal integration waveform: RGB_TO_GRAYSCALE plus FRAME_COMPOSITOR
+== Minimal integration test: RGB_TO_GRAYSCALE plus FRAME_COMPOSITOR
 
-To validate the correctness of the dual-branch AXIS interface and the resulting per-branch handshake behavior under backpressure and warm-up delays within our image processing branch, a minimal integration test is implemented between `AXI_RgbToGrayscale` and `AXI_FrameCompositor`. The test uses two small 3 #sym.times 2 frames with known pixel values to allow validation of correct synchronization (responsibility of the `AXI_FrameCompositor`).
+To validate the dual-output AXI4-Stream behavior in a system context, a minimal cocotb test connects `AXI_RgbToGrayscale` to `AXI_FrameCompositor` (@ch-frame-comp). The harness drives `s_axis_video_*` with `AxiVideoStreamSource` and captures `m_axis_video_rbg888_*` with `AxiVideoStreamSink` (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 227, line_end: 242, branch: "feat/rollback")).
 
 
 #figure(
@@ -174,8 +145,136 @@ To validate the correctness of the dual-branch AXIS interface and the resulting 
   caption: [GHW snapshot for the 3x2 two-frame RGB2GRAY-to-compositor test, highlighting gray-branch warm-up behavior at each `SOF`.],
 ) <fig-rgb2gray-sync-ghw>
 
-In @fig-rgb2gray-sync-ghw, the relevant interpretation is handshake-domain based (`TVALID && TREADY`) rather than edge-to-edge toggles of individual signals. The harness keeps split acceptance enabled (`s_split_gray_tready`, `s_split_rgb_tready`) according to FIFO capacity, while the post-compositor feed is blocked during warm-up by `s_comp_block` (#repo_link("testbench/tests/vhdl/axi_rgb2gray_frame_compositor_harness.vhd", line: 150)). This is why upstream branch activity can continue while the compositor-side gray stream temporarily withholds valid transfers.
+@fig-rgb2gray-sync-ghw should be interpreted in the accepted-beat domain (`TVALID && TREADY`). The test measures gray-branch warm-up by comparing the first handshake cycles on `o_dbg_gray_pre_*` and `o_dbg_gray_post_*`, and it records compositor-side accepted beats (`s_comp_tuser`, `s_comp_tlast`) to check SOF placement and per-pixel cadence (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 250, line_end: 294, branch: "feat/rollback")).
 
-The expected delay model on the gray branch has two parts. First, a per-frame warm-up budget is configured as `C_GRAY_WARMUP_CYCLES = 3` (#repo_link("testbench/tests/vhdl/axi_rgb2gray_frame_compositor_harness.vhd", line: 35)). The test therefore checks a bounded post-branch `SOF` gap (`3 <= warmup_cycles <= 6`) to account for the explicit hold and cycle-indexing around the `SOF` beat (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 332)). In the latest run, this measured offset was `delta = 5` cycles. Second, once warm-up is released, the post-branch cadence is expected to be one accepted beat per clock for consecutive pixels in each frame (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 337)); this corresponds to an effective one-cycle per-pixel processing interval at steady state.
+The integration test asserts:
+- *Warm-up alignment:* `o_dbg_gray_pre_*` accepts without stalling, while `o_dbg_gray_post_*` shows a bounded `3..6` cycle delay at each `SOF` (latest `delta = 5`) (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 324, line_end: 334, branch: "feat/rollback")).
+- *Steady-state cadence:* Once warm-up is released, the gray branch transfers consecutive pixels at one accepted beat per clock (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 337, branch: "feat/rollback")).
 
-The brief `TVALID=0` region before the second `SOF` in this test is also expected and originates from the stimulus driver (`await self._source.wait()` followed by idle drive, #repo_link("testbench/drivers/axis_video_source.py", line: 150)), not from gray-branch deadlock. With that context, the observed waveform behavior is consistent with the intended architecture and the assertions embedded in the integration test.
+The brief `TVALID=0` region before the second `SOF` in this test is also expected and originates from the stimulus driver (`await self._source.wait()` followed by idle drive, #repo_link("testbench/drivers/axis_video_source.py", line: 150, branch: "feat/rollback")), not from gray-branch deadlock. With that context, the observed waveform behavior is consistent with the intended architecture and the assertions embedded in the integration test.
+
+== Test coverage: rgb2gray-related cocotb tests
+
+All tests referenced below live on branch `feat/rollback`. The `tb-sim` target mapping is defined in #repo_link("testbench/targets.toml", branch: "feat/rollback").
+The RGB2GRAY stage is covered both directly and as part of the full RGB-entry pipeline.
+
+#academic_table(
+  columns: (auto, 1fr),
+  table.header([Target / test module], [Test cases (intent)]),
+  [
+    `axi_rgb_to_grayscale`
+    #linebreak()
+    #repo_link("testbench/tests/test_axi_rgb_to_grayscale.py", branch: "feat/rollback")
+  ],
+  [
+    #repo_link(
+      "testbench/tests/test_axi_rgb_to_grayscale.py",
+      body: [`test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks`],
+      line: 386,
+      branch: "feat/rollback",
+    ): READY/valid stress + handshake assertions.
+    #linebreak()
+    #repo_link(
+      "testbench/tests/test_axi_rgb_to_grayscale.py",
+      body: [`test_axi_rgb_to_grayscale_image_file_roundtrip`],
+      line: 399,
+      branch: "feat/rollback",
+    ): image roundtrip + saved artifact.
+    #linebreak()
+    #repo_link(
+      "testbench/tests/test_axi_rgb_to_grayscale.py",
+      body: [`test_axi_rgb_to_grayscale_passthrough_mode`],
+      line: 409,
+      branch: "feat/rollback",
+    ): `i_pass_through=1` yields bit-exact passthrough.
+  ],
+
+  [
+    `axi_rgb2gray_frame_compositor_minimal`
+    #linebreak()
+    #repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", branch: "feat/rollback")
+  ],
+  [
+    #repo_link(
+      "testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py",
+      body: [`test_axi_rgb2gray_frame_compositor_minimal_3x2_two_frames_with_gray_warmup`],
+      line: 207,
+      branch: "feat/rollback",
+    ): 3x2 two-frame integration into `AXI_FrameCompositor`: bounded gray warm-up + 1-cycle post-warm-up cadence.
+  ],
+
+  [
+    `axi_gray_blurr_sobel_overlay_pipeline`
+    #linebreak()
+    #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback")
+  ],
+  [
+    #repo_link(
+      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
+      body: [`test_pipeline_full_chain_state_progression`],
+      line: 200,
+      branch: "feat/rollback",
+    ): full-frame lenna passthrough check (PASS_ALL default state).
+    #linebreak()
+    #repo_link(
+      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
+      body: [`test_pipeline_full_chain_smoke_with_backpressure`],
+      line: 216,
+      branch: "feat/rollback",
+    ): smoke: validates output shape and writes reference overlay artifact.
+  ],
+
+  [
+    `axi_gray_blurr_sobel_overlay_pipeline_downscaled`
+    #linebreak()
+    #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", branch: "feat/rollback")
+  ],
+  [
+    #repo_link(
+      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
+      body: [`test_pipeline_full_chain_state_progression`],
+      line: 184,
+      branch: "feat/rollback",
+    ): downscaled lenna passthrough check (64x64).
+    #linebreak()
+    #repo_link(
+      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
+      body: [`test_pipeline_full_chain_smoke_with_backpressure`],
+      line: 198,
+      branch: "feat/rollback",
+    ): smoke: validates output shape and writes overlay artifact.
+  ],
+
+  [
+    `axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi`
+    #linebreak()
+    #repo_link("testbench/tests/test_axi_pipeline_synth_fsm.py", branch: "feat/rollback")
+  ],
+  [
+    #repo_link(
+      "testbench/tests/test_axi_pipeline_synth_fsm.py",
+      body: [`test_pipeline_synthetic_fsm_compositor_modes`],
+      line: 249,
+      branch: "feat/rollback",
+    ): synthetic 8x8 control/FSM coverage: RGB passthrough, grayscale view, and zeros overlay modes.
+    #linebreak()
+    #repo_link(
+      "testbench/tests/test_axi_pipeline_synth_fsm.py",
+      body: [`test_pipeline_controls_stay_default_without_input_sof`],
+      line: 355,
+      branch: "feat/rollback",
+    ): ensures controls only latch on accepted input `SOF`.
+  ],
+)
+
+Used harness building blocks (Python):
+- Source: #repo_link("testbench/drivers/axis_video_source.py", body: [`AxiVideoStreamSource`], line: 22, branch: "feat/rollback")
+- Sink: #repo_link("testbench/monitors/axis_video_sink.py", body: [`AxiVideoStreamSink`], line: 14, branch: "feat/rollback")
+- Reset/pause helpers: #repo_link("testbench/common/reset.py", body: [`apply_reset`], line: 8, branch: "feat/rollback"), #repo_link("testbench/common/pause.py", body: [`drive_sink_pause`], line: 17, branch: "feat/rollback"), #repo_link("testbench/common/pause.py", body: [`repeating_pause`], line: 35, branch: "feat/rollback")
+- Image model / checking: #repo_link("testbench/models/image_model.py", body: [`Image`], line: 13, branch: "feat/rollback"), #repo_link("testbench/verification/scoreboard.py", body: [`Scoreboard`], line: 10, branch: "feat/rollback")
+
+RTL components exercised in these tests:
+- RGB2GRAY core/wrapper: #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5, branch: "feat/rollback"), #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4, branch: "feat/rollback")
+- Downstream integration: #repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4, branch: "feat/rollback"), #repo_link("rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd", line: 4, branch: "feat/rollback")
+
+#pagebreak()

@@ -16,3 +16,5 @@ Compared to previous draft snapshots, this revision:
 - centers integration ownership on `FRAME_COMPOSITOR` and the current pipeline wrapper,
 - replaces stale aggregate testcase statements with command-backed evidence,
 - adds explicit notes where regressions/noise remain open rather than implying full closure.
+
+#pagebreak()
