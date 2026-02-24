@@ -23,14 +23,24 @@ This section reports synthesis and implementation utilization from cleaned Vivad
   }
 }
 
+#let fmt_count(value) = {
+  let n = float(value)
+  let i = int(n)
+  if n == i { [#i] } else { [#n] }
+}
+
+#let fmt_pct_1dp(value) = {
+  let rounded = calc.round(float(value) * 10) / 10
+  let s = str(rounded)
+  if s.contains(".") { [#s%] } else { [#s.0%] }
+}
+
 #figure(
   academic_table(
     columns: (auto, auto, auto, auto, auto),
     align: (left, center, center, center, center),
     table.header([Design context], [LUT], [FF], [BRAM], [DSP]),
-    ..resource_rows
-      .map(row => ([#module_name(row.module)], [#row.lut], [#row.ff], [#row.bram], [#row.dsp]))
-      .flatten(),
+    ..resource_rows.map(row => ([#module_name(row.module)], [#row.lut], [#row.ff], [#row.bram], [#row.dsp])).flatten(),
   ),
   caption: [Module-level utilization snapshot from OOC synthesis reports and placed system implementation report.],
 ) <tab-resource-abs>
@@ -48,7 +58,14 @@ Table @tab-resource-abs establishes the baseline footprint used throughout this 
     align: (left, right, right, right, right, right),
     table.header([Primitive], [System used], [Pipeline used], [Other used], [Available], [System util.]),
     ..system_split_rows
-      .map(row => ([#row.primitive], [#row.system_used], [#row.our_used], [#row.other_used], [#row.available], [#row.total_pct%]))
+      .map(row => (
+        [#row.primitive],
+        [#fmt_count(row.system_used)],
+        [#fmt_count(row.our_used)],
+        [#fmt_count(row.other_used)],
+        [#fmt_count(row.available)],
+        [#fmt_pct_1dp(row.total_pct)],
+      ))
       .flatten(),
   ),
   caption: [Numerical companion to @fig-resource-system-vs-pipeline with placed-system and pipeline split counters.],
@@ -67,7 +84,13 @@ The placed-design split in @fig-resource-system-vs-pipeline and @tab-resource-sy
     align: (left, left, right, right, right),
     table.header([Instance], [Component], [LUT], [LUTRAM], [FF]),
     ..instance_split_rows
-      .map(row => ([#row.instance], [#row.component], [#row.lut], [#row.lutram], [#row.ff]))
+      .map(row => (
+        [#row.instance],
+        [#row.component],
+        [#fmt_count(row.lut)],
+        [#fmt_count(row.lutram)],
+        [#fmt_count(row.ff)],
+      ))
       .flatten(),
   ),
   caption: [Per-instance resource counters parsed from the hierarchical pipeline utilization report.],

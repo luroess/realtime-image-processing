@@ -150,10 +150,10 @@ The complete per-cycle update in `P_REG_STREAM` (including reset, beat latching,
 == RGB-to-grayscale core: algorithm and tradeoff
 `E_RgbToGrayscale` is purely combinational. It decodes the incoming pixel word as `R|B|G`, computes an 8-bit luminance `Y`, and emits both the scalar luminance (`o_gray8 = Y`) and a grayscale RGB view (`o_rbg888 = {Y,Y,Y}` in `R|B|G` order).
 
-A common luminance-weighted luma model (Y#sym.prime) is specified in Rec. ITU-R BT.601.@BT601 OpenCV documents the same coefficient set for its RGB#sym.arrow gray conversions.@opencv-color-conversions
+A common luminance-weighted floating-point model is described in OpenCV's color conversion reference.@opencv-color-conversions
 $ Y_"float" = 0.299 R + 0.587 G + 0.114 B $
 
-A fixed-point integer approximation suitable for 8-bit hardware can be obtained by scaling the coefficients by 256 and rounding:
+A fixed-point integer approximation suitable for 8-bit hardware is:
 $ Y_"fix8" = (77R + 150G + 29B + 128) / 256 $
 
 The implemented RTL uses a shift/add approximation:
@@ -163,18 +163,19 @@ Across the full 8-bit RGB space ($256^3$ colors), the error relative to $Y_"floa
 
 The approximation is still chosen here because it uses only shifts and adds (no multipliers/DSP blocks), keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over photometric accuracy.
 
-// == Typical transaction sequence
-// #figure(
-//   image("../figures/generated/seq_rgb_to_grayscale_transaction.png", width: 92%),
-//   caption: [Typical dual-branch transaction for AXI_RgbToGrayscale under optional RGB-branch backpressure.],
-// ) <fig-rgb2gray-seq>
 
-== Timing evidence from cocotb waveform extraction
+== Minimal integration waveform: RGB_TO_GRAYSCALE plus FRAME_COMPOSITOR
+
+To validate the correctness of the dual-branch AXIS interface and the resulting per-branch handshake behavior under backpressure and warm-up delays within our image processing branch, a minimal integration test is implemented between `AXI_RgbToGrayscale` and `AXI_FrameCompositor`. The test uses two small 3 #sym.times 2 frames with known pixel values to allow validation of correct synchronization (responsibility of the `AXI_FrameCompositor`).
+
+
 #figure(
-  image("../figures/generated/timing_rgb_to_grayscale.png", width: 94%),
-  caption: [Measured AXI4-Stream handshake timing for `AXI_RgbToGrayscale` (from the `axi_rgb_to_grayscale` cocotb target waveform).],
-) <fig-rgb2gray-timing>
+  image("../figures/ghw/axi_rgb2gray_sync.png", width: 95%),
+  caption: [GHW snapshot for the 3x2 two-frame RGB2GRAY-to-compositor test, highlighting gray-branch warm-up behavior at each `SOF`.],
+) <fig-rgb2gray-sync-ghw>
 
-The trace confirms the synchronization contract described above in the handshake domain (`TVALID && TREADY`): `s_axis_video_tready` follows slot availability (`s_input_slot_free`), and any backpressure on either master stalls input progress until the staged beat has been observed by both branches. As a result, both outputs maintain `SOF`/`EOL` alignment across arbitrary asymmetric backpressure.
+In @fig-rgb2gray-sync-ghw, the relevant interpretation is handshake-domain based (`TVALID && TREADY`) rather than edge-to-edge toggles of individual signals. The harness keeps split acceptance enabled (`s_split_gray_tready`, `s_split_rgb_tready`) according to FIFO capacity, while the post-compositor feed is blocked during warm-up by `s_comp_block` (#repo_link("testbench/tests/vhdl/axi_rgb2gray_frame_compositor_harness.vhd", line: 150)). This is why upstream branch activity can continue while the compositor-side gray stream temporarily withholds valid transfers.
 
-#pagebreak()
+The expected delay model on the gray branch has two parts. First, a per-frame warm-up budget is configured as `C_GRAY_WARMUP_CYCLES = 3` (#repo_link("testbench/tests/vhdl/axi_rgb2gray_frame_compositor_harness.vhd", line: 35)). The test therefore checks a bounded post-branch `SOF` gap (`3 <= warmup_cycles <= 6`) to account for the explicit hold and cycle-indexing around the `SOF` beat (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 332)). In the latest run, this measured offset was `delta = 5` cycles. Second, once warm-up is released, the post-branch cadence is expected to be one accepted beat per clock for consecutive pixels in each frame (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 337)); this corresponds to an effective one-cycle per-pixel processing interval at steady state.
+
+The brief `TVALID=0` region before the second `SOF` in this test is also expected and originates from the stimulus driver (`await self._source.wait()` followed by idle drive, #repo_link("testbench/drivers/axis_video_source.py", line: 150)), not from gray-branch deadlock. With that context, the observed waveform behavior is consistent with the intended architecture and the assertions embedded in the integration test.
