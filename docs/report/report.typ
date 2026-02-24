@@ -31,7 +31,6 @@
 
 #include "sections/01_abstract.typ"
 #include "sections/02_scope_revision.typ"
-#include "sections/03_axi_protocol_background.typ"
 #include "sections/04_rgb_to_grayscale.typ"
 #include "sections/05_click_detector.typ"
 #include "sections/06_frame_compositor.typ"

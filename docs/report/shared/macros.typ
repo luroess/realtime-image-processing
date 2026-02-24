@@ -6,9 +6,11 @@
   #body
 ]
 
-#let repo_stem = "https://github.com/luroess/realtime-image-processing/blob/master/"
+#let repo_base = "https://github.com/luroess/realtime-image-processing"
+#let repo_default_branch = "master"
 
-#let repo_link(path, body: none, line: none, line_end: none) = {
+#let repo_link(path, body: none, line: none, line_end: none, branch: none) = {
+  let ref = if branch == none { repo_default_branch } else { branch }
   let anchor = if line == none {
     ""
   } else if line_end == none {
@@ -16,7 +18,7 @@
   } else {
     "#L" + str(line) + "-L" + str(line_end)
   }
-  let dest = repo_stem + path + anchor
+  let dest = repo_base + "/blob/" + ref + "/" + path + anchor
   if body == none {
     blink(dest, raw(path))
   } else {
