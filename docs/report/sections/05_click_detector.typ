@@ -68,3 +68,5 @@ The control logic is split into two orthogonal Moore partitions. The BTN1 proces
 The BTN2 base-image FSM in @fig-click-state-base-current applies guarded transitions that depend on the processing mode context. When `proc = ST_PASS_ALL`, BTN2 cycles between `ST_RGB` and `ST_GRAY` to toggle the displayed base stream without forcing overlay-only output. When `proc != ST_PASS_ALL`, BTN2 transitions are directed toward `ST_ZEROS`, ensuring that processed binary features are shown without base-image blending. This coupling keeps each FSM locally Moore while enforcing a globally coherent user-visible mode behavior.
 
 For completeness, the extended `origin/feat/frame-compositor` variants that add FAST support and the `ST_BLUR`-dependent base-force behavior are documented in Appendix @fig-app-click-state-processing-fc and @fig-app-click-state-base-fc.
+
+#pagebreak()
