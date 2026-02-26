@@ -1,40 +1,11 @@
 
-= Abstract
-This revision aligns the implementation report with the current repository state and the TODO requirements for component-level technical depth. The active processing chain covered in this version is RGB #sym.arrow Grayscale #sym.arrow 3x3 line-buffer/window #sym.arrow Sobel #sym.arrow Frame compositor, with runtime control handled by the debounced click-detector path.
+#import "../shared/macros.typ": *
 
-The report focuses on repository-owned assets under `rtl/`, `testbench/`, and `docs/report/analysis/`. In particular, this draft adds protocol background, per-component interface contracts, waveform-backed transaction timing, and synthesis evidence extracted from Vivado reports into CSV/JSON that are directly consumed by Typst in this document.
+= Introduction
+This project implements a real-time streaming image-processing chain on a Digilent Zybo Z7-10 (Zynq-7010) FPGA platform, using the Pcam 5C (OV5640) as camera input and HDMI as display output @digilent-zybo@digilent-pcam. Runtime modes are selected via on-board push buttons and control both the filter chain and the final output behavior.
 
-// \section{Einleitung (Shared)}
-// \label{sec:einleitung}
+Our work builds on #blink("https://digilent.com/reference/programmable-logic/zybo-z7/demos/pcam-5c")[Digilent's Zybo Z7 Pcam 5C demo], which provides the camera capture, AXI4-Stream Video transport, and display infrastructure @digilent-pcam-demo. Custom processing and control logic is integrated as Vivado IP blocks and communicates exclusively via AXI4-Stream Video to preserve backpressure behavior and frame/line markers.
 
-// In der folgenden Projektarbeit wird die Umsetzung des Projekts \textit{\getTitleDe} beschrieben.
-// In diesem Projekt soll auf einem FPGA-Chip ein Videostream einer Kamera in Realtime durch verschiedene Modifikationen manipuliert und über HDMI auf einem Monitor ausgegeben werden.
-// Das Projekt wurde als Gruppenarbeit von Valentin Bumeder, Jan Duchscherer, Justin Löber, Lukas Roess bearbeitet.
+The active chain converts the incoming RGB stream to grayscale and applies window-based filtering (blur and Sobel edge detection). As a minimum configuration, the system emits a binary black/white edge mask; optional modes overlay the detected edges onto a delayed base image (RGB or grayscale-replicated). This report documents the custom modules for grayscale conversion, changes to the control FSM, and frame composition/stream realignment, together with our cocotb/cocotbext-axi verification harness and Vivado synthesis/implementation utilization results.
 
-
-// \subsection{Projektziel}
-// Ziel des Projekts ist die Implementierung einer Pipeline zur Veränderung eines Videostreams auf dem FPGA-Board \textit{Digilent Zybo Z7-10 (Zynq-7010)}\cite{digilent_zybo_nodate-1}.
-// Als Input für den Videostream soll eine \textit{Pcam 5C (OV5640)}\cite{digilent_pcam_nodate} Kamera genutzt werden.
-// Auf den Videostream sollen verschiedene Modifikationen angewendet werden können, welche durch die Buttons auf dem Board gesteuert werden können.
-// Als erste Modifikation in der Pipeline soll der RGB-Stream in ein Graubild verwandelt werden.
-// Aufbauend darauf wird ein Lowpass-Filter implementiert, um Bildinhalte weichzuzeichnen.
-// Zuletzt soll als Mindestanforderung ein Kantendetektionsfilter angewandt werden.
-// Das Ausgangssignal ist durch die Modifikationen ein Schwarz-Weiß-Bild, welches die detektierten Kanten im Videostream zeigt. \newline
-
-// Nach Erfüllung des Projektziels wird optional die Implementierung der detektierten Kanten als Overlay auf den RGB-Stream,
-// der FAST Corner Detection oder weiterer morphologischer Operationen angestrebt.
-
-// \subsection{Referenzprojekt}
-
-// Als Grundlage für das Projekt wird das \textit{Zybo Z7 Pcam 5C Demo}-Projekt\cite{digilent_zybo_nodate} verwendet.
-// Dieses Projekt beinhaltet eine einfache Videostreaming-Pipeline auf der gegebenen Hardware unter Nutzung von AXI4-Videopixel-Streams.
-// Die eigens entwickelten Module sollen als IP-Blocks in das Demoprojekt integriert und der Video-Output über HDMI dadurch verändert werden.
-
-
-= Scope
-
-- RTL modules and wrappers in `rtl/` for grayscale conversion, blur/sobel processing, compositing, and pipeline integration.
-- cocotb verification framework in `testbench/`, including reusable AXI stream drivers/monitors and target-based execution.
-- AXI4-Stream framing correctness, backpressure behavior, and frame-boundary control semantics.
-- Synthesis/implementation utilization evidence for key modules and full-system placement.
-
+Unless stated otherwise, progress is measured in accepted AXI beats (`TVALID && TREADY`); stall cycles do not advance the stream. `TUSER` marks start-of-frame (SOF) and `TLAST` marks end-of-line (EOL). Pixels are encoded as 24-bit `R|B|G` (MSB to LSB), and repository links in this report refer to branch `feat/rollback`.
