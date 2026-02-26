@@ -80,86 +80,74 @@ The BTN2 base-image FSM in @fig-click-state-base-current advances through `ST_RG
 For completeness, the extended `origin/feat/frame-compositor` variants that add FAST support and the `ST_BLUR`-dependent base-force behavior are documented in Appendix @fig-app-click-state-processing-fc and @fig-app-click-state-base-fc.
 
 == Verification: FSM-related test overview
+
+
 The control state machines are verified with dedicated cocotb targets registered in #repo_link("testbench/targets.toml", line: 30, branch: "feat/rollback"). For simulation, the debounce time is reduced to keep runtimes short (`G_DEBOUNCE_NS = 100` ns in #repo_link("testbench/targets.toml", line: 36, branch: "feat/rollback"), i.e. 10 cycles at 100 MHz).
 
-- `test_debouncer`
-  #repo_link("testbench/tests/test_debouncing.py", branch: "feat/rollback")
-  #repo_link(
-    "testbench/tests/test_debouncing.py",
-    body: [`debouncer_test`],
-    line: 16,
-    branch: "feat/rollback",
-  ): synchronizer + counter-based stability detection; output updates only after `G_DEBOUNCE_NS` of stable input.
 
-- `test_click_detector`
-  #repo_link("testbench/tests/test_click_detection.py", branch: "feat/rollback")
-  #repo_link(
-    "testbench/tests/test_click_detection.py",
-    body: [`test_click_state_machine`],
-    line: 14,
-    branch: "feat/rollback",
-  ): rising-edge driven BTN1/BTN2 sequencing and Moore output decode checks for `o_pass_*`, `o_overlay_zeros`, and `o_led`.
+#text(size: 9pt)[
+  - *DUT: ClickDetector* (#repo_link("testbench/tests/test_click_detection.py", branch: "feat/rollback")):
+    + #repo_link(
+        "testbench/tests/test_click_detection.py",
+        body: [`test_click_state_machine`],
+        line: 14,
+        branch: "feat/rollback",
+      ): rising-edge driven BTN1/BTN2 sequencing and Moore output checks for `o_pass_*`, `o_overlay_zeros`, and `o_led`.
 
-- `test_debounced_click_detector`
-  #repo_link("testbench/tests/test_debounced_click_detector.py", branch: "feat/rollback")
-  #repo_link(
-    "testbench/tests/test_debounced_click_detector.py",
-    body: [`test_debounced_click_detection`],
-    line: 16,
-    branch: "feat/rollback",
-  ): end-to-end behavior with simulated bouncing on raw `i_btn[3:0]` and verification of debounced outputs and FSM mode progression.
+  - *DUT: DebouncedClickDetector* (#repo_link("testbench/tests/test_debounced_click_detector.py", branch: "feat/rollback")):
+    + #repo_link(
+        "testbench/tests/test_debounced_click_detector.py",
+        body: [`test_debounced_click_detection`],
+        line: 16,
+        branch: "feat/rollback",
+      ): end-to-end behavior with simulated bouncing on raw `i_btn[3:0]` and verification of debounced outputs and FSM mode progression.
 
-- `axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi`
-  #repo_link("testbench/tests/test_axi_pipeline_synth_fsm.py", branch: "feat/rollback")
-  #repo_link(
-    "testbench/tests/test_axi_pipeline_synth_fsm.py",
-    body: [`test_pipeline_synthetic_fsm_compositor_modes`],
-    line: 249,
-    branch: "feat/rollback",
-  ): synthetic 8x8 integration that validates RGB/GRAY/ZEROS base-mode outputs (PASS_ALL + BTN2 base-mode cycle).
-  #linebreak()
-  #repo_link(
-    "testbench/tests/test_axi_pipeline_synth_fsm.py",
-    body: [`test_pipeline_controls_stay_default_without_input_sof`],
-    line: 355,
-    branch: "feat/rollback",
-  ): ensures controls latch only on accepted input `SOF` (`TUSER=1`), not on button edges alone.
-
-- `axi_gray_blurr_sobel_overlay_pipeline_downscaled`
-  #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", branch: "feat/rollback")
-  #repo_link(
-    "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
-    body: [`test_pipeline_full_chain_state_progression`],
-    line: 184,
-    branch: "feat/rollback",
-  ): downscaled lenna passthrough check (reset/default FSM state).
-  #linebreak()
-  #repo_link(
-    "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
-    body: [`test_pipeline_full_chain_smoke_with_backpressure`],
-    line: 198,
-    branch: "feat/rollback",
-  ): smoke: validates output shape and writes overlay artifact.
-
-- `axi_gray_blurr_sobel_overlay_pipeline`
-  #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback")
-  #repo_link(
-    "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
-    body: [`test_pipeline_full_chain_state_progression`],
-    line: 200,
-    branch: "feat/rollback",
-  ): full-frame lenna passthrough check (reset/default FSM state).
-  #linebreak()
-  #repo_link(
-    "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
-    body: [`test_pipeline_full_chain_smoke_with_backpressure`],
-    line: 216,
-    branch: "feat/rollback",
-  ): smoke: validates output shape and writes reference overlay artifact.
+  - *DUT: AXI_RgbGrayBlurrSobelOverlayPipeline*:
+    + #repo_link(
+        "testbench/tests/test_axi_pipeline_synth_fsm.py",
+        body: [`test_pipeline_synthetic_fsm_compositor_modes`],
+        line: 249,
+        branch: "feat/rollback",
+      ): synthetic 8x8 integration that validates RGB/GRAY/ZEROS base-mode outputs (PASS_ALL + BTN2 base-mode cycle).
+    + #repo_link(
+        "testbench/tests/test_axi_pipeline_synth_fsm.py",
+        body: [`test_pipeline_controls_stay_default_without_input_sof`],
+        line: 355,
+        branch: "feat/rollback",
+      ): ensures controls latch only on accepted input `SOF` (`TUSER=1`), not on button edges alone.
+    + #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
+        body: [`test_pipeline_full_chain_state_progression`],
+        line: 184,
+        branch: "feat/rollback",
+      ): downscaled lenna passthrough check (reset/default FSM state).
+    + #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
+        body: [`test_pipeline_full_chain_smoke_with_backpressure`],
+        line: 198,
+        branch: "feat/rollback",
+      ): smoke: validates output shape and writes overlay artifact.
+    + #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
+        body: [`test_pipeline_full_chain_state_progression`],
+        line: 200,
+        branch: "feat/rollback",
+      ): full-frame lenna passthrough check (reset/default FSM state).
+    + #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
+        body: [`test_pipeline_full_chain_smoke_with_backpressure`],
+        line: 216,
+        branch: "feat/rollback",
+      ): validates output shape and writes reference overlay artifact.
+]
 
 #mono_block(
   raw(
-    "cd testbench\nuv run tb-sim --list-targets\nuv run tb-sim --target test_debouncer\nuv run tb-sim --target test_click_detector\nuv run tb-sim --target test_debounced_click_detector\nuv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi",
+    "cd testbench
+uv run tb-sim --list-targets
+uv run tb-sim --target test_click_detector
+uv run tb-sim --target test_debounced_click_detector
+uv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi",
   ),
 )
 

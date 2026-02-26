@@ -1,41 +1,58 @@
+#import "@preview/supercharged-hm:0.1.2": hm-template
 #import "@preview/booktabs:0.0.4": booktabs-default-table-style
 #import "shared/macros.typ": *
 
-#set text(lang: "en")
-#set math.equation(numbering: "(1)", supplement: [Eq.])
-#set par(justify: true)
-#set heading(numbering: "1.")
-#set page(paper: "a4", margin: (x: 2.1cm, y: 1.9cm), numbering: "1")
-#show: booktabs-default-table-style
-#show table.cell: set text(size: 8.7pt)
-#show table.cell.where(y: 0): set text(weight: "semibold")
-#show bibliography: set text(size: 9pt)
+#show: hm-template(
+  [
+    #set math.equation(numbering: "(1)", supplement: [Eq.])
+    #show: booktabs-default-table-style
+    #show table.cell: set text(size: 8.7pt)
+    #show table.cell.where(y: 0): set text(weight: "semibold")
+    #set page(
+      header: context {
+        set text(10pt)
+        grid(
+          columns: (1fr, auto),
+          align(left)[
+            HW/SW Co-Design
+          ],
+          align(right)[
+            #set image(height: 25pt)
+            #image("../figures/hm-logo.svg")
+          ],
+        )
+        line(length: 100%, stroke: 1pt + rgb("#1f2937"))
+      },
+    )
+    #set page(
+      footer: context {
+        align(right, numbering(
+          "1 / 1",
+          ..counter(page).get(),
+          ..counter(page).at(<end>),
+        ))
+      },
+    )
 
-#align(center)[
-  #text(size: 19pt, weight: "bold")[Realtime Streaming Image Processing on FPGA]
-  #linebreak()
-  #text(size: 11pt, fill: rgb("#334155"))[
-    Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, Verification & Simulation, Synthesis Results
-  ]
-  #v(6pt)
-  #image("../figures/hm-logo.svg", width: 2.8cm)
-  #v(6pt)
-  #text(size: 10pt)[Lukas Roess, Valentin Bumeder, Jan Duchscherer, Justin Loeber]
-  #linebreak()
-  #text(size: 9pt, fill: rgb("#64748b"))[Hardware/Software Co-Design]
-  #linebreak()
-  #text(size: 9pt, fill: rgb("#64748b"))[Revision date: 2026-02-22]
-]
-
-#v(0.8cm)
-
-#include "sections/01_intro.typ"
-#include "sections/04_rgb_to_grayscale.typ"
-#include "sections/05_click_detector.typ"
-#include "sections/06_frame_compositor.typ"
-#include "sections/07_simulation_framework.typ"
-#include "sections/08_synthesis_results.typ"
-#include "sections/10_appendix.typ"
-
-#pagebreak()
-#bibliography("references.bib", title: [References])
+    #include "sections/01_intro.typ"
+    #include "sections/04_rgb_to_grayscale.typ"
+    #include "sections/05_click_detector.typ"
+    #include "sections/06_frame_compositor.typ"
+    #include "sections/07_simulation_framework.typ"
+    #include "sections/08_synthesis_results.typ"
+  ],
+  title: [Realtime Streaming Image Processing on FPGA],
+  subtitle: [Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, Verification & Simulation, Synthesis Results],
+  top-remark: [],
+  doc-type: [HW/SW Co-Design],
+  authors: [Lukas Roess, Valentin Bumeder, Jan Duchscherer, Justin Loeber],
+  date: datetime(year: 2026, month: 2, day: 22),
+  language: "en",
+  font: "CMU Serif",
+  show-table-of-contents: true,
+  toc-depth: 2,
+  bibliography: bibliography("references.bib"),
+  appendix: [
+    #include "sections/10_appendix.typ"
+  ],
+)

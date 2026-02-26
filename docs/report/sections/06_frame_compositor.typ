@@ -5,6 +5,16 @@
 = Component: FRAME_COMPOSITOR <ch-frame-comp>
 #component_owner("Jan Duchscherer")
 
+#figure(
+  grid(
+    columns: (auto, auto, auto),
+    figure(image("../figures/pipeline_state2_blur_sobel.png", width: 90%)),
+    figure(image("../figures/pipeline_sobel_overlay_on_grayscale.png", width: 90%)),
+    figure(image("../figures/pipeline_sobel_overlay_on_rgb888.png", width: 90%)),
+  ),
+  caption: [Full Pipeline Artifacts: binary mask output (left) and edge overlay on grayscale (middle) or RGB base stream (right).],
+) <fig-frame-overlay>
+
 == Overview
 The `AXI_FrameCompositor` (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4, branch: "feat/rollback")) is responsible for the composition of final output frames, providing functionality to overlay detected edges onto the original RGB image or to emit a binary mask image, depending on the runtime mode.
 
@@ -92,7 +102,7 @@ The decision tree below is a depicts the combinational assignments for `s_axis_g
     caption-align: start,
     breakable: true,
   )
-  align(center, box(width: 92%, algorithm-figure(
+  align(center, box(width: 92%, text(size: 10pt, algorithm-figure(
     [Combinational READY computation (equivalent to RTL `when ... else` priority chains).],
     line-numbers: false,
     {
@@ -127,7 +137,7 @@ The decision tree below is a depicts the combinational assignments for `s_axis_g
         })
       })
     },
-  )))
+  ))))
 }
 
 In binary-only mode (`i_overlay_zeros=1`), the module propagates output backpressure to the gray input and drains the RGB input unconditionally. In merge mode (`i_overlay_zeros=0`), the wrapper first pre-fills the selected delayed-base tap (`s_prefill_done=0`) by accepting base beats while stalling gray beats once they appear (`gray8_tvalid=1`), and it then enters steady-state lockstep where both branches advance synchronously.
@@ -140,7 +150,7 @@ The per-beat muxing behavior is summarized below; it describes pixel selection b
     caption-align: start,
     breakable: true,
   )
-  align(center, box(width: 92%, algorithm-figure(
+  align(center, box(width: 92%, text(size: 10pt, algorithm-figure(
     [Per-beat muxing for delay-tap selection and edge overlay (pixel selection only).],
     line-numbers: false,
     {
@@ -163,13 +173,13 @@ The per-beat muxing behavior is summarized below; it describes pixel selection b
       If($"edge_mask"$, { Assign[$"composed"$][$"G_EDGE_COLOR"$] })
       Else({ Assign[$"composed"$][$"base"$] })
     },
-  )))
+  ))))
 }
 
 Conceptually, the wrapper first selects the delay-aligned base pixel, then applies the edge-color overwrite. Binary-only output is handled as a final output selection: when `i_overlay_zeros=1`, the wrapper drives a black/white mask RGB payload instead of the composed pixel.
 
 
-Waveform interpretation confirms that merge mode waits for selected delayed-base tap validity before entering steady-state lockstep emission, that the gray stream remains the output timing reference, and that READY behavior prevents deadlock during delay prefill while preserving beat-domain alignment.
+// Waveform interpretation confirms that merge mode waits for selected delayed-base tap validity before entering steady-state lockstep emission, that the gray stream remains the output timing reference, and that READY behavior prevents deadlock during delay prefill while preserving beat-domain alignment.
 
 == Core: FrameCompositor
 #figure(
@@ -309,15 +319,7 @@ The cocotb scenario that produces this trace (#repo_link("testbench/tests/test_s
 == Verification: pipeline-level output artifacts
 The end-to-end pipeline behavior (including overlay composition and base-mode toggles) is exercised by #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback"), which writes representative output images which are compared against  references computed in Python following the same composition rules.
 
-#figure(
-  grid(
-    columns: (auto, auto, auto),
-    figure(image("../figures/pipeline_state2_blur_sobel.png", width: 90%)),
-    figure(image("../figures/pipeline_sobel_overlay_on_grayscale.png", width: 90%)),
-    figure(image("../figures/pipeline_sobel_overlay_on_rgb888.png", width: 90%)),
-  ),
-  caption: [Pipeline output artifacts from `axi_gray_blurr_sobel_overlay_pipeline`: binary mask output (left) and edge overlay on grayscale (middle) or RGB base stream (right).],
-) <fig-frame-pipeline-overlay-artifacts>
+
 
 
 #pagebreak()

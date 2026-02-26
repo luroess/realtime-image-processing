@@ -1,5 +1,3 @@
-= Appendix
-
 == CLICK_DETECTOR: FAST-enabled FSM variants
 The figures in this appendix capture the `origin/feat/frame-compositor` control extension of `ClickDetector`, where FAST is integrated as an explicit processing mode and base-mode forcing during `ST_BLUR` is made explicit in the guarded transition structure.
 
