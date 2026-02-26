@@ -106,7 +106,7 @@ The decision tree below depicts the combinational assignments for `s_axis_gray8_
     width: 76%,
   )
   align(center, box(width: auto, text(size: 10pt, algorithm-figure(
-    [Combinational READY computation (equivalent to RTL `when ... else` priority chains).],
+    [Combinational READY computation.],
     line-numbers: false,
     {
       import algorithmic: *
