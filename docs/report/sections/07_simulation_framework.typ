@@ -21,10 +21,17 @@ The verification stack is organized as reusable source/sink/model/scoreboard lay
   caption: [Testbench structure: Source (+ serialization) #sym.arrow UUT #sym.arrow Sink (+ deserialization) with scoreboard checks.],
 ) <tab-tb-architecture>
 
-Framework elements aligned with cocotb timing/writing guidance:@cocotb-writing @cocotb-timing @cocotbext-axi
+The reusable layers in @tab-tb-architecture map onto a shared signal-level harness around the DUT, shown in @fig-tb-arch.
+
+#figure(
+  image("../../figures/tb_pipeline.png", width: 82%),
+  caption: [Common cocotbext-axi AXI4-Stream harness: `AxiVideoStreamSource` streams per-line packets into `s_axis_video` (`TDATA/TVALID/TUSER/TLAST`, SOF/EOL) while the DUT backpressures via `TREADY`; `AxiVideoStreamSink` captures `m_axis_video`, decodes the received frame, compares it against the model-generated ground truth (GT), and validates handshake/protocol behavior.],
+) <fig-tb-arch>
+
+Framework elements aligned with cocotb timing/writing guidance (@cocotb-writing @cocotb-timing @cocotbext-axi) include:
 - deterministic reset/startup helper (`common/reset.py`),
 - configurable backpressure generation (`common/pause.py`),
-- typed AXI stream drivers and sinks for RGB and gray paths,
+- typed AXI4-Stream video endpoints (`AxiVideoStreamSource`, `AxiVideoStreamSink`) for RGB and gray paths,
 - per-target artifact generation (`results.xml`, `.ghw`/`.vcd`, output images).
 
 Stress dimensions covered by active targets include:
@@ -59,15 +66,15 @@ Stress dimensions covered by active targets include:
   caption: [Representative target mapping from #repo_link("testbench/targets.toml", line: 1); the full target registry remains source-of-truth in `targets.toml`.],
 ) <tab-target-overview>
 
-#figure(
-  image("../figures/generated/fig_test_runtime_by_target.png", width: 82%),
-  caption: [Stored runtime distribution by simulation target.],
-) <fig-runtime>
+// #figure(
+//   image("../figures/generated/fig_test_runtime_by_target.png", width: 82%),
+//   caption: [Stored runtime distribution by simulation target.],
+// ) <fig-runtime>
 
-#figure(
-  image("../figures/generated/fig_testcase_count_by_module.png", width: 82%),
-  caption: [Stored testcase distribution by module area.],
-) <fig-testcount>
+// #figure(
+//   image("../figures/generated/fig_testcase_count_by_module.png", width: 82%),
+//   caption: [Stored testcase distribution by module area.],
+// ) <fig-testcount>
 
 == Full target inventory, waveform artifacts, and test results
 To keep the report synchronized with the evolving cocotb suite, the latest cached regression results are rendered directly from an executed Jupyter notebook. The notebook parses the registered targets in #repo_link("testbench/targets.toml", line: 1), loads `results.xml` and waveform artifacts from `testbench/sim_build`, and reports which targets are still missing component-local documentation (test overview tables and waveform snapshots).

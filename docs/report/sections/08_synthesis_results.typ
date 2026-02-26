@@ -1,27 +1,12 @@
 #import "../shared/macros.typ": *
 
 = Synthesis and Implementation Results
-#component_owner("Engineering review")
+#component_owner("Jan Duchscherer")
 
-This section reports synthesis and implementation utilization from cleaned Vivado artifacts under `docs/report/data/`. The numbers are loaded directly via Typst `csv(...)` so the tables and figures stay synchronized with regenerated analysis outputs.
+This section summarizes synthesis and implementation utilization as reported in Vivado's "Implementation Summary".
 
-#let resource_rows = csv("../data/resource_utilization.csv", row-type: dictionary)
 #let system_split_rows = csv("../data/resource_split_system_vs_pipeline.csv", row-type: dictionary)
 #let instance_split_rows = csv("../data/resource_split_pipeline_instances.csv", row-type: dictionary)
-
-#let module_name(module) = {
-  if module == "rgb_to_grayscale_axi_ooc" {
-    [RGB_TO_GRAYSCALE (AXI OOC)]
-  } else if module == "frame_compositor_core_ooc" {
-    [FRAME_COMPOSITOR core (OOC)]
-  } else if module == "pl_pipeline_ip_ooc" {
-    [Integrated AXI pipeline IP (OOC)]
-  } else if module == "system_wrapper_placed" {
-    [Entire system (`system_wrapper`, placed)]
-  } else {
-    [#module]
-  }
-}
 
 #let fmt_count(value) = {
   let n = float(value)
@@ -35,17 +20,7 @@ This section reports synthesis and implementation utilization from cleaned Vivad
   if s.contains(".") { [#s%] } else { [#s.0%] }
 }
 
-#figure(
-  academic_table(
-    columns: (auto, auto, auto, auto, auto),
-    align: (left, center, center, center, center),
-    table.header([Design context], [LUT], [FF], [BRAM], [DSP]),
-    ..resource_rows.map(row => ([#module_name(row.module)], [#row.lut], [#row.ff], [#row.bram], [#row.dsp])).flatten(),
-  ),
-  caption: [Module-level utilization snapshot from OOC synthesis reports and placed system implementation report.],
-) <tab-resource-abs>
-
-Table @tab-resource-abs establishes the baseline footprint used throughout this report. The integrated AXI pipeline contributes 4189 LUT and 4439 FF in OOC synthesis, while the placed `system_wrapper` reaches 11944 LUT, 15406 FF, and 10.5 BRAM tiles. By contrast, the isolated RGB_TO_GRAYSCALE and FRAME_COMPOSITOR core cuts remain small, which is consistent with their narrow local functionality outside full pipeline integration.
+@fig-resource-system-vs-pipeline provides a placed-system utilization overview by primitive class. The blue segments isolate the AXI pipeline contribution ("Ours") from the remainder of the system; @tab-resource-system-split lists the corresponding counters.
 
 #figure(
   image("../figures/generated/fig_resource_system_vs_pipeline.png", width: 94%),
@@ -56,7 +31,7 @@ Table @tab-resource-abs establishes the baseline footprint used throughout this 
   academic_table(
     columns: (auto, auto, auto, auto, auto, auto),
     align: (left, right, right, right, right, right),
-    table.header([Primitive], [System used], [Pipeline used], [Other used], [Available], [System util.]),
+    table.header([Primitive], [System], [Ours], [Others], [Available], [System util.]),
     ..system_split_rows
       .map(row => (
         [#row.primitive],
@@ -71,7 +46,9 @@ Table @tab-resource-abs establishes the baseline footprint used throughout this 
   caption: [Numerical companion to @fig-resource-system-vs-pipeline with placed-system and pipeline split counters.],
 ) <tab-resource-system-split>
 
-The placed-design split in @fig-resource-system-vs-pipeline and @tab-resource-system-split shows that the pipeline dominates LUTRAM pressure (3571 out of 6000 available LUTRAM, 59.517% of device capacity) while contributing a smaller share of total FF capacity (4439 out of 35200, 12.611%). LUT usage is shared between the pipeline and the remainder of the design, with the full system at 67.864% LUT utilization and the pipeline accounting for 23.801 percentage points of that total. BRAM, IO, BUFG, and MMCM usage remains outside the pipeline cut in this snapshot.
+@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUTRAM as the primary pressure point: the pipeline uses 3571 LUTRAM (#fmt_pct_1dp(3571 / 6000)), while overall LUTRAM utilization reaches #fmt_pct_1dp(3862 / 6000). By contrast, FF pressure is lower: the pipeline uses 4439 FF (#fmt_pct_1dp(4439 / 35200)), while the full system reaches #fmt_pct_1dp(15406 / 35200). For LUTs, the placed `system_wrapper` uses #fmt_pct_1dp(11944 / 17600), with #fmt_pct_1dp(4189 / 17600) attributable to the AXI pipeline. BRAM, IO, BUFG, and MMCM usage remains outside the pipeline cut in this snapshot.
+
+Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks down LUT/LUTRAM/FF usage across direct child instances; @tab-resource-pipeline-instance-split provides the exact counters.
 
 #figure(
   image("../figures/generated/fig_resource_pipeline_instance_split.png", width: 94%),
