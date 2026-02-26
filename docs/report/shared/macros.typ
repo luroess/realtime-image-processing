@@ -20,9 +20,9 @@
   }
   let dest = repo_base + "/blob/" + ref + "/" + path + anchor
   if body == none {
-    blink(dest, raw(path))
+    blink(dest, text(size: 9pt)[#raw(path)])
   } else {
-    blink(dest, body)
+    blink(dest, text(size: 9pt)[#body])
   }
 }
 
@@ -55,7 +55,7 @@
             text(size: 8pt, fill: rgb("#64748b"))[#kpi.at("note")]
           }
         ],
-      )
+      ),
     )
   }
   grid(columns: (1fr,) * kpis.len(), gutter: 8pt, ..cells)
@@ -69,6 +69,34 @@
     stroke: 0.4pt + rgb("#d1d5db"),
     text(font: "DejaVu Sans Mono", size: 8.5pt)[#content],
   )
+}
+
+#let style-algorithm-compact(
+  body,
+  caption-style: text,
+  caption-align: start,
+  breakable: true,
+  width: 78%,
+  hlines: (
+    grid.hline(),
+    grid.hline(),
+    grid.hline(),
+  ),
+) = {
+  show figure.where(kind: "algorithm"): it => {
+    set block(breakable: breakable)
+    align(center, block(width: width, grid(
+      columns: (auto,),
+      stroke: none,
+      inset: 0% + 5pt,
+      hlines.at(0),
+      caption-style(align(caption-align, it.caption)),
+      hlines.at(1),
+      align(start, it.body),
+      hlines.at(2),
+    )))
+  }
+  body
 }
 
 #let academic_table(columns: (), align: auto, ..rows) = {
@@ -112,7 +140,13 @@
 ) = {
   let generic_block = (interface_group_row("Generics", fill: group_fill, text_fill: group_text_fill),) + generics
   let port_block = if ports.len() > 0 {
-    (table.hline(stroke: group_sep_stroke), interface_group_row("Ports", fill: group_fill, text_fill: group_text_fill),) + ports
+    (
+      (
+        table.hline(stroke: group_sep_stroke),
+        interface_group_row("Ports", fill: group_fill, text_fill: group_text_fill),
+      )
+        + ports
+    )
   } else {
     ()
   }

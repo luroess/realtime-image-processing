@@ -1,6 +1,6 @@
 #import "../shared/macros.typ": *
 #import "@preview/algorithmic:1.0.7"
-#import algorithmic: algorithm-figure, style-algorithm
+#import algorithmic: algorithm-figure
 
 = Component: RGB_TO_GRAYSCALE
 #component_owner("Jan Duchscherer")
@@ -69,12 +69,13 @@ In the RTL, the `s_tready` conditional signal is implemented by `s_input_slot_fr
 The complete per-cycle update in `P_REG_STREAM` is summarized by the following pseudocode.
 
 #{
-  show: style-algorithm.with(
+  show: style-algorithm-compact.with(
     caption-style: text,
     caption-align: start,
     breakable: true,
+    width: 84%,
   )
-  align(center, box(width: 92%, text(size: 10pt, algorithm-figure(
+  align(center, box(width: auto, text(size: 10pt, algorithm-figure(
     [Synchronized dual output AXI4S master in `P_REG_STREAM`.],
     line-numbers: false,
     {
@@ -121,7 +122,7 @@ The complete per-cycle update in `P_REG_STREAM` is summarized by the following p
 == RGB-to-grayscale core: algorithm and tradeoff
 `E_RgbToGrayscale` is purely combinational. It decodes the incoming pixel word, computes an 8-bit luminance `Y`, and emits both the scalar luminance (`o_gray8 = Y`) and a grayscale RGB view (`o_rbg888 = {Y,Y,Y}`).
 
-A common luminance-weighted floating-point model is described in OpenCV's color conversion reference.@opencv-color-conversions
+A common luminance-weighted floating-point model is described in OpenCV's color conversion reference @opencv-color-conversions.
 $ Y_"fp" = 0.299 R + 0.587 G + 0.114 B $
 
 A fixed-point integer approximation suitable for 8-bit hardware is:
@@ -132,7 +133,7 @@ $ Y_"rtl" approx (R/4) + (G/2) + (B/4) $
 
 Across the full 8-bit RGB space ($256^3$ colors), the error relative to $Y_"fp"$ is $e = Y_"rtl" - Y_"fp"$. Using exhaustive enumeration (and the actual truncating shifts from the RTL), we obtain a mean absolute error of $10.30$ LSB and a worst-case magnitude $abs(e)_"max" = 36.27$ LSB (at $R = 255$, $G = 255$, $B = 3$).
 
-The approximation is still chosen here because it uses a minimal number of HW primitives (no multipliers/DSP blocks), keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over photometric accuracy. However, we acknowledge that a fixed-point shift/add approximation would have improved the luminance fidelity without a major resource increase.
+The approximation is still chosen here because it uses a minimal number of HW primitives (no multipliers/DSP blocks), keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over color accuracy. However, we acknowledge that a fixed-point shift/add approximation would have improved the luminance fidelity without a major resource increase.
 
 
 == Minimal integration test: RGB_TO_GRAYSCALE plus FRAME_COMPOSITOR
@@ -145,7 +146,7 @@ To validate the dual-output AXI4-Stream behavior in a system context, a minimal 
   caption: [GHW snapshot for the 3x2 two-frame RGB2GRAY-to-compositor test, highlighting gray-branch warm-up behavior at each `SOF`.],
 ) <fig-rgb2gray-sync-ghw>
 
-@fig-rgb2gray-sync-ghw should be interpreted in the accepted-beat domain (`TVALID && TREADY`). The test measures gray-branch warm-up by comparing the first handshake cycles on `o_dbg_gray_pre_*` and `o_dbg_gray_post_*`, and it records compositor-side accepted beats (`s_comp_tuser`, `s_comp_tlast`) to check SOF placement and per-pixel cadence (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 250, line_end: 294, branch: "feat/rollback")).
+During warm-up in @fig-rgb2gray-sync-ghw, we interpret a beat as a successful AXI transfer (`TVALID && TREADY`); stall cycles do not advance the stream. The test measures gray-branch warm-up by comparing the first handshakes on `o_dbg_gray_pre_*` and `o_dbg_gray_post_*`, and it records compositor-side accepted beats (`s_comp_tuser`, `s_comp_tlast`) to check SOF placement and per-pixel progression (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 250, line_end: 294, branch: "feat/rollback")).
 
 The integration test asserts:
 - *Warm-up alignment:* `o_dbg_gray_pre_*` accepts without stalling, while `o_dbg_gray_post_*` shows a bounded `3..6` cycle delay at each `SOF` (latest `delta = 5`) (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 324, line_end: 334, branch: "feat/rollback")).
@@ -158,118 +159,38 @@ The brief `TVALID=0` region before the second `SOF` in this test is also expecte
 All tests referenced below live on branch `feat/rollback`. The `tb-sim` target mapping is defined in #repo_link("testbench/targets.toml", branch: "feat/rollback").
 The RGB2GRAY stage is covered both directly and as part of the full RGB-entry pipeline.
 
-#{
-  academic_table(
-    columns: (auto, auto),
-    table.header([Target / test module], [Test cases (intent)]),
-    [
-      `axi_rgb_to_grayscale`
-      #linebreak()
-      #repo_link("testbench/tests/test_axi_rgb_to_grayscale.py", branch: "feat/rollback")
-    ],
-    [
-      #repo_link(
-        "testbench/tests/test_axi_rgb_to_grayscale.py",
-        body: [`test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks`],
-        line: 386,
-        branch: "feat/rollback",
-      ): READY/valid stress + handshake assertions.
-      #linebreak()
-      #repo_link(
-        "testbench/tests/test_axi_rgb_to_grayscale.py",
-        body: [`test_axi_rgb_to_grayscale_image_file_roundtrip`],
-        line: 399,
-        branch: "feat/rollback",
-      ): image roundtrip + saved artifact.
-      #linebreak()
-      #repo_link(
-        "testbench/tests/test_axi_rgb_to_grayscale.py",
-        body: [`test_axi_rgb_to_grayscale_passthrough_mode`],
-        line: 409,
-        branch: "feat/rollback",
-      ): `i_pass_through=1` yields bit-exact passthrough.
-    ],
+#text(size: 9pt)[
+  *UUT: AXI_RgbToGrayscale*
+  - #repo_link(
+      "testbench/tests/test_axi_rgb_to_grayscale.py",
+      body: [`test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks`],
+      line: 386,
+      branch: "feat/rollback",
+    ): READY/valid stress + handshake assertions.
+  - #repo_link(
+      "testbench/tests/test_axi_rgb_to_grayscale.py",
+      body: [`test_axi_rgb_to_grayscale_image_file_roundtrip`],
+      line: 399,
+      branch: "feat/rollback",
+    ): image roundtrip + saved artifact.
+  - #repo_link(
+      "testbench/tests/test_axi_rgb_to_grayscale.py",
+      body: [`test_axi_rgb_to_grayscale_passthrough_mode`],
+      line: 409,
+      branch: "feat/rollback",
+    ): `i_pass_through=1` yields bit-exact passthrough.
 
-    [
-      `axi_rgb2gray_frame_compositor_minimal`
-      #linebreak()
-      #repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", branch: "feat/rollback")
-    ],
-    [
-      #repo_link(
-        "testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py",
-        body: [`test_axi_rgb2gray_frame_compositor_minimal_3x2_two_frames_with_gray_warmup`],
-        line: 207,
-        branch: "feat/rollback",
-      ): 3x2 two-frame integration into `AXI_FrameCompositor`: bounded gray warm-up + 1-cycle post-warm-up cadence.
-    ],
+  *UUT: AXI_RgbToGrayscale + AXI_FrameCompositor (minimal integration)*
+  - #repo_link(
+      "testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py",
+      body: [`test_axi_rgb2gray_frame_compositor_minimal_3x2_two_frames_with_gray_warmup`],
+      line: 207,
+      branch: "feat/rollback",
+    ): 3x2 two-frame integration into `AXI_FrameCompositor`: bounded gray warm-up + 1-cycle post-warm-up cadence.
 
-    [
-      `axi_gray_blurr_sobel_overlay_pipeline`
-      #linebreak()
-      #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback")
-    ],
-    [
-      #repo_link(
-        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
-        body: [`test_pipeline_full_chain_state_progression`],
-        line: 200,
-        branch: "feat/rollback",
-      ): full-frame lenna passthrough check (PASS_ALL default state).
-      #linebreak()
-      #repo_link(
-        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
-        body: [`test_pipeline_full_chain_smoke_with_backpressure`],
-        line: 216,
-        branch: "feat/rollback",
-      ): smoke: validates output shape and writes reference overlay artifact.
-    ],
+]
 
-    [
-      `axi_gray_blurr_sobel_overlay_pipeline_downscaled`
-      #linebreak()
-      #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", branch: "feat/rollback")
-    ],
-    [
-      #repo_link(
-        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
-        body: [`test_pipeline_full_chain_state_progression`],
-        line: 184,
-        branch: "feat/rollback",
-      ): downscaled lenna passthrough check (64x64).
-      #linebreak()
-      #repo_link(
-        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
-        body: [`test_pipeline_full_chain_smoke_with_backpressure`],
-        line: 198,
-        branch: "feat/rollback",
-      ): smoke: validates output shape and writes overlay artifact.
-    ],
-
-    [
-      `axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi`
-      #linebreak()
-      #repo_link("testbench/tests/test_axi_pipeline_synth_fsm.py", branch: "feat/rollback")
-    ],
-    [
-      #repo_link(
-        "testbench/tests/test_axi_pipeline_synth_fsm.py",
-        body: [`test_pipeline_synthetic_fsm_compositor_modes`],
-        line: 249,
-        branch: "feat/rollback",
-      ): synthetic 8x8 control/FSM coverage: RGB passthrough, grayscale view, and zeros overlay modes.
-      #linebreak()
-      #repo_link(
-        "testbench/tests/test_axi_pipeline_synth_fsm.py",
-        body: [`test_pipeline_controls_stay_default_without_input_sof`],
-        line: 355,
-        branch: "feat/rollback",
-      ): ensures controls only latch on accepted input `SOF`.
-    ],
-  )
-}
-
-Used harness building blocks (Python):
+Used test harness components (Python):
 - Source: #repo_link("testbench/drivers/axis_video_source.py", body: [`AxiVideoStreamSource`], line: 22, branch: "feat/rollback")
 - Sink: #repo_link("testbench/monitors/axis_video_sink.py", body: [`AxiVideoStreamSink`], line: 14, branch: "feat/rollback")
 - Reset/pause helpers: #repo_link("testbench/common/reset.py", body: [`apply_reset`], line: 8, branch: "feat/rollback"), #repo_link("testbench/common/pause.py", body: [`drive_sink_pause`], line: 17, branch: "feat/rollback"), #repo_link("testbench/common/pause.py", body: [`repeating_pause`], line: 35, branch: "feat/rollback")
@@ -278,5 +199,3 @@ Used harness building blocks (Python):
 RTL components exercised in these tests:
 - RGB2GRAY core/wrapper: #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5, branch: "feat/rollback"), #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4, branch: "feat/rollback")
 - Downstream integration: #repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4, branch: "feat/rollback"), #repo_link("rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd", line: 4, branch: "feat/rollback")
-
-#pagebreak()
