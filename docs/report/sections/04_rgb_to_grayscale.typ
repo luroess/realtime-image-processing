@@ -74,8 +74,8 @@ The complete per-cycle update in `P_REG_STREAM` is summarized by the following p
     caption-align: start,
     breakable: true,
   )
-  align(center, box(width: 92%, algorithm-figure(
-    [Synchronized dual-output AXI4-Stream in `P_REG_STREAM`.],
+  align(center, box(width: 92%, text(size: 10pt, algorithm-figure(
+    [Synchronized dual output AXI4S master in `P_REG_STREAM`.],
     line-numbers: false,
     {
       import algorithmic: *
@@ -115,7 +115,7 @@ The complete per-cycle update in `P_REG_STREAM` is summarized by the following p
         Assign[$"gray_sent"$][$"gray_sent_next"$]
       })
     },
-  )))
+  ))))
 }
 
 == RGB-to-grayscale core: algorithm and tradeoff
@@ -158,114 +158,116 @@ The brief `TVALID=0` region before the second `SOF` in this test is also expecte
 All tests referenced below live on branch `feat/rollback`. The `tb-sim` target mapping is defined in #repo_link("testbench/targets.toml", branch: "feat/rollback").
 The RGB2GRAY stage is covered both directly and as part of the full RGB-entry pipeline.
 
-#academic_table(
-  columns: (auto, 1fr),
-  table.header([Target / test module], [Test cases (intent)]),
-  [
-    `axi_rgb_to_grayscale`
-    #linebreak()
-    #repo_link("testbench/tests/test_axi_rgb_to_grayscale.py", branch: "feat/rollback")
-  ],
-  [
-    #repo_link(
-      "testbench/tests/test_axi_rgb_to_grayscale.py",
-      body: [`test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks`],
-      line: 386,
-      branch: "feat/rollback",
-    ): READY/valid stress + handshake assertions.
-    #linebreak()
-    #repo_link(
-      "testbench/tests/test_axi_rgb_to_grayscale.py",
-      body: [`test_axi_rgb_to_grayscale_image_file_roundtrip`],
-      line: 399,
-      branch: "feat/rollback",
-    ): image roundtrip + saved artifact.
-    #linebreak()
-    #repo_link(
-      "testbench/tests/test_axi_rgb_to_grayscale.py",
-      body: [`test_axi_rgb_to_grayscale_passthrough_mode`],
-      line: 409,
-      branch: "feat/rollback",
-    ): `i_pass_through=1` yields bit-exact passthrough.
-  ],
+#{
+  academic_table(
+    columns: (auto, auto),
+    table.header([Target / test module], [Test cases (intent)]),
+    [
+      `axi_rgb_to_grayscale`
+      #linebreak()
+      #repo_link("testbench/tests/test_axi_rgb_to_grayscale.py", branch: "feat/rollback")
+    ],
+    [
+      #repo_link(
+        "testbench/tests/test_axi_rgb_to_grayscale.py",
+        body: [`test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks`],
+        line: 386,
+        branch: "feat/rollback",
+      ): READY/valid stress + handshake assertions.
+      #linebreak()
+      #repo_link(
+        "testbench/tests/test_axi_rgb_to_grayscale.py",
+        body: [`test_axi_rgb_to_grayscale_image_file_roundtrip`],
+        line: 399,
+        branch: "feat/rollback",
+      ): image roundtrip + saved artifact.
+      #linebreak()
+      #repo_link(
+        "testbench/tests/test_axi_rgb_to_grayscale.py",
+        body: [`test_axi_rgb_to_grayscale_passthrough_mode`],
+        line: 409,
+        branch: "feat/rollback",
+      ): `i_pass_through=1` yields bit-exact passthrough.
+    ],
 
-  [
-    `axi_rgb2gray_frame_compositor_minimal`
-    #linebreak()
-    #repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", branch: "feat/rollback")
-  ],
-  [
-    #repo_link(
-      "testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py",
-      body: [`test_axi_rgb2gray_frame_compositor_minimal_3x2_two_frames_with_gray_warmup`],
-      line: 207,
-      branch: "feat/rollback",
-    ): 3x2 two-frame integration into `AXI_FrameCompositor`: bounded gray warm-up + 1-cycle post-warm-up cadence.
-  ],
+    [
+      `axi_rgb2gray_frame_compositor_minimal`
+      #linebreak()
+      #repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", branch: "feat/rollback")
+    ],
+    [
+      #repo_link(
+        "testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py",
+        body: [`test_axi_rgb2gray_frame_compositor_minimal_3x2_two_frames_with_gray_warmup`],
+        line: 207,
+        branch: "feat/rollback",
+      ): 3x2 two-frame integration into `AXI_FrameCompositor`: bounded gray warm-up + 1-cycle post-warm-up cadence.
+    ],
 
-  [
-    `axi_gray_blurr_sobel_overlay_pipeline`
-    #linebreak()
-    #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback")
-  ],
-  [
-    #repo_link(
-      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
-      body: [`test_pipeline_full_chain_state_progression`],
-      line: 200,
-      branch: "feat/rollback",
-    ): full-frame lenna passthrough check (PASS_ALL default state).
-    #linebreak()
-    #repo_link(
-      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
-      body: [`test_pipeline_full_chain_smoke_with_backpressure`],
-      line: 216,
-      branch: "feat/rollback",
-    ): smoke: validates output shape and writes reference overlay artifact.
-  ],
+    [
+      `axi_gray_blurr_sobel_overlay_pipeline`
+      #linebreak()
+      #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback")
+    ],
+    [
+      #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
+        body: [`test_pipeline_full_chain_state_progression`],
+        line: 200,
+        branch: "feat/rollback",
+      ): full-frame lenna passthrough check (PASS_ALL default state).
+      #linebreak()
+      #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py",
+        body: [`test_pipeline_full_chain_smoke_with_backpressure`],
+        line: 216,
+        branch: "feat/rollback",
+      ): smoke: validates output shape and writes reference overlay artifact.
+    ],
 
-  [
-    `axi_gray_blurr_sobel_overlay_pipeline_downscaled`
-    #linebreak()
-    #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", branch: "feat/rollback")
-  ],
-  [
-    #repo_link(
-      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
-      body: [`test_pipeline_full_chain_state_progression`],
-      line: 184,
-      branch: "feat/rollback",
-    ): downscaled lenna passthrough check (64x64).
-    #linebreak()
-    #repo_link(
-      "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
-      body: [`test_pipeline_full_chain_smoke_with_backpressure`],
-      line: 198,
-      branch: "feat/rollback",
-    ): smoke: validates output shape and writes overlay artifact.
-  ],
+    [
+      `axi_gray_blurr_sobel_overlay_pipeline_downscaled`
+      #linebreak()
+      #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", branch: "feat/rollback")
+    ],
+    [
+      #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
+        body: [`test_pipeline_full_chain_state_progression`],
+        line: 184,
+        branch: "feat/rollback",
+      ): downscaled lenna passthrough check (64x64).
+      #linebreak()
+      #repo_link(
+        "testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py",
+        body: [`test_pipeline_full_chain_smoke_with_backpressure`],
+        line: 198,
+        branch: "feat/rollback",
+      ): smoke: validates output shape and writes overlay artifact.
+    ],
 
-  [
-    `axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi`
-    #linebreak()
-    #repo_link("testbench/tests/test_axi_pipeline_synth_fsm.py", branch: "feat/rollback")
-  ],
-  [
-    #repo_link(
-      "testbench/tests/test_axi_pipeline_synth_fsm.py",
-      body: [`test_pipeline_synthetic_fsm_compositor_modes`],
-      line: 249,
-      branch: "feat/rollback",
-    ): synthetic 8x8 control/FSM coverage: RGB passthrough, grayscale view, and zeros overlay modes.
-    #linebreak()
-    #repo_link(
-      "testbench/tests/test_axi_pipeline_synth_fsm.py",
-      body: [`test_pipeline_controls_stay_default_without_input_sof`],
-      line: 355,
-      branch: "feat/rollback",
-    ): ensures controls only latch on accepted input `SOF`.
-  ],
-)
+    [
+      `axi_gray_blurr_sobel_overlay_pipeline_synth_fsm_axi`
+      #linebreak()
+      #repo_link("testbench/tests/test_axi_pipeline_synth_fsm.py", branch: "feat/rollback")
+    ],
+    [
+      #repo_link(
+        "testbench/tests/test_axi_pipeline_synth_fsm.py",
+        body: [`test_pipeline_synthetic_fsm_compositor_modes`],
+        line: 249,
+        branch: "feat/rollback",
+      ): synthetic 8x8 control/FSM coverage: RGB passthrough, grayscale view, and zeros overlay modes.
+      #linebreak()
+      #repo_link(
+        "testbench/tests/test_axi_pipeline_synth_fsm.py",
+        body: [`test_pipeline_controls_stay_default_without_input_sof`],
+        line: 355,
+        branch: "feat/rollback",
+      ): ensures controls only latch on accepted input `SOF`.
+    ],
+  )
+}
 
 Used harness building blocks (Python):
 - Source: #repo_link("testbench/drivers/axis_video_source.py", body: [`AxiVideoStreamSource`], line: 22, branch: "feat/rollback")
