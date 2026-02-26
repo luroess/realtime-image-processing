@@ -200,9 +200,9 @@ Because the core is combinational, no timing waveform is required here; correctn
   caption: [`ShiftRamChain` core: selectable delay taps built from cascaded `c_shift_ram_0` IP cores.],
 ) <fig-frame-shiftramchain>
 
-`ShiftRamChain` provides selectable fixed delay taps for the base stream as a BRAM-backed shift-register chain (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 5, branch: "feat/rollback")). It advances with each accepted beat of the base stream: the chain shifts one word per `i_ce=1` pulse (base-stream handshake `TVALID && TREADY`) and holds its taps when `i_ce=0` (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 20, branch: "feat/rollback")).
+`ShiftRamChain` provides selectable fixed delay taps for the base stream as a BRAM-based shift-register chain (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 5, branch: "feat/rollback")). It advances with each accepted beat of the base stream: the chain shifts one word per `i_ce=1` pulse (base-stream AXIS-handshake `TVALID && TREADY`) -#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 20, branch: "feat/rollback").
 
-Delays are implemented by cascading instances of `c_shift_ram_0`, a generated BRAM shift-register primitive with a constant per-instance delay configured via its `A` input (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 40, branch: "feat/rollback")). Because `A` is 10-bit, each stage provides at most 1024 beats of delay; longer delays are realized as a sequence of full 1024-beat stages plus one final residual stage. The first chain (`s_sobel_pipe`) provides the Sobel-alignment tap, and the optional second chain (`s_blur_pipe`) appends only the additional delay beyond Sobel to reach the Blur+Sobel tap.
+Delays are implemented by cascading instances of `c_shift_ram_0`, a generated BRAM shift-register primitive with a adjustable per-instance delay configured via its `A` input (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 40, branch: "feat/rollback")). Because `A` is 10-bit, each stage provides at most 1024 beats of delay; longer delays are realized as a sequence of full 1024-beat stages plus one final residual stage. The first chain (`s_sobel_pipe`) provides the Sobel-alignment tap, and the optional second chain (`s_blur_pipe`) appends only the additional delay beyond Sobel to reach the Blur+Sobel tap.
 
 @fig-shiftram-arch summarizes the resulting datapath and control contract. The packed base word enters as `i_din[25:0] = {SOF,EOL,RGB24}` and is advanced only on `i_ce = base_accept` (accepted-beat domain). A synchronous clear (`i_sclr = not i_aresetn`) resets the stored state, forcing taps to zero until refilled. The tap mux selects `o_dout` from either the bypass path (`sel=00`), the Sobel tap (`sel=01/11`), or the Blur+Sobel tap (`sel=10`), matching the selector semantics summarized later in @tab-shiftram-sel-map.
 
@@ -296,11 +296,6 @@ $
 // ) <tab-frame-tests-shiftramchain>
 
 
-// TODO: exclude this figure.
-// #figure(
-//   image("../figures/generated/seq_shift_ram_chain_transaction.png", width: 96%),
-//   caption: [Sequence view of AXI_FrameCompositor + ShiftRamChain interaction: `s_*_tready` generation, `i_ce`/`i_sclr` effects, selector-driven tap behavior, and `m_*_tvalid` emission. Rendered from Mermaid with `mmdc -s 2`.],
-// ) <fig-shiftram-seq>
 
 #figure(
   image("../figures/ghw/shift_ram_chain.png", width: 96%),
