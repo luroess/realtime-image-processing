@@ -3,7 +3,7 @@
 = Synthesis and Implementation Results
 #component_owner("Jan Duchscherer")
 
-This section summarizes synthesis and implementation utilization as reported in Vivado's "Implementation Summary".
+This section summarizes synthesis and implementation utilization as reported in Vivado's Sythesis Summary for our full Pipeline as implemented on branch `feat/rollback`. Since we did not manage to sucessfully integrate and test both overlay and filtering features into a single bitstream, the following results must be regared with caution as full functionality of the integrated system was only verified for both development branches in isolation, but not together. Hence, it is not guaranteed that the synthesis snapshot reflects the resource usage of the fully integrated design with all features enabled.
 
 #let system_split_rows = csv("../data/resource_split_system_vs_pipeline.csv", row-type: dictionary)
 #let instance_split_rows = csv("../data/resource_split_pipeline_instances.csv", row-type: dictionary)
@@ -20,12 +20,14 @@ This section summarizes synthesis and implementation utilization as reported in 
   if s.contains(".") { [#s%] } else { [#s.0%] }
 }
 
-@fig-resource-system-vs-pipeline provides a placed-system utilization overview by primitive class. The blue segments isolate the AXI pipeline contribution ("Ours") from the remainder of the system; @tab-resource-system-split lists the corresponding counters.
+
 
 #figure(
   image("../figures/generated/fig_resource_system_vs_pipeline.png", width: 94%),
   caption: [Placed-system utilization split by primitive class, separating the AXI pipeline contribution from other system components.],
 ) <fig-resource-system-vs-pipeline>
+
+@fig-resource-system-vs-pipeline provides a full-system utilization overview by primitive class. The blue segments isolate our AXI pipeline, containing all other IP cores that were created in the context of this project, from the remainder of the system; @tab-resource-system-split lists the corresponding counters and percentages.
 
 #figure(
   academic_table(
@@ -46,7 +48,7 @@ This section summarizes synthesis and implementation utilization as reported in 
   caption: [Numerical companion to @fig-resource-system-vs-pipeline with placed-system and pipeline split counters.],
 ) <tab-resource-system-split>
 
-@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUTRAM as the primary pressure point: the pipeline uses 3571 LUTRAM (#fmt_pct_1dp(3571 / 6000)), while overall LUTRAM utilization reaches #fmt_pct_1dp(3862 / 6000). By contrast, FF pressure is lower: the pipeline uses 4439 FF (#fmt_pct_1dp(4439 / 35200)), while the full system reaches #fmt_pct_1dp(15406 / 35200). For LUTs, the placed `system_wrapper` uses #fmt_pct_1dp(11944 / 17600), with #fmt_pct_1dp(4189 / 17600) attributable to the AXI pipeline. BRAM, IO, BUFG, and MMCM usage remains outside the pipeline cut in this snapshot.
+@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUTRAM as the primarily utilized primitive: the pipeline uses 3571 LUTRAM (#fmt_pct_1dp(3571 / 6000 * 100)), while overall LUTRAM utilization reaches #fmt_pct_1dp(3862 / 6000 * 100). By contrast, utilization of FFs and regular LUTs is lower, and our additions to the overall system did _not_ affect the number f
 
 Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks down LUT/LUTRAM/FF usage across direct child instances; @tab-resource-pipeline-instance-split provides the exact counters.
 
@@ -73,6 +75,5 @@ Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks
   caption: [Per-instance resource counters parsed from the hierarchical pipeline utilization report.],
 ) <tab-resource-pipeline-instance-split>
 
-The internal split in @fig-resource-pipeline-instance-split and @tab-resource-pipeline-instance-split localizes most area to `U_AxiFrameCompositor`, `U_AxiSobelWindowModule`, and `U_AxiBlurrWindowModule`, while `U_DebouncedClickDetector` and `U_AxiRgbToGrayscale` remain comparatively lightweight. This distribution matches the architecture, where delay-line-heavy stream alignment and windowed filtering dominate over control logic and simple pixel conversion.
+The internal split in @fig-resource-pipeline-instance-split and @tab-resource-pipeline-instance-split localizes most area to `U_AxiFrameCompositor`, `U_AxiSobelWindowModule`, and `U_AxiBlurrWindowModule`, while `U_DebouncedClickDetector` and `U_AxiRgbToGrayscale` remain lightweight. This distribution matches the architecture, where delay-line-heavy stream alignment and windowed filtering dominate over control logic and simple pixel conversion.
 
-The flat pipeline synthesis report (`pipeline_ip_utilization_synth.rpt`) under `docs/report/data/vivado_ooc/pipeline_ip/` further separates the 4189 LUT total into 618 logic LUTs and 3571 LUT memory/SRL resources, and the hierarchical report (`pipeline_ip_hier_utilization_synth.rpt`) attributes those resources to the same dominant blocks shown above. Taken together, the synthesis and implementation evidence indicates that future optimization leverage is concentrated in memory-based delay structures and window modules rather than in the control-path or grayscale front-end logic.
