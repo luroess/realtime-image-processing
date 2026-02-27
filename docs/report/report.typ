@@ -47,6 +47,7 @@
     #include "sections/23_pipeline.typ"
     #include "sections/07_simulation_framework.typ"
     #include "sections/08_synthesis_results.typ"
+    #include "sections/09_conclusion.typ"
   ],
   title: [Realtime Streaming Image Processing on FPGA],
   subtitle: [Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, Verification & Simulation, Synthesis Results],
