@@ -5,7 +5,7 @@
 
 == Top-level objective
 #repo_link("rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd", body: raw("AXI_RgbGrayBlurrSobelOverlayPipeline"), line: 4) integrates the full real-time stream chain:
-`RGB -> grayscale -> blur -> Sobel -> overlay compositor`.
+`RGB -> Grayscale -> Blur -> Sobel -> Frame Compositor`.
 
 The module keeps one AXI4-Stream input/output interface and exposes runtime mode controls through debounced button logic.
 

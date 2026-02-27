@@ -70,3 +70,22 @@ In @fig-sobel-adaptive-fast the step size is larger because `mean_shift=4`, so t
 The wrapper constrains operation to 3x3 windows using an elaboration assertion (#repo_link("rtl/SOBEL_FILTER/axi_sobel_filter.vhd", line: 47)). READY is propagated from output to input (#repo_link("rtl/SOBEL_FILTER/axi_sobel_filter.vhd", line: 74)), and the core updates adaptation state only on accepted beats (`TVALID && TREADY`) at #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 156).
 
 The behavioral validation is implemented in #repo_link("testbench/tests/test_axi_sobel_filter.py", body: raw("test_axi_sobel_filter.py"), line: 1) with model-based comparisons and stress patterns under AXI backpressure.
+
+== Hardware discrepancy and rollback decision
+During integration of adaptive thresholding into the full image path, a regression was observed on hardware: strong visual artifacts appeared and the resulting pattern looked like signal oversteering across large image regions. The effect was not limited to the final overlay view; artifacts were already visible in intermediate frames associated with the Blur Filter processing chain.
+
+#figure(
+  image("../../figures/visual-artifacts-of-bug-2.jpg", width: 72%),
+  caption: [Observed hardware artifact pattern during adaptive-threshold integration in the full pipeline.],
+) <fig-sobel-hw-artifact>
+
+To isolate the issue, I used a dedicated Sobel testcase `test_axi_sobel_filter_white_3x3_zero_padded_windows` in #repo_link("testbench/tests/test_axi_sobel_filter.py", line: 341).
+
+#figure(
+  image("../../figures/test-sobel_filter_white_3x3_zero_padded-surfer-overview-signal-flow.png", width: 92%),
+  caption: [Surfer signal-flow view for testcase `test_axi_sobel_filter_white_3x3_zero_padded_windows`.],
+) <fig-sobel-surfer-3x3>
+
+@fig-sobel-surfer-3x3 shows the signal flow of a simple zero-padded $3 times 3$ raster. In this pattern, only the center pixel is not classified as an edge. The red-marked position therefore shows output `00` for this single sample, while neighboring samples stay at edge level. This matched the simulation model and confirmed correct Sobel decision behavior for the written testcase.
+
+The adaptive threshold also behaved as expected in simulation, so the result remained a simulation-versus-device mismatch. Because the physical root cause could not be isolated before the deadline, the project rolled back to the previously device-stable revision for the final hardware demonstration.
