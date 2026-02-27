@@ -205,7 +205,7 @@ $
   D_bullet (W, K) & = (W + 1) ((K - 1) / 2) \
         D_"sobel" & = D(W, K_"sobel") \
    D_"blur+sobel" & = D(W, K_"blur") + D(W, K_"sobel") \
-$
+$ <eq:delay>
 
 @tab-shiftram-sel-map lists the configured FIFO length ($D_bullet$) and the number of instantiated shift-RAM stages per selector/tap. In simulation, these stages map to a custom `c_shift_ram_0_model` behavioral replacement to avoid usage of vendor components via `vsim`. Because each additional cascaded stage beyond the first contributes a single beat handoff latency, the wrapper uses an effective delay of $D_"effective" = D_bullet + (N_"stages" - 1)$ for non-bypass paths (and $D_"effective"=0$ for bypass), e.g. `2562` with `4` stages yields `2565`.
 

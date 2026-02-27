@@ -26,11 +26,14 @@
     )
     #set page(
       footer: context {
-        align(right, numbering(
-          "1 / 1",
-          ..counter(page).get(),
-          ..counter(page).at(<end>),
-        ))
+        set text(9pt)
+        grid(
+          columns: (1fr, auto),
+          align(left)[Jan Duchscherer, Lukas Röss],
+          align(right)[
+            #counter(page).display("1 / 1", both: true)
+          ],
+        )
       },
     )
 
@@ -45,7 +48,7 @@
   subtitle: [Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, Verification & Simulation, Synthesis Results],
   top-remark: [],
   doc-type: [HW/SW Co-Design],
-  authors: [Lukas Roess, Valentin Bumeder, Jan Duchscherer, Justin Loeber],
+  authors: [Lukas Röss, Jan Duchscherer],
   date: datetime(year: 2026, month: 2, day: 22),
   language: "en",
   font: "CMU Serif",

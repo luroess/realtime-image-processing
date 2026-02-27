@@ -27,7 +27,7 @@ This section summarizes resource utilization as reported by Vivado for the `feat
   caption: [Utilization split by primitive class, ours (blue) vs. rest (gray).],
 ) <fig-resource-system-vs-pipeline>
 
-@fig-resource-system-vs-pipeline compares the placed `system_wrapper` utilization against an out-of-context synthesis report of our AXI pipeline IP. The blue segments show the pipeline contribution, while gray indicates the remaining system infrastructure; @tab-resource-system-split lists the corresponding counts and percentages.
+@fig-resource-system-vs-pipeline provides a full-system utilization overview by primitive class. The blue segments isolate our AXI pipeline, containing all other IP cores that were created in the context of this project, from the remainder of the system; @tab-resource-system-split lists the corresponding counters and percentages.
 
 #figure(
   academic_table(
@@ -50,9 +50,9 @@ This section summarizes resource utilization as reported by Vivado for the `feat
 
 @fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUT memory as the dominant resource: the pipeline uses 3571 LUT-memory cells (#fmt_pct_1dp(3571 / 6000 * 100)), while overall utilization reaches #fmt_pct_1dp(3862 / 6000 * 100). This is expected because the line buffers and delay lines are implemented as LUT-based shift registers (SRLs), which Vivado counts under `LUT as Memory` rather than BRAM.
 
-The pipeline IP is synthesized out-of-context and therefore has no package-pin I/O, so `Bonded IOB` is reported as zero for the pipeline. Board-level signals such as `btn[3:0]` and `led[3:0]` are bound only at full `system_wrapper` implementation level; their I/O usage is included in the placed-system total and therefore appears under `Others` in this system-vs-pipeline decomposition.
+Board-level signals such as `btn[3:0]` and `led[3:0]` are bound only at full `system_wrapper` implementation level; their I/O usage is included in the placed-system total and therefore appears under `Others` in this system-vs-pipeline decomposition.
 
-Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks down LUT/LUT-memory/FF usage across direct child instances; @tab-resource-pipeline-instance-split provides the exact counters. For consistency with Vivado's `LUT as Memory` category, the LUTRAM column below includes both LUTRAMs and SRLs from the hierarchical report.
+Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks down LUT/LUTRAM/FF usage across direct child instances; @tab-resource-pipeline-instance-split provides the exact counters. For consistency with Vivado's `LUT as Memory` category, the LUTRAM column includes both LUTRAMs and SRLs from the hierarchical report.
 
 #figure(
   image("../figures/generated/fig_resource_pipeline_instance_split.png", width: 94%),
@@ -79,11 +79,8 @@ Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks
 
 The internal split in @fig-resource-pipeline-instance-split and @tab-resource-pipeline-instance-split localizes most area to `U_AxiFrameCompositor`, `U_AxiSobelWindowModule`, and `U_AxiBlurrWindowModule`, while `U_DebouncedClickDetector` and `U_AxiRgbToGrayscale` remain lightweight. This distribution matches the architecture, where delay-line-heavy stream alignment and windowed filtering dominate over control logic and simple pixel conversion.
 
-For `U_AxiFrameCompositor`, the memory-heavy contribution is expected from `ShiftRamChain` (cascaded `c_shift_ram_0` stages). With odd kernel size, the warm-up delay is
-$
-  D(W, K) = (W + 1) ((K - 1) / 2).
-$
-For `K=3` and `W=1280` (line width), this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping, a first-order storage estimate is
+For `U_AxiFrameCompositor`, the memory-heavy contribution is expected from `ShiftRamChain` (cascaded `c_shift_ram_0` stages). With odd kernel size, the warm-up delay can pe computed as per @eq:delay.\
+For `K=3` and `W=1280` (line width), this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping(SRLC32E, 32-deep shift-register LUT) @ug953-srlc32e, a first-order storage estimate is
 $
   N_"SRL32,est" = 26 sum_i ceil((D_i - 1) / 32) = 26 (32 + 8 + 32 + 8) = 2080,
 $
