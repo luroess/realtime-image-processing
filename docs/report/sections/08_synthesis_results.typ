@@ -48,7 +48,7 @@ This section summarizes resource utilization as reported by Vivado for the `feat
   caption: [Placed-system and pipeline split counters.],
 ) <tab-resource-system-split>
 
-@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUT memory as the dominant resource: the pipeline uses 3571 LUT-memory cells (#fmt_pct_1dp(3571 / 6000 * 100)), while overall utilization reaches #fmt_pct_1dp(3862 / 6000 * 100). This is expected because the line buffers and delay lines are implemented as LUT-based shift registers (SRLs), which Vivado counts under `LUT as Memory` rather than BRAM.
+@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUT memory as the dominant resource: the pipeline uses 3571 LUT-memory cells (#fmt_pct_1dp(3571 / 6000 * 100)), while overall utilization reaches #fmt_pct_1dp(3862 / 6000 * 100). This is expected because the line buffers and delay lines are implemented as LUT-based shift registers (SRLs), which Vivado counts under `LUT as Memory` rather than BRAM @ug835-report_utilization.
 
 Board-level signals such as `btn[3:0]` and `led[3:0]` are bound only at full `system_wrapper` implementation level; their I/O usage is included in the placed-system total and therefore appears under `Others` in this system-vs-pipeline decomposition.
 
@@ -84,8 +84,4 @@ For `K=3` and `W=1280` (line width), this gives `D_sobel=1281` and `D_blur+sobel
 $
   N_"SRL32,est" = 26 sum_i ceil((D_i - 1) / 32) = 26 (32 + 8 + 32 + 8) = 2080,
 $
-which is close to the measured `2049` SRL-class primitives (reported here under the LUT-memory bucket). For beat alignment, the wrapper uses
-$
-  D_"effective" = D_"requested" + (N_"stages" - 1),
-$
-thus the effective taps are `1282` for Sobel (`1281 + (2 - 1)`) and `2565` for Blur+Sobel (`2562 + (4 - 1)`). This adjusts alignment timing, but not the storage estimate above. Since `c_shift_ram_0` enables `RegLastBit`, FFs are expected in addition to SRL-based LUT memory, along with wrapper control registers.
+which is close to the measured `2049` SRL-class primitives (reported here under the LUT-memory bucket).
