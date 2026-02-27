@@ -8,4 +8,6 @@ Our work builds on #blink("https://digilent.com/reference/programmable-logic/zyb
 
 The active chain converts the incoming RGB stream to grayscale and applies window-based filtering (blur and Sobel edge detection). As a minimum configuration, the system emits a binary black/white edge mask; optional modes overlay the detected edges onto a delayed base image (RGB or grayscale-replicated). This report documents the custom modules for grayscale conversion, changes to the control FSM, and frame composition/stream realignment, together with our cocotb/cocotbext-axi verification harness and Vivado synthesis/implementation utilization results.
 
+The project was carried out as group work by Valentin Bumeder, Jan Duchscherer, Justin Löber, and Lukas Roess. This report of Justin Löber will be handed in as a seperate document due to organisational reasons.
+
 // Unless stated otherwise, progress is measured in accepted AXI beats (`TVALID && TREADY`); stall cycles do not advance the stream. `TUSER` marks start-of-frame (SOF) and `TLAST` marks end-of-line (EOL). Pixels are encoded as 24-bit `R|B|G` (MSB to LSB), and repository links in this report refer to branch `feat/rollback`.

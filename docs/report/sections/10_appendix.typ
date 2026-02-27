@@ -189,3 +189,9 @@ To visualize the binary mask output, we manually alpha-blended the cocotb-genera
   ),
   caption: [FAST mask overlays generated from cocotb regression outputs.],
 ) <fig-app-fast-overlays>
+
+== Picture Overlay Testbench Output
+#figure(
+  image("../figures/artifacts/picture_overlay_output.png", width: 100%),
+  caption: [Testbench output of `AxiPictureOverlay`.],
+) <fig-picture-overlay-output>
