@@ -13,7 +13,7 @@ The detailed derivation of this window formation stage and its buffering model i
 == Comparative interface and behavior summary
 #figure(
   academic_table(
-    columns: (1.2fr, 1.25fr, 2.25fr),
+    columns: (1.3fr, 1.5fr, 2.6fr),
     align: (left, left, left),
     table.header([Aspect], [Modules], [Behavioral interpretation]),
     [Primary wrapper stage],
@@ -32,9 +32,9 @@ The detailed derivation of this window formation stage and its buffering model i
     [Blur preserves scalar gray output, while Sobel output is replicated to RGB lanes for compositor compatibility.],
     [Bypass logic],
     [
-      #repo_link("rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd", line: 111)
+      #repo_link("rtl/BLURR_WINDOW_MODULE/hdl/axi_blurr_window_module.vhd", body: raw("AXI_BlurrWindowModule mux"), line: 111)
       #linebreak()
-      #repo_link("rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd", line: 113)
+      #repo_link("rtl/SOBEL_WINDOW_MODULE/hdl/axi_sobel_window_module.vhd", body: raw("AXI_SobelWindowModule mux"), line: 113)
     ],
     [A mode-controlled mux keeps stream continuity and selects either filtered data or direct input samples.],
     [Design constraints],
