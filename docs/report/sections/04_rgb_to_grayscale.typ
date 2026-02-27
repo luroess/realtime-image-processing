@@ -7,12 +7,23 @@
 
 == Overview
 
-The IP core RGB_TO_GRAYSCALE is the initial conversion stage. It reduces the incoming RGB24 pixel stream to an 8-bit luminance (`gray8`) for subsequent image processing modules, while still providing a synchronized RGB stream (`rbg888`) for downstream blocks that require color. In the active block design, it is placed after Bayer reconstruction and gamma correction (provided in the employed demo project by Digilent @digilent-pcam-demo). The wrapper is implemented as a synchronized two-consumer AXI4-Stream Video fan-out, so the `gray8` and `rbg888` outputs remain frame- and line-aligned even under asymmetric backpressure.
 
-#figure(
-  image("../../figures/ip-cores/AxiRGBToGrayscale.png", width: 45%),
-  caption: [AXI_RgbToGrayscale top-level IP-core wrapper view and external stream/control interface.],
-) <fig-rgb2gray-vivado>
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 0.55cm,
+  [
+    The IP core RGB_TO_GRAYSCALE is the initial conversion stage. It reduces the incoming RGB24 pixel stream to an 8-bit luminance (`gray8`) for subsequent image processing modules, while still providing a synchronized RGB stream (`rbg888`) for downstream blocks that require color. In the active block design, it is placed after Bayer reconstruction and gamma correction (provided in the employed demo project by Digilent @digilent-pcam-demo).
+  ],
+  [
+    #figure(
+      image("../../figures/ip-cores/AxiRGBToGrayscale.png", width: 90%),
+      caption: [AXI_RgbToGrayscale top-level IP-core wrapper view and external stream/control interface.],
+    ) <fig-rgb2gray-vivado>
+  ],
+)
+
+The wrapper is implemented as a synchronized two-consumer AXI4-Stream Video fan-out, so the `gray8` and `rbg888` outputs remain frame- and line-aligned even under asymmetric backpressure.
+
 
 The component is split into a combinational pixel core `E_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5, branch: "feat/rollback")) and an AXI4-Stream video wrapper `AXI_RgbToGrayscale` (#repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4, branch: "feat/rollback")). The core computes per-pixel luminance `Y`, while the wrapper implements the synchronized dual-output AXI4-Stream Video interface.
 
