@@ -80,3 +80,13 @@ xst/
 isim/
 .vscode/
 .external
+
+rtl/PIPELINE/src/
+vivado_axi_pipeline/
+vivado_backup/
+vivado_block_design_representation/
+vivado_outputs/axi_pipeline
+vivado_outputs/axi_pipeline_without_window_generator_change
+vivado_outputs/fixed_adaptive
+vivado_outputs/rollback
+vivado_rollback/
