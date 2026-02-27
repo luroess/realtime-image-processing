@@ -4,7 +4,7 @@
 = Simulation Framework using cocotb and cocotbext-axi
 #component_owner("Jan Duchscherer, Lukas Roess, Valentin Bumeder, Justin Loeber")
 
-The verification stack is organized as reusable source/sink/model/scoreboard layers in `testbench/` and executed through target registration in #repo_link("testbench/targets.toml", line: 1), with runner entrypoint #repo_link("testbench/sim/run.py", body: raw("testbench/sim/run.py"), line: 194).
+Our verification stack is organized as reusable source/sink/model/scoreboard layers in `testbench/` and executed through target registration in #repo_link("testbench/targets.toml", line: 1), with test-runner entrypoint #repo_link("testbench/sim/run.py", body: raw("testbench/sim/run.py"), line: 194).
 
 #figure(
   academic_table(

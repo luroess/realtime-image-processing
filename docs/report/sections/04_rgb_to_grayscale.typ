@@ -133,7 +133,7 @@ $ Y_"rtl" approx (R/4) + (G/2) + (B/4) $
 
 Across the full 8-bit RGB space ($256^3$ colors), the error relative to $Y_"fp"$ is $e = Y_"rtl" - Y_"fp"$. Using exhaustive enumeration (and the actual truncating shifts from the RTL), we obtain a mean absolute error of $10.30$ LSB and a worst-case magnitude $abs(e)_"max" = 36.27$ LSB (at $R = 255$, $G = 255$, $B = 3$).
 
-The approximation is still chosen here because it uses a minimal number of HW primitives (no multipliers/DSP blocks), keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over color accuracy. However, we acknowledge that a fixed-point shift/add approximation would have improved the luminance fidelity without a major resource increase.
+The approximation is still chosen here because it uses a minimal number of HW primitives, keeps `E_RgbToGrayscale` fully combinational and low-latency, and is sufficient for this pipeline where real-time throughput and relative contrast are prioritized over color accuracy. However, we acknowledge that a fixed-point shift/add approximation would have improved the luminance fidelity without a major resource increase.
 
 
 == Minimal integration test: RGB_TO_GRAYSCALE plus FRAME_COMPOSITOR
@@ -152,7 +152,7 @@ The integration test asserts:
 - *Warm-up alignment:* `o_dbg_gray_pre_*` accepts without stalling, while `o_dbg_gray_post_*` shows a bounded `3..6` cycle delay at each `SOF` (latest `delta = 5`) (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 324, line_end: 334, branch: "feat/rollback")).
 - *Steady-state cadence:* Once warm-up is released, the gray branch transfers consecutive pixels at one accepted beat per clock (#repo_link("testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py", line: 337, branch: "feat/rollback")).
 
-The brief `TVALID=0` region before the second `SOF` in this test is also expected and originates from the stimulus driver (`await self._source.wait()` followed by idle drive, #repo_link("testbench/drivers/axis_video_source.py", line: 150, branch: "feat/rollback")), not from gray-branch deadlock. With that context, the observed waveform behavior is consistent with the intended architecture and the assertions embedded in the integration test.
+The brief `TVALID=0` region before the second `SOF` in this test is also expected and originates from the stimulus driver (`await self._source.wait()` followed by idle drive, #repo_link("testbench/drivers/axis_video_source.py", line: 150, branch: "feat/rollback")), not from gray-branch deadlock. With that context, the observed waveform behavior is consistent with the intended architecture and the assertions in the integration test.
 
 == Test coverage: rgb2gray-related cocotb tests
 

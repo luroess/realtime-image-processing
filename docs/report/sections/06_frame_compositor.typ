@@ -16,20 +16,20 @@
 ) <fig-frame-overlay>
 
 == Overview
-The `AXI_FrameCompositor` (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4, branch: "feat/rollback")) is responsible for the composition of final output frames, providing functionality to overlay detected edges onto the original RGB image or to emit a binary mask image, depending on the runtime mode.
+The `AXI_FrameCompositor` (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4, branch: "feat/rollback")) aligns a delayed base stream with a processed gray/mask stream and emits either an edge overlay or a binary mask, depending on the runtime mode.
 
 #figure(
   image("../../figures/ip-cores/AxiFrameCompositor.png", width: 45%),
   caption: [AXI_FrameCompositor top-level IP-core wrapper with dual-stream inputs, delay-stage select, and composed RGB output.],
 ) <fig-frame-arch>
 
-It receives two AXI4-Stream Video inputs that originate from different branches: a base `rbg888` stream and a processed `gray8` stream that acts as timing reference and carries the edge mask. Because Sobel (and optional Blur+Sobel) are window-based stages, the processed branch exhibits a deterministic warm-up latency after each `SOF`, so the two streams cannot be consumed in lockstep without explicit re-alignment.
+It consumes two AXI4-Stream Video inputs that originate from different branches: a base `rbg888` stream and a processed `gray8` stream that acts as timing reference and carries the edge mask. Because Sobel (and optional Blur+Sobel) are window-based stages, the processed branch exhibits a deterministic warm-up latency after each `SOF`, so the two streams cannot be consumed in lockstep without explicit re-alignment.
 
-The module resolves this phase-mismatch by buffering the *base* branch. Each accepted base beat is packed as `{SOF, EOL, RBG24}` and propagated through a chain of RAM-based shift registers (`ShiftRamChain`, #repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 10, branch: "feat/rollback")) only when `TVALID && TREADY` is true. A runtime selector (`i_base_delay_stage_sel`) chooses which delay tap is used to align the base stream to the current processing mode, while the gray stream remains the sole output framing reference (`TVALID`, `TUSER=SOF`, `TLAST=EOL`). The wrapper therefore emits output beats only when the gray reference is valid and, in merge mode, the selected delayed-base tap contains valid data.
+The module resolves this phase-mismatch by delaying the *base* branch in the accepted-beat domain. Each accepted base beat is packed as `{SOF, EOL, RBG24}` and advanced through a BRAM-backed delay chain (`ShiftRamChain`, #repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 10, branch: "feat/rollback")) only when `TVALID && TREADY` is true. The selector `i_base_delay_stage_sel` chooses bypass, Sobel, or Blur+Sobel taps; output beats are emitted only when the gray reference is valid and (in merge mode) the selected delayed-base tap contains valid data.
 
-Two output modes are supported in the implementation on branch `feat/rollback`. In overlay mode (`i_overlay_zeros = 0`), `FrameCompositor` overwrites the delayed base pixel#footnote([which may be color or grayscale-replicated based on `*_pass_grayscale`]) with `G_EDGE_COLOR` whenever the mask indicates an edge (`gray8 != 0`). In binary mode (`i_overlay_zeros = 1`), the base stream is not required; the module emits a black/white mask image (white for non-zero mask) while still remaining gray-timed. Note that on branch #blink("https://github.com/luroess/realtime-image-processing/tree/feat/frame-compositor")[`feat/frame-compositor`], the `FRAME_COMPOSITOR` is also capable of emitting the blur-only stream.
+In overlay mode (`i_overlay_zeros = 0`), `FrameCompositor` overwrites the delayed base pixel#footnote([which may be color or grayscale-replicated based on `*_pass_grayscale`]) with `G_EDGE_COLOR` whenever the mask indicates an edge (`gray8 != 0`). In binary mode (`i_overlay_zeros = 1`), the base stream is ignored and the module emits a black/white mask image (white for non-zero mask) while still remaining gray-timed. (Branch #blink("https://github.com/luroess/realtime-image-processing/tree/feat/frame-compositor")[`feat/frame-compositor`] additionally implements a blur-only output mode.)
 
-To avoid deadlock during warm-up, READY generation is _asymmetric_ during prefill: while the gray stream is idle (`s_axis_gray8_tvalid=0`), the wrapper keeps gray `TREADY` high and shifts base beats through `ShiftRamChain` until the selected tap becomes valid. Once `s_axis_gray8_tvalid=1`, the wrapper stalls gray until prefill completes. Runtime controls are expected to change only at `SOF`; the RTL includes simulation guards for mid-frame control toggles and for SOF/EOL mismatch between gray timing and the delayed base stream (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 200, branch: "feat/rollback")).
+To avoid deadlock during warm-up, READY generation is asymmetric during prefill: while the gray stream is idle (`s_axis_gray8_tvalid=0`), the wrapper keeps gray `TREADY` high and shifts base beats through `ShiftRamChain` until the selected tap becomes valid. Once `s_axis_gray8_tvalid=1`, the wrapper stalls gray until prefill completes. Runtime controls are expected to change only at `SOF`; the RTL includes simulation guards for mid-frame control toggles and for SOF/EOL mismatch between gray timing and the delayed base stream (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 200, branch: "feat/rollback")).
 
 == Interface ports and generics
 #figure(
@@ -105,7 +105,7 @@ The decision tree below depicts the combinational assignments for `s_axis_gray8_
     breakable: true,
     width: 76%,
   )
-  align(center, box(width: auto, text(size: 10pt, algorithm-figure(
+  text(size: 10pt, algorithm-figure(
     [Combinational READY computation.],
     line-numbers: false,
     {
@@ -140,15 +140,12 @@ The decision tree below depicts the combinational assignments for `s_axis_gray8_
         })
       })
     },
-  ))))
+  ))
 }
 
-In binary-only mode (`i_overlay_zeros=1`), the module propagates output backpressure to the gray input and drains the RGB input unconditionally. In merge mode (`i_overlay_zeros=0`), the wrapper first pre-fills the selected delayed-base tap (`s_prefill_done=0`) by accepting base beats while stalling gray beats once they appear (`s_axis_gray8_tvalid=1`), and it then enters lockstep where both branches advance synchronously.
+In binary-only mode (`i_overlay_zeros=1`), the module propagates output backpressure to `s_axis_gray_*` and drains the RGB input unconditionally. In merge mode (`i_overlay_zeros=0`), the wrapper first pre-fills the selected delayed-base tap (`s_prefill_done=0`) by accepting base beats while stalling gray beats once they appear (`s_axis_gray8_tvalid=1`), and it then enters lockstep where both branches advance synchronously.
 
 Per-beat composition follows the `i_base_delay_stage_sel` tap selection and the edge mask derived from the gray payload (`edge_mask = (gray8 != 0)`). The final pixel is either the selected base pixel or the generic edge color, depending on whether the mask is active. When `i_overlay_zeros=1`, the output is forced to a binary black/white value based on the mask, regardless of the base pixel.
-
-
-// Waveform interpretation confirms that merge mode waits for selected delayed-base tap validity before entering steady-state lockstep emission, that the gray stream remains the output timing reference, and that READY behavior prevents deadlock during delay prefill while preserving beat-domain alignment.
 
 == Core: FrameCompositor
 #figure(
@@ -157,40 +154,51 @@ Per-beat composition follows the `i_base_delay_stage_sel` tap selection and the 
 ) <fig-frame-framecompositor>
 
 The `FrameCompositor` is a purely combinational pixel composer that overwrites the base RGB pixel whenever an edge mask bit is active. The overlay color is provided as the packed generic `G_EDGE_COLOR` and expanded to the configured component width.
-// #figure(
-//   academic_test_table(
-//     target: "frame_compositor_core",
-//     test_file: "test_frame_compositor_core.py",
-//     cases: (
-//       academic_test_case(
-//         name: "test_frame_compositor_all_input_combinations",
-//         check: [FrameCompositor combinational decode: mask-active output selects edge color, mask-inactive output forwards base RGB.],
-//       ),
-//     ),
-//   ),
-//   caption: [Cocotb evidence for FrameCompositor: exhaustive combinational checks across representative RGB samples and mask values.],
-// ) <tab-frame-tests-framecompositor>
 
 Because the core is combinational, no timing waveform is required here; correctness is validated directly by input-to-output comparisons in the cocotb test.
 
 == Core: ShiftRamChain
-#figure(
-  image("../../figures/ip-cores/ShiftRamChain.png", width: 45%),
-  caption: [`ShiftRamChain` core: selectable delay taps built from cascaded `c_shift_ram_0` IP cores.],
-) <fig-frame-shiftramchain>
 
-`ShiftRamChain` provides selectable fixed delay taps for the base stream as a BRAM-based shift-register chain (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 5, branch: "feat/rollback")). It advances with each accepted beat of the base stream: the chain shifts one word per `i_ce=1` pulse (base-stream AXI handshake `TVALID && TREADY`) (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 20, branch: "feat/rollback")).
+#grid(
+  columns: (auto, auto),
+  [
+    `ShiftRamChain` provides selectable fixed delay taps for the base stream as a BRAM-based shift-register chain (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 5, branch: "feat/rollback")). It advances with each accepted beat of the base stream: the chain shifts one word per `i_ce=1` pulse (base-stream AXI handshake `TVALID && TREADY`) (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 20, branch: "feat/rollback")).
+  ],
+  [
+    #figure(
+      image("../../figures/ip-cores/ShiftRamChain.png", width: 80%),
+      caption: [`ShiftRamChain` core: selectable delay taps built from cascaded `c_shift_ram_0` IP cores.],
+    ) <fig-frame-shiftramchain>,
 
-Delays are implemented by cascading instances of `c_shift_ram_0`, a generated BRAM shift-register primitive with an adjustable per-instance delay configured via its `A` input (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 40, branch: "feat/rollback")). Because `A` is 10-bit, each stage provides at most 1024 beats of delay; longer delays are realized as a sequence of full 1024-beat stages plus one final residual stage. The first chain (`s_sobel_pipe`) provides the Sobel-alignment tap, and the optional second chain (`s_blur_pipe`) appends only the additional delay beyond Sobel to reach the Blur+Sobel tap.
+  ],
+)
+#grid(
+  columns: (1fr, 2fr),
+  gutter: 0.55cm,
+  [
+    #figure(image("../../figures/ip-cores/shift_ram.png", width: 80%), caption: [
+      `c_shift_ram_0`: variable-length RAM-based shift register.]) <fig-frame-shiftram>,
 
-@fig-shiftram-arch summarizes the resulting datapath and control contract. The packed base word enters as `i_din[25:0] = {SOF, EOL, RBG24}` and is advanced only on `i_ce = s_base_accept` (accepted-beat domain). A synchronous clear (`i_sclr = not i_aresetn`) resets the stored state, forcing taps to zero until refilled. The tap mux selects `o_dout` from either the bypass path (`sel=00`), the Sobel tap (`sel=01/11`), or the Blur+Sobel tap (`sel=10`), matching the selector semantics summarized later in @tab-shiftram-sel-map.
+  ],
+  [
+    Delays are implemented by cascading instances of `c_shift_ram_0`, a generated RAM shift-register primitive with an adjustable per-instance delay configured via its 10-bit `A` input (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 40, branch: "feat/rollback")). A single stage therefore provides at most 1024 beats of delay; longer delays are realized as a sequence of full 1024-beat stages plus one final residual stage. The first chain (`s_sobel_pipe`) provides the Sobel-alignment tap, and the optional second chain (`s_blur_pipe`) appends only the additional delay beyond Sobel to reach the Blur+Sobel tap.
+  ],
+)
 
-#figure(
-  image("../figures/generated/block_shift_ram_chain_arch.png", width: 55%),
-  caption: [Functional architecture of `ShiftRamChain`: accepted-beat gated BRAM shift-register chains (Sobel + optional extra) with selector-driven tap mux (`sel`).],
-) <fig-shiftram-arch>
-
-Delay taps are derived in the wrapper from frame geometry and kernel sizes. For odd kernel sizes, warm-up delay in accepted beats for a K#(sym.times)K window stage is modeled as (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 68, branch: "feat/rollback")):
+#grid(
+  columns: (auto, auto),
+  gutter: 0.55cm,
+  [
+    @fig-shiftram-arch illustrates the resulting datapath and control contract. The packed base word enters as `i_din[25:0] = {SOF, EOL, RBG24}` and is advanced only on `i_ce = s_base_accept`. A synchronous clear (`i_sclr = not i_aresetn`) resets stored state, forcing taps to zero until refilled. The tap mux selects `o_dout` from either the bypass path (`sel=00`), the Sobel tap (`sel=01/11`), or the Blur+Sobel tap (`sel=10`), matching the selector semantics summarized later in @tab-shiftram-sel-map.
+    Delay taps are derived in the wrapper from frame geometry and kernel sizes. For odd kernel sizes, warm-up delay in accepted beats for a K#(sym.times)K window stage is modeled as (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 68, branch: "feat/rollback")):
+  ],
+  [
+    #figure(
+      image("../figures/generated/block_shift_ram_chain_arch.png", width: 100%),
+      caption: [`ShiftRamChain`-Architecture: AXIS-beat gated RAM shift-register chain with adjustable length.],
+    ) <fig-shiftram-arch>
+  ],
+)
 
 $
          D(W, K) & = (W + 1) ((K - 1) / 2) \
@@ -203,60 +211,52 @@ $
 
 #figure(
   academic_table(
-    columns: (auto, auto, auto, auto, auto),
-    align: (left, center, left, center, center),
+    columns: (auto, auto, auto, auto),
+    align: (center, left, center, center),
     table.header(
-      [Context],
       [`sel`],
       [Selected tap],
-      [FIFO length],
-      [\# Shift-RAMs],
+      [$D_"requested"$],
+      [$N_"stages"$],
     ),
-    [Sim],
+    interface_group_row("Simulation (c_shift_ram_0_model)"),
     [`00`],
     [Bypass (`i_din`)],
     [`0`],
     [`0`],
-    [Sim],
     [`01`],
     [Sobel tap],
     [`3`],
     [`1`],
-    [Sim],
     [`10`],
     [Blur+Sobel tap],
     [`5`],
     [`2`],
-    [Sim],
     [`11`],
     [Reserved #sym.arrow Sobel alias],
     [`3`],
     [`1`],
-    [Synthesis],
+    table.hline(stroke: 0.3pt + rgb("#cbd5e1")),
+    interface_group_row("Synthesis / default wrapper configuration"),
     [`00`],
     [Bypass (`i_din`)],
     [`0`],
     [`0`],
-    [Synthesis],
     [`01`],
     [Sobel tap],
     [`1281`],
     [`2`],
-    [Synthesis],
     [`10`],
     [Blur+Sobel tap],
     [`2562`],
     [`4`],
-    [Synthesis],
     [`11`],
     [Reserved #sym.arrow Sobel alias],
     [`1281`],
     [`2`],
   ),
-  caption: [Selector-to-FIFO map for ShiftRamChain: configured FIFO lengths and Shift-RAM stage counts for simulation and synthesis/default AXI-wrapper settings (accepted-beat domain).],
+  caption: [Selector-to-delay map for `ShiftRamChain`: requested FIFO length $D_"requested"$ and instantiated stage count $N_"stages"$ for simulation and synthesis/default wrapper settings (accepted-beat domain).],
 ) <tab-shiftram-sel-map>
-
-Because each cascaded stage contributes a one-beat handoff latency, the effective tap length is $D_"effective" = D_"requested" + (N_"stages" - 1)$ for non-bypass delays; the cocotb target #repo_link("testbench/tests/test_shift_ram_chain.py", line: 33, branch: "feat/rollback") models and asserts this behavior.
 
 #figure(
   image("../figures/ghw/shift_ram_chain.png", width: 96%),
@@ -351,4 +351,4 @@ The `FRAME_COMPOSITOR` chapter is covered by dedicated unit/integration cocotb t
 ]
 
 == Verification: pipeline-level output artifacts
-The end-to-end pipeline behavior (including overlay composition and base-mode toggles) is evaluated by #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback"), which writes representative output images that are compared against references computed in Python following the same computational rules. The aforementioned test was utilized to generate the three artifact outputs @fig-frame-overlay.
+The end-to-end pipeline behavior (including overlay composition and base-mode toggles) is evaluated by #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", branch: "feat/rollback"), which writes representative output images and compares them against Python references following the same composition rules. @fig-frame-overlay shows the artifact set generated by this regression (binary mask, overlay on grayscale, overlay on RGB base stream).
