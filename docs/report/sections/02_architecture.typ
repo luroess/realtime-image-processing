@@ -17,7 +17,7 @@ The architecture is organized into six functional blocks. Runtime control is han
 
 The filtering path is formed by `AXI_BlurrWindowModule` and `AXI_SobelWindowModule`. Each wrapper is a combined stage: it contains both window formation and the corresponding filter operation. In other words, these modules are not only transport wrappers; they realize `window + filter` as one processing block.
 
-Only the pure window-generation method itself is delegated to the separate report section by Justin Löber. That separate section explains the sliding-window derivation. The present report covers the integrated wrapper behavior in which window generation and filtering are coupled.
+The window-generation method is delegated to the separate report by Justin Löber. That separate report explains the sliding-window derivation. The present report covers the integrated wrapper behavior in which window generation and filtering are coupled.
 
 The final merge stage is `AXI_FrameCompositor`, which aligns delayed base data with processed edge timing and generates either a normal, an overlay or a binary edge view. The complete system integration is provided by `AXI_RgbGrayBlurrSobelOverlayPipeline`, which combines all blocks into one frame-consistent AXI4-Stream chain.
 
