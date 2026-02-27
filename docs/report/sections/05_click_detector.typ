@@ -9,15 +9,25 @@
 )
 
 == Overview
-The control path consists of `DebouncedClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4, branch: "feat/rollback")), `ClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5, branch: "feat/rollback")) and bit-wise debouncing modules (#repo_link("rtl/DEBOUNCER/hdl/debouncing.vhd", line: 5, branch: "feat/rollback")).
 
-BTN1 cycles processing stages, while BTN2 cycles base-image behavior.
-All RTL references in this chapter point to branch `feat/rollback`.
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 0.55cm,
+  [
+    The control path consists of `DebouncedClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4, branch: "feat/rollback")), `ClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5, branch: "feat/rollback")) and bit-wise debouncing modules (#repo_link("rtl/DEBOUNCER/hdl/debouncing.vhd", line: 5, branch: "feat/rollback")).
 
-#figure(
-  image("../../figures/ip-cores/DebouncedClickDet.png", width: 30%),
-  caption: [DebouncedClickDetector top-level control IP with button-debounce inputs and runtime mode-control outputs.],
-) <fig-click-vivado>
+    BTN1 cycles processing stages, while BTN2 cycles base-image behavior.
+    All RTL references in this chapter point to branch `feat/rollback`.
+  ],
+  [
+    #figure(
+      image("../../figures/ip-cores/DebouncedClickDet.png", width: 50%),
+      caption: [DebouncedClickDetector top-level control IP with button-debounce inputs and runtime mode-control outputs.],
+    ) <fig-click-vivado>
+
+  ],
+)
+
 
 == Interface ports and generics
 #figure(
