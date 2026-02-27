@@ -57,8 +57,11 @@
     #include "sections/08_synthesis_results.typ"
     #include "sections/09_conclusion.typ"
   ],
-  title: [Realtime Streaming Image Processing on FPGA],
-  subtitle: [Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, Verification & Simulation, Synthesis Results],
+  title: [
+    #set par(leading: 0.6em)
+    Realtime Streaming Image Processing on FPGA
+  ],
+  subtitle: [Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, #box[Verification]~&~Simulation, Synthesis Results],
   top-remark: [],
   doc-type: [HW/SW Co-Design],
   authors: [Jan Duchscherer, Lukas Röß, Valentin Bumeder],
