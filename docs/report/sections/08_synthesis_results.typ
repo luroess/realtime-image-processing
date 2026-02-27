@@ -48,7 +48,8 @@ This section summarizes synthesis and implementation utilization as reported in 
   caption: [Numerical companion to @fig-resource-system-vs-pipeline with placed-system and pipeline split counters.],
 ) <tab-resource-system-split>
 
-@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUTRAM as the primarily utilized primitive: the pipeline uses 3571 LUTRAM (#fmt_pct_1dp(3571 / 6000 * 100)), while overall LUTRAM utilization reaches #fmt_pct_1dp(3862 / 6000 * 100). By contrast, utilization of FFs and regular LUTs is lower, and our additions to the overall system did _not_ affect the number f
+@fig-resource-system-vs-pipeline and @tab-resource-system-split highlight LUTRAM as the primarily utilized primitive: the pipeline uses 3571 LUTRAM (#fmt_pct_1dp(3571 / 6000 * 100)), while overall LUTRAM utilization reaches #fmt_pct_1dp(3862 / 6000 * 100). By contrast, utilization of FFs and regular LUTs is lower, and our additions to the overall system did _not_ affect the number of utilized BRAM, DSP, or BUFG primitives. Seeing no change in BRAM usage was somewhat unexpected, given our usage of shift RAM for line buffering; here, it we assume that the synthesis tool mapped all line buffers to LUTRAM-based shift RAM primitives
+//
 
 Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks down LUT/LUTRAM/FF usage across direct child instances; @tab-resource-pipeline-instance-split provides the exact counters.
 
@@ -77,3 +78,12 @@ Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks
 
 The internal split in @fig-resource-pipeline-instance-split and @tab-resource-pipeline-instance-split localizes most area to `U_AxiFrameCompositor`, `U_AxiSobelWindowModule`, and `U_AxiBlurrWindowModule`, while `U_DebouncedClickDetector` and `U_AxiRgbToGrayscale` remain lightweight. This distribution matches the architecture, where delay-line-heavy stream alignment and windowed filtering dominate over control logic and simple pixel conversion.
 
+For `U_AxiFrameCompositor`, the memory-heavy contribution is expected from `ShiftRamChain` (`c_shift_ram_0` stages). With odd kernel size, the warm-up delay is
+$
+  D(W, K) = (W + 1) ((K - 1) / 2).
+$
+For `K=3` and `W=1280` (720p width, not height), this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping, a first-order estimate is
+$
+  N_"SRL32,est" = 26 sum_i ceil((D_i - 1) / 32) = 26 (32 + 8 + 32 + 8) = 2080,
+$
+which is close to the measured `2049` SRL-class primitives (reported in this document's LUTRAM column as `LUT as Memory + SRL`). It is also possible (and expected) that both SRL/LUT-memory and FF primitives are used for `c_shift_ram_0` due to output/register-last-bit and wrapper control logic.

@@ -8,7 +8,7 @@
     + text(fill: gray)[ (revision, orthogonal FSM partitions) ],
 )
 
-== Conceptual introduction
+== Overview
 The control path consists of `DebouncedClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/debounced_click_detector.vhd", line: 4, branch: "feat/rollback")), `ClickDetector` (#repo_link("rtl/CLICK_DETECTOR/hdl/click_detection.vhd", line: 5, branch: "feat/rollback")) and bit-wise debouncing modules (#repo_link("rtl/DEBOUNCER/hdl/debouncing.vhd", line: 5, branch: "feat/rollback")).
 
 BTN1 cycles processing stages, while BTN2 cycles base-image behavior.
