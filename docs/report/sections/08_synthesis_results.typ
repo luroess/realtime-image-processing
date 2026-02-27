@@ -80,7 +80,7 @@ Within the integrated AXI pipeline, @fig-resource-pipeline-instance-split breaks
 The internal split in @fig-resource-pipeline-instance-split and @tab-resource-pipeline-instance-split localizes most area to `U_AxiFrameCompositor`, `U_AxiSobelWindowModule`, and `U_AxiBlurrWindowModule`, while `U_DebouncedClickDetector` and `U_AxiRgbToGrayscale` remain lightweight. This distribution matches the architecture, where delay-line-heavy stream alignment and windowed filtering dominate over control logic and simple pixel conversion.
 
 For `U_AxiFrameCompositor`, the memory-heavy contribution is expected from `ShiftRamChain` (cascaded `c_shift_ram_0` stages). With odd kernel size, the warm-up delay can pe computed as per @eq:delay.\
-For `K=3` and `W=1280` (line width), this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping(SRLC32E, 32-deep shift-register LUT) @ug953-srlc32e, a first-order storage estimate is
+For `K=3` and `W=1280` (line width), this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping(SRLC32E, 32-deep shift-register LUT) @xilinx_pg122_c_shift_ram_v12_0, a first-order storage estimate is
 $
   N_"SRL32,est" = 26 sum_i ceil((D_i - 1) / 32) = 26 (32 + 8 + 32 + 8) = 2080,
 $
