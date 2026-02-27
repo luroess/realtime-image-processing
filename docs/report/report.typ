@@ -38,6 +38,7 @@
     )
 
     #include "sections/01_intro.typ"
+    #include "sections/02_architecture.typ"
     #include "sections/04_rgb_to_grayscale.typ"
     #include "sections/05_a_debouncer.typ"
     #include "sections/05_click_detector.typ"
