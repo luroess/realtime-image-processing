@@ -12,29 +12,10 @@ $ y = "clip"((B + sum_(i=0)^(K^2 - 1) p_i c_i) / D, 0, 2^W - 1) $
 
 where `W` is the pixel width, `c_i` are signed tap coefficients, `D` is the normalization divisor, and `B` is the bias term. In #repo_link("rtl/BLURR_FILTER/blurr_core.vhd", line: 46), the core uses integer arithmetic, rounds to nearest before division when `D > 1`, and saturates the result to the output range.
 
-== Core module elements: `E_BlurrCore`
-The arithmetic behavior is fully defined in #repo_link("rtl/BLURR_FILTER/blurr_core.vhd", body: raw("E_BlurrCore"), line: 5). The core is combinational (`A_RtlComb`) and contains one function plus one main process.
+== Computational principle
+From a signal-processing view, the blur module is a linear spatial filter with finite support. Each accepted pixel is generated from the local neighborhood by the weighted sum in Eq. (1), followed by scaling and clipping. The coefficients define the filter response, while `G_NORMALIZE_DIVISOR` and `G_BIAS` control overall gain and offset.
 
-#figure(
-  academic_table(
-    columns: (1.35fr, 1.1fr, 2.55fr),
-    align: (left, left, left),
-    table.header([Element], [Location], [Role]),
-    [Tap-count/range constants], [#repo_link("rtl/BLURR_FILTER/blurr_core.vhd", line: 29)], [Defines the loop bounds (`C_NUM_TAPS`) and output clip ceiling (`C_MAX_PIXEL`).],
-    [Coefficient decode function], [#repo_link("rtl/BLURR_FILTER/blurr_core.vhd", body: raw("f_coeff_at"), line: 32)], [Extracts one signed coefficient from packed `G_KERNEL_COEFFS` using bit slices.],
-    [Generic guards], [#repo_link("rtl/BLURR_FILTER/blurr_core.vhd", line: 39)], [Checks kernel size validity and packed coefficient length consistency.],
-    [MAC + normalize + clip process], [#repo_link("rtl/BLURR_FILTER/blurr_core.vhd", line: 46)], [Implements multiply-accumulate, sign-aware rounding, division, saturation, and cast to output vector.],
-  ),
-  caption: [Core implementation elements in #repo_link("rtl/BLURR_FILTER/blurr_core.vhd", body: raw("blurr_core.vhd"), line: 1).],
-) <tab-blur-core-elements>
-
-The process sequence is:
-1. Initialize accumulator with `G_BIAS`.
-2. For each tap, unpack pixel and coefficient, then accumulate `v_sum += pixel * coeff`.
-3. Apply optional normalization by `G_NORMALIZE_DIVISOR` with round-to-nearest.
-4. Saturate to `[0, 2^W - 1]` and cast to `std_logic_vector`.
-
-This mapping keeps the core simple and deterministic, and it matches the parameterized filter equation above.
+The current default coefficients implement a small Gaussian-like low-pass kernel. This configuration preserves large scene structures and suppresses high-frequency detail, so edge transitions become smoother before Sobel processing. Because the implementation is feed-forward and combinational in the filtering stage, no additional algorithmic latency is introduced inside the core itself.
 
 == Typical transaction sequence
 #figure(
@@ -59,31 +40,19 @@ This mapping keeps the core simple and deterministic, and it matches the paramet
 
 The wrapper validates coefficient-payload sizing with an elaboration-time assertion (#repo_link("rtl/BLURR_FILTER/axi_blurr_filter.vhd", line: 44)). The core performs the same consistency check (#repo_link("rtl/BLURR_FILTER/blurr_core.vhd", line: 42)).
 
+The blur implementation is not limited to the default Gaussian coefficients. Any $K times K$ signed kernel can be mapped through `G_KERNEL_COEFFS` as long as the packed vector length matches `G_KERNEL_SIZE * G_KERNEL_SIZE * G_COEFF_WIDTH` (#repo_link("rtl/BLURR_FILTER/blurr_core.vhd", line: 42)). This enables smoothing, sharpening, and custom spatial filters with the same wrapper/core structure.
+
 == AXI handshake behavior
 The data path is combinational, so the accepted-beat rate is set by downstream readiness. In the wrapper, `s_axis_window_tready` follows `m_axis_filter8_tready` when reset is inactive (#repo_link("rtl/BLURR_FILTER/axi_blurr_filter.vhd", line: 63)). Output payload and sidebands are forced to zero whenever `TVALID=0` (#repo_link("rtl/BLURR_FILTER/axi_blurr_filter.vhd", line: 70)).
 
 This behavior stays aligned with the project AXI4-Stream video rules for beat acceptance and SOF/EOL timing carriage.@UG934
 
-== Verification with cocotb testbench
-The blur chapter is verified through the wrapper target because no standalone `AXI_BlurrFilter` target is registered in #repo_link("testbench/targets.toml", line: 1). The executed target was `axi_blurr_window_module` (`tests.test_axi_blurr_window_module`) from #repo_link("testbench/tests/test_axi_blurr_window_module.py", line: 1).
-
-Executed command:
-```bash
-cd testbench
-uv run tb-sim --target axi_blurr_window_module
-```
-
-Observed result from `results.xml`:
-- testcases: `3`
-- failures: `0`
-- errors: `0`
-
-Main checks in the test module:
-- Gaussian-window expected output and shape checks (#repo_link("testbench/tests/test_axi_blurr_window_module.py", line: 63))
-- pass-through mode behavior (#repo_link("testbench/tests/test_axi_blurr_window_module.py", line: 156))
-- timeout-bounded sink receive (#repo_link("testbench/tests/test_axi_blurr_window_module.py", line: 125))
-
 #figure(
-  image("../figures/generated/tb_blurr_window_output.png", width: 75%),
-  caption: [Output image produced by `axi_blurr_window_module` test run (`lenna_512_512_out_window_module_blurr.png`).],
-) <fig-tb-blur-output>
+  grid(
+    columns: (1fr, 1fr),
+    gutter: 0.45cm,
+    image("../../figures/lenna_512_512_out_gray_rgb.png", width: 100%),
+    image("../figures/generated/tb_blurr_window_output.png", width: 100%),
+  ),
+  caption: [Side-by-side comparison of grayscale input (left) and blur output (right). With the default $3 times 3$ Gaussian-like kernel, the visual change is intentionally small and mainly reduces local high-frequency noise.],
+) <fig-blur-vs-gray>

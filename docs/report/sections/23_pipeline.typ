@@ -56,26 +56,38 @@ The compositor is the final owner of `m_axis_video_rbg888_*`, and READY propagat
 
 This coupling is implemented at #repo_link("rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd", line: 263) and keeps both branches synchronized in accepted-beat space.
 
-== Verification with cocotb testbench
-Pipeline-level verification is defined by:
-- #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", body: raw("tests.test_axi_gray_blurr_sobel_overlay_pipeline"), line: 1)
-- #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", body: raw("tests.test_axi_gray_blurr_sobel_overlay_pipeline_downscaled"), line: 1)
-- target configuration in #repo_link("testbench/targets.toml", line: 106) and #repo_link("testbench/targets.toml", line: 143)
+The associated simulation models are implemented in #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline.py", body: raw("test_axi_gray_blurr_sobel_overlay_pipeline.py"), line: 1) and #repo_link("testbench/tests/test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py", body: raw("test_axi_gray_blurr_sobel_overlay_pipeline_downscaled.py"), line: 1). A broader discussion of the shared cocotb framework is provided in the simulation-framework chapter.
 
-Executed command for this report update:
-```bash
-cd testbench
-uv run tb-sim --target axi_gray_blurr_sobel_overlay_pipeline_downscaled
-```
-
-Current status in this checkout:
-- target result: `FAIL`
-- root cause: missing source file #repo_link("testbench/tests/vhdl/c_shift_ram_0_model.vhd")
-- failure appears before simulation build (`results.xml` not generated for this run)
-
-Even with this open issue, the pipeline test area already contains generated image artifacts from prior pipeline simulations under `testbench/sim_build/`. The latest available overlay artifact is shown below.
-
+== Visual stage progression on Lenna
 #figure(
-  image("../figures/generated/tb_pipeline_overlay_output.png", width: 86%),
-  caption: [Latest available pipeline simulation artifact (`pipeline_full_chain_state3_sobel.png`) from `testbench/sim_build/test_axi_gray_blurr_sobel_overlay_pipeline/.../build/`.],
-) <fig-tb-pipeline-output>
+  grid(
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
+    gutter: 0.25cm,
+    [
+      #text(weight: "semibold")[Input RGB]
+      #linebreak()
+      #image("../../../testbench/images/lenna_512_512.png", width: 100%)
+    ],
+    [
+      #text(weight: "semibold")[Gray]
+      #linebreak()
+      #image("../../figures/lenna_512_512_out_gray_rgb.png", width: 100%)
+    ],
+    [
+      #text(weight: "semibold")[Blur]
+      #linebreak()
+      #image("../figures/generated/tb_blurr_window_output.png", width: 100%)
+    ],
+    [
+      #text(weight: "semibold")[Sobel]
+      #linebreak()
+      #image("../figures/generated/tb_sobel_filter_output.png", width: 100%)
+    ],
+    [
+      #text(weight: "semibold")[Overlay]
+      #linebreak()
+      #image("../figures/pipeline_sobel_overlay_on_grayscale.png", width: 100%)
+    ],
+  ),
+  caption: [Pipeline stage sequence for one Lenna frame: original input, grayscale conversion, blur output, Sobel output, and final overlay composition.],
+) <fig-pipeline-lenna-stages>

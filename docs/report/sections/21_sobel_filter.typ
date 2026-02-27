@@ -16,28 +16,10 @@ $ M = |G_x| + |G_y| $
 
 The implementation is visible in #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 101), with clamping to the internal magnitude range at #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 128).
 
-== Core module elements: `E_SobelCore`
-The detailed detector behavior is defined in #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", body: raw("E_SobelCore"), line: 5). The core is split into utility functions, combinational datapath logic, and one clocked adaptation process.
+== Detector dynamics
+The Sobel stage can be read as a two-part decision system. The first part estimates local contrast by the gradient magnitude $M$. The second part compares $M$ with a threshold. This threshold may stay fixed, or it may follow scene statistics through a running mean. In hardware terms, gradient evaluation is instantaneous for each current window, while mean adaptation evolves only with accepted stream samples.
 
-#figure(
-  academic_table(
-    columns: (1.4fr, 1.1fr, 2.5fr),
-    align: (left, left, left),
-    table.header([Element], [Location], [Role]),
-    [Utility clamp], [#repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", body: raw("f_clamp"), line: 43)], [Bounds magnitude and threshold values to valid integer ranges.],
-    [Power-of-two helper], [#repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", body: raw("f_pow2_saturating"), line: 54)], [Builds the adaptation divisor `2^G_SOBEL_MEAN_SHIFT` with overflow protection.],
-    [Window unpack], [#repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 90)], [Maps flattened input window to `p1..p9` unsigned pixel signals.],
-    [Gradient/magnitude process], [#repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 101)], [Computes `Gx`, `Gy`, absolute values, and L1 magnitude `M`.],
-    [Threshold compare process], [#repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 132)], [Builds adaptive threshold and emits binary edge pixel.],
-    [Running-mean update], [#repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", body: raw("P_MEAN_UPDATE"), line: 147)], [Updates `s_running_mean` only on accepted AXI beats and selected update interval.],
-  ),
-  caption: [Core implementation elements in #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", body: raw("sobel_core.vhd"), line: 1).],
-) <tab-sobel-core-elements>
-
-The process split is important for verification:
-1. Magnitude generation is combinational and depends only on the current 3x3 window.
-2. Threshold decision is combinational and depends on current `s_running_mean` and `s_mag`.
-3. Adaptation state (`s_running_mean`, update counter) changes only on `TVALID && TREADY` accepted beats.
+This separation is important for interpretation of the output: sharp local transitions increase $M$ immediately, but long-term brightness or texture changes alter the threshold only over time.
 
 == Threshold evolution: fixed to adaptive
 The first implementation used a constant threshold compare (`M >= G_SOBEL_THRESHOLD`) for binary edge output. The current implementation keeps `G_SOBEL_THRESHOLD` as initial mean value but extends the detector with adaptive thresholding based on a running mean.
@@ -50,6 +32,20 @@ $ T_n = "clamp"(mu_n * N / D + O, T_"min", T_"max") $
 
 with `S = G_SOBEL_MEAN_SHIFT`, `N/D = G_SOBEL_THRESHOLD_GAIN_NUM / G_SOBEL_THRESHOLD_GAIN_DEN`, and `O = G_SOBEL_THRESHOLD_OFFSET`. These parameters are defined in #repo_link("rtl/SOBEL_FILTER/axi_sobel_filter.vhd", line: 10) and consumed in #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 147). The final binary output remains:
 $ "edge" = 255 " if " M >= T_n ", else 0" $
+
+#figure(
+  image("../../figures/3x3_raster_of_images_from_sobel_filter_start_with_threshold_10_mean_shift_8_update_interval_16384.png", width: 86%),
+  caption: [Adaptive-threshold progression shown as a 3x3 raster for one input frame under intentionally slow settings (`threshold=10`, `mean_shift=8`, `update_interval=16384`).],
+) <fig-sobel-adaptive-raster-slow>
+
+@fig-sobel-adaptive-raster-slow visualizes the adaptation dynamics at a very low update rate. The threshold moves only after long accepted-pixel intervals, which makes the nine snapshots differ only in coarse steps.
+
+#figure(
+  image("../../figures/lenna_512_512_out_sobel_iter_theshold_10_mean_shift_4_update_interavl_16384.png", width: 72%),
+  caption: [Faster adaptive-threshold response with stronger update step (`mean_shift=4`, `update_interval=16384`) on Lenna.],
+) <fig-sobel-adaptive-fast>
+
+In @fig-sobel-adaptive-fast the step size is larger because `mean_shift=4`, so threshold locking appears as visible block segments. The utility clamp (`f_clamp`) bounds magnitude and threshold to valid ranges and limits extreme outliers. In that sense it helps against noise spikes, but it is a safety bound, not a dedicated denoiser.
 
 == Typical transaction sequence
 #figure(
@@ -73,27 +69,4 @@ $ "edge" = 255 " if " M >= T_n ", else 0" $
 
 The wrapper constrains operation to 3x3 windows using an elaboration assertion (#repo_link("rtl/SOBEL_FILTER/axi_sobel_filter.vhd", line: 47)). READY is propagated from output to input (#repo_link("rtl/SOBEL_FILTER/axi_sobel_filter.vhd", line: 74)), and the core updates adaptation state only on accepted beats (`TVALID && TREADY`) at #repo_link("rtl/SOBEL_FILTER/sobel_core.vhd", line: 156).
 
-== Verification with cocotb testbench
-The Sobel filter is verified directly with target `axi_sobel_filter` (`tests.test_axi_sobel_filter`) in #repo_link("testbench/targets.toml", line: 57) and #repo_link("testbench/tests/test_axi_sobel_filter.py", line: 1).
-
-Executed command:
-```bash
-cd testbench
-uv run tb-sim --target axi_sobel_filter
-```
-
-Observed result from `results.xml`:
-- testcases: `4`
-- failures: `0`
-- errors: `0`
-
-Main checks in the test module:
-- Sobel golden-model comparison (#repo_link("testbench/tests/test_axi_sobel_filter.py", line: 50))
-- explicit window-content assertions (#repo_link("testbench/tests/test_axi_sobel_filter.py", line: 299))
-- rotating stimulus and non-identical output behavior (#repo_link("testbench/tests/test_axi_sobel_filter.py", line: 341))
-- backpressure/pause robustness case (#repo_link("testbench/tests/test_axi_sobel_filter.py", line: 202))
-
-#figure(
-  image("../figures/generated/tb_sobel_filter_output.png", width: 75%),
-  caption: [Output image produced by `axi_sobel_filter` test run (`lenna_512_512_out_sobel.png`).],
-) <fig-tb-sobel-output>
+The behavioral validation is implemented in #repo_link("testbench/tests/test_axi_sobel_filter.py", body: raw("test_axi_sobel_filter.py"), line: 1) with model-based comparisons and stress patterns under AXI backpressure.
