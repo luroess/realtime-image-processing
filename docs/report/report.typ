@@ -29,7 +29,7 @@
         set text(9pt)
         grid(
           columns: (1fr, auto),
-          align(left)[Jan Duchscherer, Lukas Röss],
+          align(left)[Jan Duchscherer, Lukas Röß, Valentin Bumeder],
           align(right)[
             #counter(page).display("1 / 1", both: true)
           ],
@@ -40,7 +40,11 @@
     #include "sections/01_intro.typ"
     #include "sections/04_rgb_to_grayscale.typ"
     #include "sections/05_click_detector.typ"
+    #include "sections/20_blur_filter.typ"
+    #include "sections/21_sobel_filter.typ"
+    #include "sections/22_sobel-blur_window_module.typ"
     #include "sections/06_frame_compositor.typ"
+    #include "sections/23_pipeline.typ"
     #include "sections/07_simulation_framework.typ"
     #include "sections/08_synthesis_results.typ"
   ],
@@ -48,7 +52,7 @@
   subtitle: [Module Report: AXI4-Stream Pipeline, Control FSM, Image Overlay, Verification & Simulation, Synthesis Results],
   top-remark: [],
   doc-type: [HW/SW Co-Design],
-  authors: [Lukas Röss, Jan Duchscherer],
+  authors: [Jan Duchscherer, Lukas Röß, Valentin Bumeder],
   date: datetime(year: 2026, month: 2, day: 22),
   language: "en",
   font: "CMU Serif",
