@@ -1,10 +1,9 @@
 #import "../shared/macros.typ": *
-#import "@preview/callisto:0.2.4"
 
 = Simulation Framework using cocotb and cocotbext-axi
-#component_owner("Jan Duchscherer, Lukas Roess, Valentin Bumeder, Justin Loeber")
+#component_owner("Jan Duchscherer, Lukas Röss, Valentin Bumeder, Justin Löber")
 
-Our verification stack is organized as reusable source/sink/model/scoreboard layers in `testbench/` and executed through target registration in #repo_link("testbench/targets.toml", line: 1), with test-runner entrypoint #repo_link("testbench/sim/run.py", body: raw("testbench/sim/run.py"), line: 194).
+All RTL blocks are verified in a shared cocotb harness under `testbench/`. Simulation targets are registered in #repo_link("testbench/targets.toml", line: 1, branch: "feat/rollback"), which binds simulator selection, HDL sources, generic overrides, and the cocotb test module to a target key. The `tb-sim` runner (#repo_link("testbench/sim/run.py", body: raw("testbench/sim/run.py"), line: 194, branch: "feat/rollback")) executes these targets (default: GHDL) and stores per-run artifacts under `testbench/sim_build/`.
 
 #figure(
   academic_table(
@@ -25,21 +24,10 @@ The reusable layers in @tab-tb-architecture map onto a shared signal-level harne
 
 #figure(
   image("../../figures/tb_pipeline.png", width: 82%),
-  caption: [Common cocotbext-axi AXI4-Stream harness: `AxiVideoStreamSource` streams per-line packets into `s_axis_video` (`TDATA/TVALID/TUSER/TLAST`, SOF/EOL) while the DUT backpressures via `TREADY`; `AxiVideoStreamSink` captures `m_axis_video`, decodes the received frame, compares it against the model-generated ground truth (GT), and validates handshake/protocol behavior.],
+  caption: [Common cocotbext-axi AXI4-Stream video harness used across targets: per-line packet source #sym.arrow DUT #sym.arrow sink with protocol checks and golden-reference comparison.],
 ) <fig-tb-arch>
 
-Framework elements aligned with cocotb timing/writing guidance (@cocotb-writing @cocotb-timing @cocotbext-axi) include:
-- deterministic reset/startup helper (`common/reset.py`),
-- configurable backpressure generation (`common/pause.py`),
-- typed AXI4-Stream video endpoints (`AxiVideoStreamSource`, `AxiVideoStreamSink`) for RGB and gray paths,
-- per-target artifact generation (`results.xml`, `.ghw`/`.vcd`, output images).
-
-Stress dimensions covered by active targets include:
-- backpressure/stall robustness,
-- reset and initialization transitions,
-- frame-boundary correctness (`SOF`/`EOL`),
-- mode/control transitions through button-driven FSM paths,
-- timeout handling via cocotb `with_timeout` wrappers in sink APIs.
+At the stream interface, `AxiVideoStreamSource` drives `s_axis_video` (`TDATA/TVALID/TUSER/TLAST`, `TUSER=SOF`, `TLAST=EOL`) and can throttle `TVALID`; the DUT applies backpressure via `TREADY`. Output traffic is captured by `AxiVideoStreamSink`, which can deassert `TREADY` to create controlled stalls and decodes the project wire-order (`TDATA[23:0] = R|B|G`) into `(R,G,B)` pixels. Protocol checkers inside DUT-local test modules track `VALID/READY` statistics and assert invariants such as `SOF`/`EOL` placement and stall-stability. Expected frames are computed in Python reference models and compared against received frames in `verification/scoreboard.py` (first-mismatch reporting). Common utilities include deterministic reset (`common/reset.py`), configurable pause patterns (`common/pause.py`), and cocotb `with_timeout` wrappers to turn missing output progress into actionable failures.
 
 == Active target snapshot and purpose
 #figure(
@@ -63,7 +51,7 @@ Stress dimensions covered by active targets include:
     [AXI_RgbGrayBlurrSobel #linebreak() OverlayPipeline],
     [Integrated reset/mode/backpressure regression on a bounded 64x64 frame workload.],
   ),
-  caption: [Representative target mapping from #repo_link("testbench/targets.toml", line: 1); the full target registry remains source-of-truth in `targets.toml`.],
+  caption: [Representative target mapping from #repo_link("testbench/targets.toml", line: 1, branch: "feat/rollback"); `targets.toml` remains source-of-truth for the full registry.],
 ) <tab-target-overview>
 
 // #figure(
@@ -75,13 +63,4 @@ Stress dimensions covered by active targets include:
 //   image("../figures/generated/fig_testcase_count_by_module.png", width: 82%),
 //   caption: [Stored testcase distribution by module area.],
 // ) <fig-testcount>
-
-== Full target inventory, waveform artifacts, and test results
-To keep the report synchronized with the evolving cocotb suite, the latest cached regression results are rendered directly from an executed Jupyter notebook. The notebook parses the registered targets in #repo_link("testbench/targets.toml", line: 1), loads `results.xml` and waveform artifacts from `testbench/sim_build`, and reports which targets are still missing component-local documentation (test overview tables and waveform snapshots).
-
-The notebook is executed offline (its outputs are cached inside the `.ipynb`) and embedded here via the Typst Universe package `callisto`:
-
-// #callisto.render(
-//   nb: json("../analysis/testbench_inventory.ipynb"),
-//   input: false,
-// )
+For each run, cocotb writes `results.xml` and (optionally) waveform dumps (`.ghw`/`.vcd`) plus output image artifacts into `testbench/sim_build/`. Targets are invoked via `tb-sim --target <key>`; the full registry can be inspected via `tb-sim --list-targets` and remains centralized in `targets.toml`.

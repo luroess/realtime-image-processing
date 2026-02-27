@@ -165,48 +165,6 @@ The integration test asserts:
 
 The brief `TVALID=0` region before the second `SOF` in this test is also expected and originates from the stimulus driver (`await self._source.wait()` followed by idle drive, #repo_link("testbench/drivers/axis_video_source.py", line: 150, branch: "feat/rollback")), not from gray-branch deadlock. With that context, the observed waveform behavior is consistent with the intended architecture and the assertions in the integration test.
 
-== Test coverage: rgb2gray-related cocotb tests
+== Verification: RGB2GRAY-related cocotb tests
 
-All tests referenced below live on branch `feat/rollback`. The `tb-sim` target mapping is defined in #repo_link("testbench/targets.toml", branch: "feat/rollback").
-The RGB2GRAY stage is covered both directly and as part of the full RGB-entry pipeline.
-
-#text(size: 9pt)[
-  *UUT: AXI_RgbToGrayscale*
-  - #repo_link(
-      "testbench/tests/test_axi_rgb_to_grayscale.py",
-      body: [`test_axi_rgb_to_grayscale_with_backpressure_three_cycle_breaks`],
-      line: 386,
-      branch: "feat/rollback",
-    ): READY/valid stress + handshake assertions.
-  - #repo_link(
-      "testbench/tests/test_axi_rgb_to_grayscale.py",
-      body: [`test_axi_rgb_to_grayscale_image_file_roundtrip`],
-      line: 399,
-      branch: "feat/rollback",
-    ): image roundtrip + saved artifact.
-  - #repo_link(
-      "testbench/tests/test_axi_rgb_to_grayscale.py",
-      body: [`test_axi_rgb_to_grayscale_passthrough_mode`],
-      line: 409,
-      branch: "feat/rollback",
-    ): `i_pass_through=1` yields bit-exact passthrough.
-
-  *UUT: AXI_RgbToGrayscale + AXI_FrameCompositor (minimal integration)*
-  - #repo_link(
-      "testbench/tests/test_axi_rgb2gray_frame_compositor_minimal.py",
-      body: [`test_axi_rgb2gray_frame_compositor_minimal_3x2_two_frames_with_gray_warmup`],
-      line: 207,
-      branch: "feat/rollback",
-    ): 3x2 two-frame integration into `AXI_FrameCompositor`: bounded gray warm-up + 1-cycle post-warm-up cadence.
-
-]
-
-Used test harness components (Python):
-- Source: #repo_link("testbench/drivers/axis_video_source.py", body: [`AxiVideoStreamSource`], line: 22, branch: "feat/rollback")
-- Sink: #repo_link("testbench/monitors/axis_video_sink.py", body: [`AxiVideoStreamSink`], line: 14, branch: "feat/rollback")
-- Reset/pause helpers: #repo_link("testbench/common/reset.py", body: [`apply_reset`], line: 8, branch: "feat/rollback"), #repo_link("testbench/common/pause.py", body: [`drive_sink_pause`], line: 17, branch: "feat/rollback"), #repo_link("testbench/common/pause.py", body: [`repeating_pause`], line: 35, branch: "feat/rollback")
-- Image model / checking: #repo_link("testbench/models/image_model.py", body: [`Image`], line: 13, branch: "feat/rollback"), #repo_link("testbench/verification/scoreboard.py", body: [`Scoreboard`], line: 10, branch: "feat/rollback")
-
-RTL components exercised in these tests:
-- RGB2GRAY core/wrapper: #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/rgb_to_grayscale.vhd", line: 5, branch: "feat/rollback"), #repo_link("rtl/RGB_TO_GRAYSCALE/hdl/axi_rgb_to_grayscale.vhd", line: 4, branch: "feat/rollback")
-- Downstream integration: #repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 4, branch: "feat/rollback"), #repo_link("rtl/PIPELINE/hdl/axi_rgb_gray_blurr_sobel_overlay_pipeline.vhd", line: 4, branch: "feat/rollback")
+For a comprehensive overview of all testbenchs related to the `RGB_TO_GRAYSCALE` component and its integration into the `FRAME_COMPOSITOR`, see #blink(<sec-rgb2gray-verification>)[Verification: RGB2GRAY-related tests] in the appendix
