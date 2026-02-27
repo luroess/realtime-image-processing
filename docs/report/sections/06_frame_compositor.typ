@@ -162,7 +162,7 @@ Because the core is combinational, no timing waveform is required here; correctn
 #grid(
   columns: (auto, auto),
   [
-    `ShiftRamChain` provides selectable fixed delay taps for the base stream as a BRAM-based shift-register chain (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 5, branch: "feat/rollback")). It advances with each accepted beat of the base stream: the chain shifts one word per `i_ce=1` pulse (base-stream AXI handshake `TVALID && TREADY`) (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 20, branch: "feat/rollback")).
+    `ShiftRamChain` provides selectable fixed delay taps for the base stream as a BRAM-based shift-register chain (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 5, branch: "feat/rollback")). It advances with each accepted beat of the base stream: shifting the chain one word per `i_ce=1` pulse (base-stream AXI handshake `TVALID && TREADY`) (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 20, branch: "feat/rollback")).
   ],
   [
     #figure(
@@ -181,7 +181,7 @@ Because the core is combinational, no timing waveform is required here; correctn
 
   ],
   [
-    Delays are implemented by cascading instances of `c_shift_ram_0`, a generated RAM shift-register primitive with an adjustable per-instance delay configured via its 10-bit `A` input (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 40, branch: "feat/rollback")). A single stage therefore provides at most 1024 beats of delay; longer delays are realized as a sequence of full 1024-beat stages plus one final residual stage. The first chain (`s_sobel_pipe`) provides the Sobel-alignment tap, and the optional second chain (`s_blur_pipe`) appends only the additional delay beyond Sobel to reach the Blur+Sobel tap.
+    Delays are implemented by cascading instances of `c_shift_ram_0`, a generated RAM shift-register primitive with an adjustable per-instance delay configured via its 10-bit `A` input (#repo_link("rtl/FRAME_COMPOSITOR/hdl/shift_ram_chain.vhd", line: 40, branch: "feat/rollback")). A single stage therefore provides at most 1024 beats of delay; longer delays are realized as a sequence of full 1024-beat stages plus one final residual stage. The first chain (`s_sobel_pipe`) provides the Sobel-alignment tap, and the optional second chain (`s_blur_pipe`) provides the additional delay beyond Sobel to reach the Blur+Sobel tap.
   ],
 )
 
@@ -190,7 +190,7 @@ Because the core is combinational, no timing waveform is required here; correctn
   gutter: 0.55cm,
   [
     @fig-shiftram-arch illustrates the resulting datapath and control contract. The packed base word enters as `i_din[25:0] = {SOF, EOL, RBG24}` and is advanced only on `i_ce = s_base_accept`. A synchronous clear (`i_sclr = not i_aresetn`) resets stored state, forcing taps to zero until refilled. The tap mux selects `o_dout` from either the bypass path (`sel=00`), the Sobel tap (`sel=01/11`), or the Blur+Sobel tap (`sel=10`), matching the selector semantics summarized later in @tab-shiftram-sel-map.
-    Delay taps are derived in the wrapper from frame geometry and kernel sizes. For odd kernel sizes, warm-up delay in accepted beats for a K#(sym.times)K window stage is modeled as (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 68, branch: "feat/rollback")):
+    Delay taps are derived in the wrapper from frame geometry and kernel sizes. For odd kernel sizes, warm-up delay in accepted beats for
   ],
   [
     #figure(
@@ -199,15 +199,15 @@ Because the core is combinational, no timing waveform is required here; correctn
     ) <fig-shiftram-arch>
   ],
 )
+a K#(sym.times)K window stage is modeled as (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 68, branch: "feat/rollback")):
 
 $
-         D(W, K) & = (W + 1) ((K - 1) / 2) \
-       D_"sobel" & = D(W, K_"sobel") \
-  D_"blur+sobel" & = D(W, K_"blur") + D(W, K_"sobel") \
-   D_"effective" & = D_"requested" + (N_"stages" - 1)
+  D_bullet (W, K) & = (W + 1) ((K - 1) / 2) \
+        D_"sobel" & = D(W, K_"sobel") \
+   D_"blur+sobel" & = D(W, K_"blur") + D(W, K_"sobel") \
 $
 
-@tab-shiftram-sel-map lists the configured FIFO length ($D_"requested"$) and the number of instantiated shift-RAM stages per selector/tap. In simulation, these stages map to a custom `c_shift_ram_0_model` behavioral replacement (avoids `vsim`). Because each additional cascaded stage beyond the first contributes a single beat handoff latency, the wrapper uses an effective delay of $D_"effective" = D_"requested" + (N_"stages" - 1)$ for non-bypass paths (and $D_"effective"=0$ for bypass), e.g. `2562` with `4` stages yields `2565`. These effective taps are used by the wrapper's prefill gating (`s_base_valid_pipe` / `s_base_delayed_valid`) to prevent underrun at frame start (#repo_link("rtl/FRAME_COMPOSITOR/hdl/axi_frame_compositor.vhd", line: 238, branch: "feat/rollback")).
+@tab-shiftram-sel-map lists the configured FIFO length ($D_bullet$) and the number of instantiated shift-RAM stages per selector/tap. In simulation, these stages map to a custom `c_shift_ram_0_model` behavioral replacement to avoid usage of vendor components via `vsim`. Because each additional cascaded stage beyond the first contributes a single beat handoff latency, the wrapper uses an effective delay of $D_"effective" = D_bullet + (N_"stages" - 1)$ for non-bypass paths (and $D_"effective"=0$ for bypass), e.g. `2562` with `4` stages yields `2565`.
 
 #figure(
   academic_table(
@@ -216,7 +216,7 @@ $
     table.header(
       [`sel`],
       [Selected tap],
-      [$D_"requested"$],
+      [$D_bullet$],
       [$N_"stages"$],
     ),
     interface_group_row("Simulation (c_shift_ram_0_model)"),
@@ -255,7 +255,7 @@ $
     [`1281`],
     [`2`],
   ),
-  caption: [Selector-to-delay map for `ShiftRamChain`: requested FIFO length $D_"requested"$ and instantiated stage count $N_"stages"$ for simulation and synthesis/default wrapper settings (accepted-beat domain).],
+  caption: [Selector #sym.arrow delay map for `ShiftRamChain`: requested FIFO length $D_bullet$ and instance count $N_"stages"$ for simulation and synthesis/default.],
 ) <tab-shiftram-sel-map>
 
 #figure(
@@ -263,7 +263,7 @@ $
   caption: [Waveform excerpt from cocotb target `shift_ram_chain`: control-driven delay-line behavior and representative internal memory movement inside Sobel/extra chunks.],
 ) <fig-shiftram-ghw>
 
-In @fig-shiftram-ghw, `u_sobelchunka.a = 0x002` and `u_extrachunka.a = 0x001` are constant per-instance delay settings (TB generics `G_SOBEL_DELAY=3`, `G_BLUR_SOBEL_DELAY=5`), not runtime controls. The trace highlights `i_ce` gating, `i_sclr` clearing, and `i_base_delay_stage_sel` tap selection (see @tab-shiftram-sel-map).
+In @fig-shiftram-ghw, `u_sobelchunka.a = 0x002` and `u_extrachunka.a = 0x001` are constant delay settings (TB generics `G_SOBEL_DELAY=3`, `G_BLUR_SOBEL_DELAY=5`), not runtime controls. The trace highlights `i_ce` gating, `i_sclr` clearing at `SOF`, and `i_base_delay_stage_sel` tap selection (see @tab-shiftram-sel-map).
 
 == Verification: frame-compositor-related test overview
 The `FRAME_COMPOSITOR` chapter is covered by dedicated unit/integration cocotb tests and by pipeline-level regressions that exercise compositor behavior in the full chain.

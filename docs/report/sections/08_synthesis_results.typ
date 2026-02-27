@@ -82,7 +82,7 @@ For `U_AxiFrameCompositor`, the memory-heavy contribution is expected from `Shif
 $
   D(W, K) = (W + 1) ((K - 1) / 2).
 $
-For `K=3` and `W=1280` (720p width, not height), this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping, a first-order estimate is
+For `K=3` and `W=1280`, this gives `D_sobel=1281` and `D_blur+sobel=2562`, implemented as chunk delays `[1024, 257, 1024, 257]`. With 26-bit payload (`{SOF,EOL,RGB24}`) and SRL32-based mapping, a first-order estimate is
 $
   N_"SRL32,est" = 26 sum_i ceil((D_i - 1) / 32) = 26 (32 + 8 + 32 + 8) = 2080,
 $
