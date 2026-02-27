@@ -31,7 +31,11 @@
           columns: (1fr, auto),
           align(left)[Jan Duchscherer, Lukas Röß, Valentin Bumeder],
           align(right)[
-            #counter(page).display("1 / 1", both: true)
+            #numbering(
+              "1 / 1",
+              ..counter(page).get(),
+              ..counter(page).at(<end>),
+            )
           ],
         )
       },
@@ -58,7 +62,7 @@
   top-remark: [],
   doc-type: [HW/SW Co-Design],
   authors: [Jan Duchscherer, Lukas Röß, Valentin Bumeder],
-  date: datetime(year: 2026, month: 2, day: 22),
+  date: datetime(year: 2026, month: 2, day: 27),
   language: "en",
   font: "CMU Serif",
   show-table-of-contents: true,
