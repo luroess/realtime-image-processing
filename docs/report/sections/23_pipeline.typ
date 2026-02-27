@@ -1,6 +1,7 @@
 #import "../shared/macros.typ": *
 
 = Component Deep Dive: RGB-Gray-Blur-Sobel-Overlay Pipeline
+<sec-pipeline-deep-dive>
 #component_owner("Lukas Röß")
 
 == Top-level objective

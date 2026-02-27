@@ -48,6 +48,7 @@
     #include "sections/23_pipeline.typ"
     #include "sections/30_picture_overlay.typ"
     #include "sections/07_simulation_framework.typ"
+    #include "sections/31_vivado_integration.typ"
     #include "sections/08_synthesis_results.typ"
     #include "sections/09_conclusion.typ"
   ],
